@@ -1,0 +1,57 @@
+# PlantRecognition .gitignore file
+
+# Ignore data folder to avoid storing large datasets in git
+data/
+data/plant_images/
+data/features/
+data/observations-561226.csv
+
+# Ignore checkpoints and models (large binary files)
+checkpoints/
+models/
+exported_model/
+
+# Ignore logs and stats
+logs/
+stats/
+
+# Ignore checkpoint files
+download_checkpoint.json
+*.checkpoint
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
