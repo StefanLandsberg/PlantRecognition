@@ -1,0 +1,869 @@
+#!/usr/bin/env python3
+"""
+Offline Image Augmentation System
+================================
+
+A GPU-accelerated system for efficiently augmenting large image datasets with
+thousands of classes. Features memory-efficient processing, multi-threading,
+and robust checkpointing to handle interruptions.
+
+Usage:
+------
+1. Configure the parameters below
+2. Run this script: python offline_augmentation.py
+3. Use keyboard shortcuts to control execution:
+   - Ctrl+Alt+C: Stop gracefully (press again to force quit)
+   - Pause/Break key (Linux/macOS only): Pause/resume processing
+
+Author: Stefan
+License: MIT
+"""
+
+# ─── Configuration Constants ────────────────────────────────────────────────────
+import os, sys, threading, queue, time, gc, random, uuid, json, logging
+from concurrent.futures import ThreadPoolExecutor
+import tensorflow as tf
+from tqdm import tqdm
+
+SLEEP_SHORT = 0.0000001 
+
+# Optimized for i7 9k (8 cores) with RTX 3050 8GB
+CPU_CORES = 8  # Physical cores on i7 9k
+CLASS_WORKER_CORES = 6  # Class workers (leaving 2 cores for system/background)
+BATCH_WORKER_CORES = 12  # Higher than physical cores for I/O waiting
+
+# Optimized RTX 3050 settings - CHANGE THESE CONSTANTS
+GPU_BATCH_SIZE = 12  # Reduced from 24 to free up GPU memory
+CPU_BATCH_SIZE = 48  # Keep CPU batch size higher
+PARALLEL_GPU_STREAMS = 4  # Increased parallel streams
+QUEUE_SIZE = 32  # Smaller queue to reduce memory pressure
+AUGMENTATION_QUEUE_SIZE = 16  # Smaller queue to reduce pending batches
+
+TARGET_IMAGES_PER_CLASS = 250
+IMAGE_SIZE = (224, 224)
+BATCH_SIZE = GPU_BATCH_SIZE  # Use GPU-optimized batch size
+JPEG_QUALITY = 92
+
+# Augmentation settings
+ROTATION_FACTOR = 0.25              # Rotation range (fraction of 360°)
+TRANSLATION_FACTOR = 0.15           # Translation range (fraction of image size)
+ZOOM_FACTOR = 0.2                   # Zoom variation range
+CONTRAST_FACTOR = 0.2               # Contrast adjustment range
+FLIP_MODE = "horizontal_and_vertical"  # Flip mode (or "none", "horizontal")
+
+# Seasonality augmentation (for plants)
+ENABLE_SEASONALITY = True           # Enable/disable seasonal color variations
+HUE_SHIFT_PROBABILITY = 0.5         # Probability of applying hue shift
+HUE_SHIFT_FACTOR = 0.03             # Maximum hue shift amount
+
+# System settings
+CHECKPOINT_INTERVAL = 300           # Seconds between checkpoints
+CLEAR_TERMINAL_INTERVAL = 1800      # Seconds between terminal refreshes
+LOW_DISK_THRESHOLD_GB = 10          # Minimum required disk space in GB
+
+# ─── Imports ──────────────────────────────────────────────────────────────────
+import os
+import shutil
+import sys
+import numpy as np
+import time
+import json
+import signal
+import datetime
+import uuid
+import threading
+import queue
+import gc
+import random
+import logging
+import argparse
+import traceback
+from typing import Tuple, List, Set, Dict, Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Configure environment before other imports
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['KMP_HANDLE_SIGNALS'] = '0'
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+
+# Maximize CPU utilization for TensorFlow
+os.environ['TF_NUM_INTEROP_THREADS'] = str(CPU_CORES * 2)
+os.environ['TF_NUM_INTRAOP_THREADS'] = str(CPU_CORES * 2)
+os.environ['KMP_BLOCKTIME'] = '0'
+os.environ['KMP_SETTINGS'] = '0'
+
+# Use cooperative GPU scheduling rather than exclusive mode
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+os.environ['TF_CUDNN_USE_AUTOTUNE'] = '1'
+
+# Third-party imports
+try:
+    import tensorflow as tf
+    from tqdm import tqdm
+    import keyboard  # For keyboard shortcuts
+except ImportError as e:
+    print(f"Error: Required package not found: {e}")
+    print("Please install required packages: pip install tensorflow tqdm keyboard")
+    sys.exit(1)
+
+# Silence TensorFlow messages
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
+# ─── Configuration Class ────────────────────────────────────────────────────────
+class AugmentationConfig:
+    """Configuration settings for image augmentation optimized for plant recognition"""
+    
+    def __init__(self):
+        # Set default values
+        # Paths
+        self.base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        self.data_dir = os.path.join(self.base_dir, 'data', 'plant_images')
+        self.checkpoint_file = os.path.join(self.base_dir, 'augmentation_checkpoint.json')
+        
+        # Augmentation parameters - from constants
+        self.target_images = TARGET_IMAGES_PER_CLASS
+        self.image_size = IMAGE_SIZE
+        self.batch_size = BATCH_SIZE
+        self.jpeg_quality = JPEG_QUALITY
+        
+        # System resources - optimized for i7 9k 8-core
+        self.cpu_cores = CPU_CORES
+        self.class_worker_cores = CLASS_WORKER_CORES
+        self.batch_worker_cores = BATCH_WORKER_CORES
+        self.max_workers = self.cpu_cores
+        
+        # Queue sizes for pipeline stages
+        self.queue_size = QUEUE_SIZE
+        self.augmentation_queue_size = AUGMENTATION_QUEUE_SIZE
+        
+        # Batch sizes for different processing stages
+        self.gpu_batch_size = GPU_BATCH_SIZE
+        self.cpu_batch_size = CPU_BATCH_SIZE
+        
+        # Runtime settings
+        self.checkpoint_interval = CHECKPOINT_INTERVAL
+        self.clear_terminal_interval = CLEAR_TERMINAL_INTERVAL
+        self.low_disk_threshold_gb = LOW_DISK_THRESHOLD_GB
+        
+        # Augmentation settings - from constants
+        self.rotation_factor = ROTATION_FACTOR
+        self.translation_factor = TRANSLATION_FACTOR
+        self.zoom_factor = ZOOM_FACTOR
+        self.contrast_factor = CONTRAST_FACTOR
+        self.flip_mode = FLIP_MODE
+        
+        # Seasonality augmentation settings
+        self.enable_seasonality = ENABLE_SEASONALITY
+        self.hue_shift_probability = HUE_SHIFT_PROBABILITY
+        self.hue_shift_factor = HUE_SHIFT_FACTOR
+        
+        # GPU utilization
+        self.parallel_gpu_streams = PARALLEL_GPU_STREAMS
+        
+        # Try to load from config file if it exists
+        self._load_from_file()
+    
+    def _load_from_file(self):
+        """Attempt to load config from a JSON file"""
+        config_path = os.path.join(os.path.dirname(__file__), 'augmentation_config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    config_data = json.load(f)
+                
+                # Update attributes from config file
+                for key, value in config_data.items():
+                    if hasattr(self, key):
+                        setattr(self, key, value)
+                        
+                print(f"✓ Loaded configuration from {config_path}")
+            except Exception as e:
+                print(f"⚠ Failed to load config file: {e}")
+    
+    def update_from_args(self):
+        """Update config from command line arguments"""
+        parser = argparse.ArgumentParser(description='Offline Image Augmentation')
+        parser.add_argument('--data-dir', type=str, help='Directory containing class folders')
+        parser.add_argument('--target', type=int, help='Target number of images per class')
+        parser.add_argument('--batch-size', type=int, help='Batch size for processing')
+        parser.add_argument('--cpu-cores', type=int, help='Number of CPU cores to use')
+        parser.add_argument('--checkpoint-file', type=str, help='Path to checkpoint file')
+        parser.add_argument('--image-width', type=int, help='Width of processed images')
+        parser.add_argument('--image-height', type=int, help='Height of processed images')
+        parser.add_argument('--enable-seasonality', type=bool, help='Enable seasonal color variations')
+        parser.add_argument('--gpu-batch-size', type=int, help='Batch size for GPU processing')
+        
+        args = parser.parse_args()
+        
+        # Update config from args
+        if args.data_dir:
+            self.data_dir = args.data_dir
+        if args.target:
+            self.target_images = args.target
+        if args.batch_size:
+            self.batch_size = args.batch_size
+        if args.cpu_cores:
+            self.cpu_cores = args.cpu_cores
+        if args.checkpoint_file:
+            self.checkpoint_file = args.checkpoint_file
+        if args.image_width and args.image_height:
+            self.image_size = (args.image_height, args.image_width)
+        if args.enable_seasonality is not None:
+            self.enable_seasonality = args.enable_seasonality
+        if args.gpu_batch_size:
+            self.gpu_batch_size = args.gpu_batch_size
+
+# ─── Global State ─────────────────────────────────────────────────────────────
+class AugmentationState:
+    """Global state for augmentation process"""
+    
+    def __init__(self):
+        self.pause_flag = False
+        self.stop_flag = False
+        self.processed_classes: Set[str] = set()
+        self.current_class = None
+        self.last_checkpoint_time = time.time()
+        self.last_clear_time = time.time()
+        self.total_augmented = 0
+        self.gpu_utilization = 0.0
+        self.cpu_utilization = 0.0
+
+# Initialize state and config
+state = AugmentationState()
+config = AugmentationConfig()
+
+# ─── GPU Setup ─────────────────────────────────────────────────────────────────
+def setup_gpu() -> bool:
+    """Configure GPU for optimal performance and memory management for RTX 3050 8GB"""
+    # First clean any existing session
+    tf.keras.backend.clear_session()
+    
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Allow memory growth instead of allocating all at once
+            # This avoids CUDA_ERROR_NOT_PERMITTED when another process is using the GPU
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            
+            print(f"✓ GPU detected: {len(gpus)} devices")
+            
+            # Use mixed float16 precision to reduce memory usage and improve performance on RTX 3050
+            policy = tf.keras.mixed_precision.Policy('mixed_float16')
+            tf.keras.mixed_precision.set_global_policy(policy)
+            print("✓ Mixed precision (float16) enabled for reduced memory usage and faster processing")
+            
+            # Run a small test operation to warm up the GPU
+            with tf.device('/GPU:0'):
+                dummy_tensor = tf.random.normal([config.gpu_batch_size, *config.image_size, 3])
+                dummy_result = tf.nn.relu(dummy_tensor)
+                _ = dummy_result.numpy()  # Force execution
+            print("✓ GPU warmed up and ready for processing")
+            
+            return True
+        except RuntimeError as e:
+            print(f"⚠ GPU configuration error: {e}")
+    else:
+        print("⚠ No GPU detected. Using CPU only (this will be much slower).")
+    return False
+
+# ─── Optimization ────────────────────────────────────────────────────────────
+def optimize_batch_processing():
+    """Configure for maximum CPU/GPU overlap optimized for i7 9k + RTX 3050"""
+    # Don't limit TensorFlow threads
+    tf.config.threading.set_intra_op_parallelism_threads(0)
+    tf.config.threading.set_inter_op_parallelism_threads(0)
+    
+    # Force TensorFlow to use aggressive threading
+    os.environ['TF_NUM_INTEROP_THREADS'] = str(CPU_CORES * 4)
+    os.environ['TF_NUM_INTRAOP_THREADS'] = str(CPU_CORES * 4)
+    
+    # These environment variables maximize GPU utilization
+    os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+    os.environ['TF_CUDNN_USE_AUTOTUNE'] = '1'
+    
+    # Prevent thread sleeping
+    os.environ['KMP_BLOCKTIME'] = '0'
+    
+    # Set minimal sleep time
+    global SLEEP_SHORT
+    SLEEP_SHORT = 0.0000001
+    
+    print("✓ Optimization settings applied for i7 9k 8-core + RTX 3050 8GB")
+
+# Define global layers
+flip_layer = None
+rotation_layer = None
+translation_layer = None
+zoom_layer = None
+contrast_layer = None
+
+def load_and_prepare(path: str) -> Optional[tf.Tensor]:
+    """Load and preprocess a single image with aggressive parallelism"""
+    try:
+        # Force all operations to run on CPU with minimal thread waiting
+        with tf.device('/CPU:0'):
+            img = tf.io.read_file(path)
+            img = tf.image.decode_image(img, channels=3, expand_animations=False)
+            img = tf.image.convert_image_dtype(img, tf.float32)
+            img = tf.image.resize(img, config.image_size)
+        return img
+    except (tf.errors.InvalidArgumentError, tf.errors.NotFoundError, OSError):
+        return None
+    
+# ─── Augmentation Pipeline ───────────────────────────────────────────────────
+def create_augmentation_pipeline():
+    """Create the augmentation layers pipeline with stateless operations"""
+    global flip_layer, rotation_layer, translation_layer, zoom_layer, contrast_layer
+    
+    # Important: add clear_after_read=False to prevent the TensorArray error
+    if config.flip_mode == "none":
+        flip_layer = lambda x: x  # No-op function
+    else:
+        # Create layers with deterministic seeds to avoid randomness issues between threads
+        flip_layer = tf.keras.layers.RandomFlip(
+            config.flip_mode, 
+            seed=42,
+        )
+        
+    rotation_layer = tf.keras.layers.RandomRotation(
+        config.rotation_factor,
+        seed=43,
+    )
+    
+    translation_layer = tf.keras.layers.RandomTranslation(
+        config.translation_factor, 
+        config.translation_factor,
+        seed=44,
+    )
+    
+    zoom_layer = tf.keras.layers.RandomZoom(
+        config.zoom_factor, 
+        config.zoom_factor,
+        seed=45,
+    )
+    
+    contrast_layer = tf.keras.layers.RandomContrast(
+        config.contrast_factor,
+        seed=46,
+    )
+
+def apply_seasonality(x: tf.Tensor) -> tf.Tensor:
+    """Apply seasonal color variations to images"""
+    if not config.enable_seasonality:
+        return x
+        
+    # Randomly apply one of these color shifts to simulate seasons
+    random_choice = tf.random.uniform([], 0, 1.0)
+        
+    if random_choice < 0.25:  # Summer
+        x = tf.image.adjust_brightness(x, delta=0.05)
+    elif random_choice < 0.5:  # Fall
+        fall_factor = np.random.uniform(0.85, 0.95)
+        x = x * np.array([1.0, fall_factor, fall_factor * 0.85])
+        x = tf.clip_by_value(x, 0.0, 1.0)
+    elif random_choice < 0.75:  # Winter
+        x = tf.image.adjust_saturation(x, 0.7)
+        x = tf.image.adjust_brightness(x, 0.05)
+    else:  # Spring
+        spring_factor = np.random.uniform(1.05, 1.15)
+        x = x * np.array([1.0, spring_factor, 1.0])
+        x = tf.clip_by_value(x, 0.0, 1.0)
+        
+    # Apply hue shift based on probability
+    if np.random.uniform(0, 1.0) < config.hue_shift_probability:
+        x = tf.image.random_hue(x, config.hue_shift_factor)
+        
+    return x
+
+def augment_batch(batch: tf.Tensor) -> tf.Tensor:
+    """Apply augmentation to a batch of images using optimized operations for RTX 3050"""
+    # First ensure the layers exist
+    if None in (flip_layer, rotation_layer, translation_layer, zoom_layer, contrast_layer):
+        create_augmentation_pipeline()
+    
+    try:
+        # Apply augmentations with explicit GPU placement
+        with tf.device('/GPU:0'):
+            # Convert to float32/float16 for processing if needed
+            if batch.dtype != tf.float32:
+                batch = tf.cast(batch, tf.float32)
+                
+            # Apply flips manually rather than using the layer
+            if config.flip_mode != "none":
+                # Manual implementation of random flip
+                batch_size = tf.shape(batch)[0]
+                random_flip_h = tf.random.uniform([batch_size], 0, 1) > 0.5
+                random_flip_v = tf.random.uniform([batch_size], 0, 1) > 0.5
+                
+                # Apply horizontal flips
+                if "horizontal" in config.flip_mode:
+                    batch = tf.where(
+                        tf.reshape(random_flip_h, [-1, 1, 1, 1]),
+                        tf.image.flip_left_right(batch),
+                        batch
+                    )
+                
+                # Apply vertical flips
+                if "vertical" in config.flip_mode:
+                    batch = tf.where(
+                        tf.reshape(random_flip_v, [-1, 1, 1, 1]),
+                        tf.image.flip_up_down(batch),
+                        batch
+                    )
+            
+            # Apply remaining transformations directly
+            # Use eager execution to ensure the GPU is fully utilized
+            x = rotation_layer(batch)
+            x = translation_layer(x)
+            x = zoom_layer(x)
+            x = contrast_layer(x)
+            
+            # Apply seasonality
+            x = apply_seasonality(x)
+            
+            # Force the GPU to complete the computation before returning
+            # This ensures the GPU is fully utilized
+            return tf.identity(x)
+            
+    except (tf.errors.ResourceExhaustedError, tf.errors.InternalError) as e:
+        print(f"⚠ Error during augmentation: {e}")
+        # If all else fails, just return the original batch
+        return batch
+
+# ─── Image Processing ─────────────────────────────────────────────────────────
+def load_and_prepare_batch(paths: List[str]) -> Optional[List[tf.Tensor]]:
+    """Load and preprocess a batch of images on CPU for parallel processing"""
+    images = []
+    
+    def process_image(path):
+        try:
+            # Explicitly run on CPU
+            with tf.device('/CPU:0'):
+                img = tf.io.read_file(path)
+                img = tf.image.decode_image(img, channels=3, expand_animations=False)
+                img = tf.image.convert_image_dtype(img, tf.float32)
+                img = tf.image.resize(img, config.image_size)
+            return img
+        except Exception:
+            return None
+    
+    # Process images in parallel
+    with ThreadPoolExecutor(max_workers=BATCH_WORKER_CORES) as executor:
+        futures = {executor.submit(process_image, path): path for path in paths}
+        for future in as_completed(futures):
+            img = future.result()
+            if img is not None:
+                images.append(img)
+    
+    if not images:
+        return None
+    
+    return images
+
+def process_batch(paths: List[str]) -> Optional[tf.Tensor]:
+    """Process a batch of images with optimized parallelism for i7 9k"""
+    # Process images in optimized chunks for better CPU utilization
+    chunk_size = max(8, len(paths) // BATCH_WORKER_CORES)  # at least 8 images per chunk
+    chunks = [paths[i:i + chunk_size] for i in range(0, len(paths), chunk_size)]
+    
+    images = []
+    
+    # Process chunks in parallel
+    with ThreadPoolExecutor(max_workers=BATCH_WORKER_CORES) as executor:
+        futures = {executor.submit(load_and_prepare_batch, chunk): i for i, chunk in enumerate(chunks)}
+        for future in as_completed(futures):
+            chunk_images = future.result()
+            if chunk_images:
+                images.extend(chunk_images)
+    
+    if not images:
+        return None
+    
+    # Stack images into a batch tensor ON CPU
+    with tf.device('/CPU:0'):
+        stacked = tf.stack(images)
+    
+    return stacked
+
+# ─── Class Processing ──────────────────────────────────────────────────────────
+def process_class(cls_name: str) -> Tuple[int, str]:
+    """Process a single class: load, augment, save until target reached.
+    Optimized for i7 9k + RTX 3050 maximum throughput"""
+    state.current_class = cls_name
+    cls_dir = os.path.join(config.data_dir, cls_name)
+
+    # Directory existence check
+    if not os.path.isdir(cls_dir):
+        return 0, "directory_not_found"
+
+    # List original and augmented images
+    all_files = [f for f in os.listdir(cls_dir)
+                 if f.lower().endswith(('jpg', 'jpeg', 'png'))]
+    originals = [os.path.join(cls_dir, f) 
+                 for f in all_files if not f.startswith('aug_')]
+
+    if not originals:
+        return 0, "no_images"
+
+    current_count = len(all_files)
+    to_do = max(0, config.target_images - current_count)
+    if to_do == 0:
+        return 0, "sufficient"
+
+    saved = 0
+    pos = (threading.get_ident() % 10) + 2
+
+    # Ensure augmentation layers exist
+    if None in (flip_layer, rotation_layer, 
+                translation_layer, zoom_layer, contrast_layer):
+        create_augmentation_pipeline()
+
+    try:
+        with tqdm(total=to_do,
+                  desc=f"{cls_name[:20]:<20}",
+                  position=pos,
+                  leave=True) as bar:
+
+            # Create deeper queues for better throughput
+            raw_batch_queue = queue.Queue(maxsize=config.queue_size)
+            aug_batch_queue = queue.Queue(maxsize=config.augmentation_queue_size)
+            stop_event = threading.Event()
+            
+            # Create a semaphore to limit the number of batches in GPU memory
+            gpu_semaphore = threading.Semaphore(8)  # Allow up to 8 batches in GPU memory
+
+            # Thread: load and preprocess batches on CPU
+            def load_batches_thread():
+                # Use a larger batch multiplier for CPU processing
+                batch_multiplier = 4
+                
+                while not stop_event.is_set() and not state.stop_flag:
+                    # Only extremely brief pauses when queue is full
+                    if raw_batch_queue.full():
+                        time.sleep(SLEEP_SHORT)
+                        continue
+
+                    # Create larger batches for CPU processing
+                    cpu_batch_size = min(config.cpu_batch_size, to_do - saved)
+                    if cpu_batch_size <= 0:
+                        time.sleep(SLEEP_SHORT)
+                        continue
+                        
+                    batch_paths = random.choices(originals, k=cpu_batch_size)
+                    
+                    # Process batch with optimized parallelism
+                    batch = process_batch(batch_paths)
+                    
+                    if batch is not None:
+                        # Split large CPU batches into appropriate GPU batch sizes
+                        for i in range(0, tf.shape(batch)[0], config.gpu_batch_size):
+                            end = min(i + config.gpu_batch_size, tf.shape(batch)[0])
+                            if i < end:
+                                sub_batch = batch[i:end]
+                                # Add to queue with minimal blocking
+                                try:
+                                    raw_batch_queue.put(sub_batch, block=True, timeout=0.1)
+                                except queue.Full:
+                                    pass
+
+            # Thread: augment batches on GPU - optimized for RTX 3050
+            def augment_batches_thread():
+                local_gc_counter = 0
+                
+                while not stop_event.is_set() and not state.stop_flag:
+                    try:
+                        # Acquire semaphore to limit GPU batch count
+                        gpu_semaphore.acquire(timeout=0.1)
+                        
+                        if raw_batch_queue.empty():
+                            gpu_semaphore.release()
+                            time.sleep(SLEEP_SHORT)
+                            continue
+                            
+                        # Get batch from queue
+                        batch = raw_batch_queue.get_nowait()
+                        
+                        # Process on GPU
+                        aug = augment_batch(batch)
+                        
+                        # Add to output queue
+                        try:
+                            aug_batch_queue.put(aug, block=True, timeout=0.1)
+                            raw_batch_queue.task_done()
+                        except queue.Full:
+                            # If queue is full, skip this batch
+                            pass
+                            
+                        # Release semaphore after batch is processed
+                        gpu_semaphore.release()
+                        
+                        # Occasional garbage collection
+                        local_gc_counter += 1
+                        if local_gc_counter >= 20:  # Less frequent GC
+                            gc.collect()
+                            local_gc_counter = 0
+                            
+                    except queue.Empty:
+                        if gpu_semaphore._value < 8:
+                            gpu_semaphore.release()
+                        time.sleep(SLEEP_SHORT)
+                    except Exception as e:
+                        print(f"⚠ Error in augmentation thread: {e}")
+                        if gpu_semaphore._value < 8:
+                            gpu_semaphore.release()
+
+            # Thread: save augmented images to disk
+            def save_images_thread():
+                nonlocal saved
+                
+                # Define the inner function FIRST before using it
+                def _save_pending_images(pending_list):
+                    for filename, jpg_data in pending_list:
+                        out_path = os.path.join(cls_dir, filename)
+                        tf.io.write_file(out_path, jpg_data)
+                
+                # Use local batch accumulation to reduce disk I/O overhead
+                pending_images = []
+                last_save_time = time.time()
+                
+                while not stop_event.is_set() and not state.stop_flag:
+                    if saved >= to_do:
+                        # Save any remaining images
+                        if pending_images:
+                            _save_pending_images(pending_images)
+                            pending_images = []
+                        break
+                        
+                    try:
+                        # Get batch with timeout to check for stop conditions
+                        aug = aug_batch_queue.get(timeout=0.5)
+                        
+                        # Process each image in the batch
+                        for img in aug:
+                            if saved >= to_do or state.stop_flag:
+                                break
+                                
+                            # Convert and append to pending list
+                            img_u8 = tf.image.convert_image_dtype(img, tf.uint8)
+                            jpg = tf.io.encode_jpeg(img_u8, quality=config.jpeg_quality)
+                            
+                            # Generate unique filename
+                            out_filename = f"aug_{uuid.uuid4().hex}.jpg"
+                            
+                            # Add to pending list
+                            pending_images.append((out_filename, jpg))
+                            saved += 1
+                            bar.update(1)
+                            
+                            # Save in batches to reduce disk I/O
+                            current_time = time.time()
+                            if len(pending_images) >= 16 or (current_time - last_save_time) > 1.0:
+                                _save_pending_images(pending_images)
+                                pending_images = []
+                                last_save_time = current_time
+                                
+                        aug_batch_queue.task_done()
+                        
+                    except queue.Empty:
+                        # Check if we should save pending images
+                        if pending_images and (time.time() - last_save_time) > 1.0:
+                            _save_pending_images(pending_images)
+                            pending_images = []
+                            last_save_time = time.time()
+
+            # Start multiple CPU loader threads for maximum throughput
+            threads = []
+            for _ in range(BATCH_WORKER_CORES // 2):  # Half of batch workers for loading
+                t = threading.Thread(target=load_batches_thread, daemon=True)
+                threads.append(t)
+                t.start()
+            
+            # Start multiple GPU augmentation threads to saturate GPU
+            for _ in range(config.parallel_gpu_streams):
+                aug_t = threading.Thread(target=augment_batches_thread, daemon=True)
+                threads.append(aug_t)
+                aug_t.start()
+            
+            # Start multiple save threads
+            for _ in range(max(4, BATCH_WORKER_CORES // 4)):  # At least 4 save threads
+                save_t = threading.Thread(target=save_images_thread, daemon=True)
+                threads.append(save_t)
+                save_t.start()
+
+            # Monitor progress and handle pause/stop
+            while saved < to_do and not state.stop_flag:
+                if state.pause_flag:
+                    time.sleep(0.1)
+                    continue
+                    
+                # Short sleep to check status
+                time.sleep(0.1)
+                
+                # Check if all threads have died unexpectedly
+                if not any(t.is_alive() for t in threads):
+                    print(f"⚠ All processing threads died for class {cls_name}")
+                    break
+
+            # Clean up
+            stop_event.set()
+            
+            # Wait for threads to finish with timeout
+            for t in threads:
+                t.join(timeout=0.5)
+                
+            # Clean up queues to prevent deadlocks
+            while not raw_batch_queue.empty():
+                try:
+                    raw_batch_queue.get_nowait()
+                    raw_batch_queue.task_done()
+                except queue.Empty:
+                    break
+                    
+            while not aug_batch_queue.empty():
+                try:
+                    aug_batch_queue.get_nowait()
+                    aug_batch_queue.task_done()
+                except queue.Empty:
+                    break
+                
+            # Force garbage collection to clean up memory
+            gc.collect()
+
+    except Exception as e:
+        print(f"⚠ Error in {cls_name}: {e}")
+        traceback.print_exc()
+        return saved, "error"
+
+    return saved, ("augmented" if saved > 0 else "none")
+
+# ─── Worker Thread ────────────────────────────────────────────────────────────
+def worker(class_queue: queue.Queue, overall_pbar: tqdm, lock: threading.Lock) -> None:
+    """Worker thread for processing classes"""
+    while not state.stop_flag:
+        try:
+            # Get next class from queue
+            cls = class_queue.get_nowait()
+        except queue.Empty:
+            break
+
+        # Process class
+        try:
+            cnt, status = process_class(cls)
+        except Exception as e:
+            print(f"⚠ Error processing class '{cls}': {e}")
+            continue
+
+        # Update shared state
+        with lock:
+            if status == "augmented":
+                state.total_augmented += cnt
+                state.processed_classes.add(cls)
+            if overall_pbar:
+                overall_pbar.update(1)
+
+        # Mark task as done
+        class_queue.task_done()
+        
+        # Clean memory between classes - important for RTX 3050 with 8GB VRAM
+        tf.keras.backend.clear_session()
+        gc.collect()
+
+# ─── Main Function ───────────────────────────────────────────────────────────
+def main() -> int:
+    """Main function for augmentation process optimized for i7 9k + RTX 3050"""
+    # Apply optimizations first thing
+    optimize_batch_processing()
+    
+    # Update config from command line arguments
+    config.update_from_args()
+
+    # Configure GPU
+    has_gpu = setup_gpu()
+    if not has_gpu:
+        print("⚠ GPU acceleration is required for optimal performance.")
+        print("  The script will still run but will be much slower.")
+        
+    # Create augmentation layers BEFORE any processing happens
+    create_augmentation_pipeline()
+
+    # Find unprocessed classes
+    try:
+        all_dirs = [d for d in os.listdir(config.data_dir) 
+                  if os.path.isdir(os.path.join(config.data_dir, d))]
+    except FileNotFoundError:
+        print(f"⚠ Error: Data directory not found: {config.data_dir}")
+        return 1
+    
+    # Pre-populate queue for efficiency
+    class_queue = queue.Queue()
+    for d in all_dirs:
+        class_queue.put(d)
+
+    # Use CLASS_WORKER_CORES for processing classes
+    threads = []
+    n_threads = min(CLASS_WORKER_CORES, len(all_dirs))
+    
+    if n_threads == 0:
+        print("✓ No classes to process.")
+        return 0
+
+    print(f"ℹ RTX 3050 8GB + i7 9k 8-core optimized settings:")
+    print(f"  - Processing {len(all_dirs)} classes using {n_threads} class workers")
+    print(f"  - Each class will use {BATCH_WORKER_CORES} dedicated batch preparation cores")
+    print(f"  - GPU batch size: {config.gpu_batch_size}, CPU batch size: {config.cpu_batch_size}")
+    print(f"  - Parallel GPU streams: {config.parallel_gpu_streams}")
+    
+    # Start timing
+    start = time.time()
+    lock = threading.Lock()
+    
+    try:
+        with tqdm(total=len(all_dirs),
+                  desc="Overall Progress",
+                  position=0,
+                  leave=True) as overall_pbar:
+            
+            # Create and start threads
+            for _ in range(n_threads):
+                t = threading.Thread(
+                    target=worker,
+                    args=(class_queue, overall_pbar, lock),
+                    daemon=True
+                )
+                threads.append(t)
+                t.start()
+
+            # Monitor threads
+            while any(t.is_alive() for t in threads) and not state.stop_flag:
+                time.sleep(0.5)
+
+    except KeyboardInterrupt:
+        state.stop_flag = True
+        print("\nℹ Received interrupt. Stopping gracefully...")
+    except Exception as e:
+        print(f"\n⚠ Unexpected error: {e}")
+        return 1
+    finally:
+        # Wait for threads to finish
+        for t in threads:
+            t.join(timeout=1.0)
+        
+        # Print summary
+        elapsed = time.time() - start
+        print(f"\n✓ Done. Augmented {state.total_augmented} images in {elapsed:.1f}s.")
+        if state.total_augmented > 0:
+            print(f"  Average rate: {state.total_augmented / elapsed:.1f} images/second")
+    
+    return 0
+
+# ─── Entry Point ───────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    try:
+        # Run main function with our configuration
+        sys.exit(main())
+    except Exception as e:
+        print(f"\n⚠ Fatal error: {e}")
+        traceback.print_exc()
+        sys.exit(1)
