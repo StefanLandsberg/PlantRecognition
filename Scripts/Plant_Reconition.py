@@ -200,12 +200,14 @@ else:
 colorama.init()
 
 # Configuration
-DATA_DIR = r"C:\Users\stefa\Desktop\New folder\data\completed_images"
-FEATURES_DIR = r"C:\Users\stefa\Desktop\New folder\data\features"
-MODEL_DIR = r"C:\Users\stefa\Desktop\New folder\models"
-CHECKPOINT_DIR = r"C:\Users\stefa\Desktop\New folder\checkpoints"
-LOG_DIR = r"C:\Users\stefa\Desktop\New folder\logs"
-STATS_DIR = r"C:\Users\stefa\Desktop\New folder\stats"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))    # Script directory
+BASE_DIR = os.path.dirname(SCRIPT_DIR)                     # Project root directory
+DATA_DIR = os.path.join(BASE_DIR, "data", "plant_images")  # Where images are saved
+FEATURES_DIR = os.path.join(BASE_DIR, "data", "features")  # Where extracted features are stored
+MODEL_DIR = os.path.join(BASE_DIR, "models")               # Where trained models are saved
+CHECKPOINT_DIR = os.path.join(BASE_DIR, "checkpoints")     # Where training checkpoints are saved
+LOG_DIR = os.path.join(BASE_DIR, "logs")                   # Where training logs are stored
+STATS_DIR = os.path.join(BASE_DIR, "stats")                # Where statistics are saved
 
 # Training Parameters
 BATCH_SIZE = 128
@@ -839,7 +841,16 @@ class AutoTrainingConfig(tf.keras.callbacks.Callback):
                 self.plateau_count = 0  # Reset counter after adjustment
 
 # Advanced training configuration with gradual unfreezing
-def create_custom_callbacks():
+def create_custom_callbacks(model, feature_dim):
+    """Create custom callbacks for training with parameters for the specific model
+    
+    Args:
+        model: The model being trained
+        feature_dim: Dimension of the feature space
+        
+    Returns:
+        List of callbacks to use during training
+    """
     class GradualUnfreezingCallback(tf.keras.callbacks.Callback):
         def __init__(self, model, feature_dim):
             super().__init__()
@@ -865,7 +876,7 @@ def create_custom_callbacks():
                     
                 self.unfrozen_layers += 1
     
-    return [GradualUnfreezingCallback(model, feature_dim)]  # Add to your callbacks list
+    return [GradualUnfreezingCallback(model, feature_dim)]
 
 def analyze_features(features_file):
     """Analyze feature quality to detect problems"""
@@ -2054,6 +2065,45 @@ class AdaptiveClassWeightAdjuster(tf.keras.callbacks.Callback):
             print(f"{TermColors.CYAN}ℹ Updated class weights will affect future training{TermColors.ENDC}")
             self.adjustments_made += 1
 
+def compute_balanced_class_weights(labels):
+    """Compute class weights inversely proportional to class frequencies
+    
+    Args:
+        labels: Training labels array
+        
+    Returns:
+        Dictionary mapping class indices to weights
+    """
+    # Get unique classes and count occurrences
+    unique_classes = np.unique(labels)
+    
+    # Use sklearn's balanced class weight calculation
+    weights = compute_class_weight(
+        class_weight='balanced',
+        classes=unique_classes,
+        y=labels
+    )
+    
+    # Create a dictionary mapping class indices to weights
+    weight_dict = {i: w for i, w in zip(unique_classes, weights)}
+    
+    # Cap extreme weights to avoid instability (max 10x weight)
+    for cls, weight in list(weight_dict.items()):
+        if weight > 10.0:
+            weight_dict[cls] = 10.0
+    
+    # Print class weights for the most imbalanced classes
+    sorted_weights = sorted(weight_dict.items(), key=lambda x: x[1], reverse=True)
+    
+    print(f"{TermColors.CYAN}ℹ Class weight examples:{TermColors.ENDC}")
+    for cls, weight in sorted_weights[:5]:  # Top 5 highest weights
+        print(f"  - Class {cls}: weight={weight:.2f}")
+    
+    for cls, weight in sorted_weights[-5:]:  # Bottom 5 lowest weights
+        print(f"  - Class {cls}: weight={weight:.2f}")
+        
+    return weight_dict
+
 def test_time_augmentation_predict(image_path, top_k=5):
     """Memory-efficient prediction using test-time augmentation"""
     def check_memory_limit():
@@ -2257,7 +2307,7 @@ def self_consistency_predict(image_path, top_k=5):
     # Process each augmentation independently to minimize memory usage
     aug_bar = tqdm(total=len(augmented_images), desc="Processing augmentations", position=0)
     
-    for aug_idx, aug_img in enumerate(augmented_images):
+    for aug_idx, aug_img in augmented_images:
         # Extract features
         img_batch = np.expand_dims(aug_img, axis=0)
         features = feature_extractor.predict(img_batch, verbose=0)
@@ -2427,11 +2477,11 @@ def cross_model_fusion_predict(image_path, top_k=5):
         if not os.path.exists(metadata_file):
             model_bar.update(1)
             continue
-            
-        # Load model and metadata
+        
         with open(metadata_file) as f:
             metadata = json.load(f)
         
+        # Load model
         model = tf.keras.models.load_model(model_file, custom_objects={
             'sparse_top_k_accuracy': sparse_top_k_accuracy
         })
@@ -2513,11 +2563,11 @@ def cross_model_fusion_predict(image_path, top_k=5):
         if not os.path.exists(metadata_file):
             model_bar.update(1)
             continue
-            
-        # Load model and metadata
+        
         with open(metadata_file) as f:
             metadata = json.load(f)
         
+        # Load model
         model = tf.keras.models.load_model(model_file, custom_objects={
             'sparse_top_k_accuracy': sparse_top_k_accuracy
         })
@@ -2730,29 +2780,39 @@ def train_chunk_model_with_swa(features_file, chunk_idx, training_state=None):
         class_weights = None
         if len(np.unique(y_train)) > 1:  # Only if we have multiple classes
             try:
-                # Count samples per class
-                unique_classes = np.unique(y_train)
-                class_counts = {cls: np.sum(y_train == cls) for cls in unique_classes}
+                # Use our new balanced class weight function
+                print(f"{TermColors.CYAN}ℹ Computing balanced class weights to handle class imbalance{TermColors.ENDC}")
+                class_weights = compute_balanced_class_weights(y_train)
                 
-                # Check for imbalance
-                max_count = max(class_counts.values())
-                min_count = min(class_counts.values())
-                
-                if max_count / min_count > 2:  # Significant imbalance
-                    print(f"{TermColors.CYAN}ℹ Class imbalance detected (max/min ratio: {max_count/min_count:.1f}){TermColors.ENDC}")
-                    
-                    # Compute balanced weights
-                    weights = compute_class_weight(class_weight='balanced', classes=unique_classes, y=y_train)
-                    class_weights = {i: w for i, w in zip(unique_classes, weights)}
-                    
-                    # Cap extreme weights
-                    for cls, weight in class_weights.items():
-                        if weight > 5:
-                            class_weights[cls] = 5.0  # Cap at 5x
-                            
-                    print(f"{TermColors.CYAN}ℹ Using class weights to balance training{TermColors.ENDC}")
+                print(f"{TermColors.GREEN}✅ Class weights computed to balance training{TermColors.ENDC}")
             except Exception as e:
                 print(f"{TermColors.YELLOW}⚠️ Could not compute class weights: {e}{TermColors.ENDC}")
+                # Fallback to manual calculation if the function fails
+                try:
+                    # Count samples per class
+                    unique_classes = np.unique(y_train)
+                    class_counts = {cls: np.sum(y_train == cls) for cls in unique_classes}
+                    
+                    # Check for imbalance
+                    max_count = max(class_counts.values())
+                    min_count = min(class_counts.values())
+                    
+                    if max_count / min_count > 2:  # Significant imbalance
+                        print(f"{TermColors.CYAN}ℹ Class imbalance detected (max/min ratio: {max_count/min_count:.1f}){TermColors.ENDC}")
+                        
+                        # Compute balanced weights
+                        weights = compute_class_weight(class_weight='balanced', classes=unique_classes, y=y_train)
+                        class_weights = {i: w for i, w in zip(unique_classes, weights)}
+                        
+                        # Cap extreme weights
+                        for cls, weight in class_weights.items():
+                            if weight > 5:
+                                class_weights[cls] = 5.0  # Cap at 5x
+                                
+                        print(f"{TermColors.CYAN}ℹ Using class weights to balance training{TermColors.ENDC}")
+                except Exception as e:
+                    print(f"{TermColors.YELLOW}⚠️ Could not compute class weights: {e}{TermColors.ENDC}")
+                    class_weights = None
         
         # Keep track of weight snapshots
         weight_snapshots = []
@@ -2936,7 +2996,6 @@ def predict_with_chunked_models(image_path, top_k=5):
         if mem.percent > 80:  # Emergency cutoff
             print(f"{TermColors.RED}🚨 RAM usage too high ({mem.percent}%). Cannot proceed with prediction.{TermColors.ENDC}")
             return False
-        return True
     
     # Add this line HERE, after the function definition
     if not check_memory_limit():
@@ -3120,7 +3179,7 @@ if __name__ == "__main__":
             
             # Get class directories
             class_dirs = [os.path.join(DATA_DIR, d) for d in os.listdir(DATA_DIR) 
-                         if os.path.isdir(os.path.join(DATA_DIR, d))]
+                        if os.path.isdir(os.path.join(DATA_DIR, d))]
             
             # Group classes into chunks
             chunks = []
@@ -3140,47 +3199,97 @@ if __name__ == "__main__":
             
             # Process each chunk
             for chunk_idx, chunk_classes in enumerate(chunks):
-                # Skip already processed chunks - MODIFY THIS SECTION
+                # Skip already processed chunks
                 if chunk_idx in training_state.processed_chunks:
                     print(f"{TermColors.YELLOW}⚠️ Skipping chunk {chunk_idx} (already processed){TermColors.ENDC}")
                     continue
                 
-                # IMPORTANT: Check if features already exist before extracting again
-                chunk_feature_dir = os.path.join(FEATURES_DIR, f"chunk_{chunk_idx}")
-                features_file = os.path.join(chunk_feature_dir, "features.npz")
+                # CRITICAL: Completely restart the TensorFlow runtime between chunks to prevent memory leaks
+                print(f"{TermColors.YELLOW}⚠️ Preparing system for chunk {chunk_idx}...{TermColors.ENDC}")
                 
+                # Step 1: Aggressively clear all memory
+                tf.keras.backend.clear_session()
+                import gc
+                
+                # Force garbage collection multiple times to ensure everything is cleaned up
+                print(f"{TermColors.CYAN}ℹ Running aggressive garbage collection...{TermColors.ENDC}")
+                for _ in range(5):
+                    gc.collect()
+                
+                # Step 2: Reset TensorFlow's GPU allocator
+                try:
+                    # Reset GPU memory
+                    physical_devices = tf.config.list_physical_devices('GPU')
+                    if physical_devices:
+                        for device in physical_devices:
+                            tf.config.experimental.reset_memory_stats(device)
+                        print(f"{TermColors.GREEN}✅ GPU memory stats reset successfully{TermColors.ENDC}")
+                except Exception as e:
+                    print(f"{TermColors.YELLOW}⚠️ Could not reset GPU memory stats: {e}{TermColors.ENDC}")
+                
+                # Step 3: Sleep to ensure OS has time to reclaim memory
+                print(f"{TermColors.CYAN}ℹ Waiting for OS to reclaim memory...{TermColors.ENDC}")
+                time.sleep(15)  # Wait 15 seconds to ensure memory is reclaimed
+                
+                # Step 4: Monitor current memory usage and abort if too high
+                mem = psutil.virtual_memory()
+                if mem.percent > 85:
+                    print(f"{TermColors.RED}🚨 System memory usage still too high ({mem.percent}%). Emergency abort!{TermColors.ENDC}")
+                    print(f"{TermColors.RED}🚨 Please restart the program after system memory has stabilized.{TermColors.ENDC}")
+                    return  # Exit training to prevent crash
+                    
+                # Now process the current chunk
                 print(f"{TermColors.HEADER}\n{'='*50}")
                 print(f"PROCESSING CHUNK {chunk_idx+1}/{len(chunks)} WITH {len(chunk_classes)} CLASSES")
                 print(f"{'='*50}{TermColors.ENDC}")
                 
                 # Check if features already exist
-                if os.path.exists(features_file):
-                    print(f"{TermColors.CYAN}ℹ Found existing features for chunk {chunk_idx}. Using existing features.{TermColors.ENDC}")
-                else:
-                    # Extract combined features only if they don't exist
-                    print(f"{TermColors.CYAN}ℹ Extracting features for chunk {chunk_idx}...{TermColors.ENDC}")
-                    features_file, _ = extract_combined_features_optimized(chunk_classes, chunk_idx)
+                chunk_feature_dir = os.path.join(FEATURES_DIR, f"chunk_{chunk_idx}")
+                features_file = os.path.join(chunk_feature_dir, "features.npz")
+                
+                try:
+                    # Check if features already exist
+                    if os.path.exists(features_file):
+                        print(f"{TermColors.CYAN}ℹ Found existing features for chunk {chunk_idx}. Using existing features.{TermColors.ENDC}")
+                    else:
+                        # Extract combined features only if they don't exist
+                        print(f"{TermColors.CYAN}ℹ Extracting features for chunk {chunk_idx}...{TermColors.ENDC}")
+                        features_file, _ = extract_combined_features_optimized(chunk_classes, chunk_idx)
+                        
+                    if features_file is None:
+                        print(f"{TermColors.RED}❌ Failed to extract features for chunk {chunk_idx}{TermColors.ENDC}")
+                        continue
                     
-                if features_file is None:
-                    print(f"{TermColors.RED}❌ Failed to extract features for chunk {chunk_idx}{TermColors.ENDC}")
+                    # Train with SWA
+                    train_chunk_model_with_swa(features_file, chunk_idx, training_state)
+                    
+                except Exception as e:
+                    print(f"{TermColors.RED}❌ Error processing chunk {chunk_idx}: {e}{TermColors.ENDC}")
+                    traceback.print_exc()
+                    # Continue to next chunk rather than stopping completely
                     continue
                 
-                # Train with SWA
-                train_chunk_model_with_swa(features_file, chunk_idx, training_state)
-                
-                print(f"{TermColors.YELLOW}⚠️ Performing full memory cleanup between chunks{TermColors.ENDC}")
-                # Release all resources explicitly
-                del features_file
-                # Multiple garbage collections
-                for _ in range(5):
-                    gc.collect()
-                tf.keras.backend.clear_session()
-                # Sleep to ensure OS reclaims memory
-                print(f"{TermColors.CYAN}ℹ Waiting 10 seconds for memory to be fully released...{TermColors.ENDC}")
-                time.sleep(10) 
-
-                # Clean memory between chunks
-                clean_memory()
+                finally:
+                    # Always perform cleanup even if there was an error
+                    print(f"{TermColors.YELLOW}⚠️ Performing thorough cleanup after chunk {chunk_idx}{TermColors.ENDC}")
+                    
+                    # Explicit cleanup
+                    tf.keras.backend.clear_session()
+                    for _ in range(5):
+                        gc.collect()
+                        
+                    # Attempt to explicitly release system memory
+                    if sys.platform == 'win32':
+                        try:
+                            import ctypes
+                            ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
+                            print(f"{TermColors.GREEN}✅ Windows memory working set released{TermColors.ENDC}")
+                        except:
+                            pass
+                    
+                    # Force sleep between chunks
+                    print(f"{TermColors.CYAN}ℹ Pausing 20 seconds before next chunk...{TermColors.ENDC}")
+                    time.sleep(20)
             
             print(f"{TermColors.GREEN}✅ All chunks processed successfully!{TermColors.ENDC}")
         
