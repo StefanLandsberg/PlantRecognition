@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Recognition App</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1><i class="fas fa-leaf"></i> Plant Recognition</h1>
+            <div class="theme-toggle">
+                <i class="fas fa-moon"></i>
+                <div class="toggle-switch" id="themeToggle">
+                    <div class="toggle-knob"></div>
+                </div>
+                <i class="fas fa-sun"></i>
+            </div>
+        </header>
+        
+        <main>
+            <div class="mode-selector">
+                <span>Photo Mode</span>
+                <div class="toggle-switch" id="modeToggle">
+                    <div class="toggle-knob"></div>
+                </div>
+                <span>Video Mode</span>
+            </div>
+            
+            <div class="capture-container">
+                <!-- Photo Mode -->
+                <div id="photoMode" class="mode-container active">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop images here or click to select</p>
+                        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+                    </div>
+                    <div class="selected-images" id="selectedImages"></div>
+                </div>
+                
+                <!-- Video Mode -->
+                <div id="videoMode" class="mode-container">
+                    <div class="video-container">
+                        <div class="video-wrapper">
+                            <video id="video" autoplay playsinline></video>
+                            <canvas id="overlayCanvas" class="video-overlay"></canvas>
+                        </div>
+                        <canvas id="canvas" hidden></canvas>
+                        <div class="video-controls">
+                            <button id="startCamera" class="btn"><i class="fas fa-video"></i> Start Camera</button>
+                            <button id="toggleAutoDetection" class="btn" disabled><i class="fas fa-play"></i> Start Detection</button>
+                            <button id="stopCamera" class="btn" disabled><i class="fas fa-video-slash"></i> Stop Camera</button>
+                        </div>
+                    </div>
+                    <div class="detection-info">
+                        <p>Automatic plant detection will identify plants in real-time and save images when confidence is high enough.</p>
+                    </div>
+                    <div class="captured-frames" id="capturedFrames"></div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="analyzeBtn" class="btn primary-btn" disabled><i class="fas fa-search"></i> Identify Plants</button>
+                <button id="clearBtn" class="btn secondary-btn" disabled><i class="fas fa-trash"></i> Clear All</button>
+            </div>
+            
+            <div class="results-container" id="resultsContainer">
+                <!-- Analysis phases will be shown here -->
+                <div class="phases-container">
+                    <div class="phase" id="phase1">
+                        <h3>Phase 1: Pre-Selection</h3>
+                        <div class="phase-results" id="phase1Results">
+                            <!-- Top 20 results will be shown here -->
+                        </div>
+                    </div>
+                    
+                    <div class="phase" id="phase2">
+                        <h3>Phase 2: Focused Search</h3>
+                        <div class="phase-results" id="phase2Results">
+                            <!-- Final results will be shown here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Final identification result -->
+                <div class="final-result" id="finalResult">
+                    <!-- The identified plant will be shown here -->
+                </div>
+            </div>
+        </main>
+        
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p id="loadingText">Analyzing... Please wait</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>&copy; 2025 Plant Recognition System</p>
+        </footer>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
