@@ -34,6 +34,7 @@ import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.preprocessing import StandardScaler
+import random
 
 # Suppress TensorFlow warnings
 import os
@@ -52,6 +53,15 @@ import numpy as np
 np.seterr(all='ignore')
 
 import re
+
+SEED = 42
+def set_seeds(seed=SEED):
+    """Sets random seeds for reproducibility."""
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    print(f"{TermColors.CYAN}ℹ Random seeds set to {seed}{TermColors.ENDC}")
 
 # Create a filter for TFA warnings
 def filter_tfa_warnings(message, category, filename, lineno, file=None, line=None):
@@ -1552,6 +1562,94 @@ def extract_combined_features_optimized(class_dirs, chunk_idx):
     print(f"{TermColors.GREEN}✅ Combined features saved: {combined_dim} dimensions{TermColors.ENDC}")
     return features_file, class_mapping
 
+def contrastive_feature_learning(X_train, y_train, margin=1.0, pull_factor=0.1, push_factor=0.05, max_shift_norm=0.5):
+    """Applies contrastive learning to feature vectors to increase class separability.
+
+    Moves features closer to their class centroid and further from other centroids.
+
+    Args:
+        X_train: Training features (numpy array).
+        y_train: Training labels (numpy array).
+        margin: Desired separation margin (not directly used in this force model, but concept applies).
+        pull_factor: Strength to pull sample towards its own centroid.
+        push_factor: Strength to push sample away from other centroids.
+        max_shift_norm: Maximum allowed magnitude of the shift vector to prevent instability.
+
+    Returns:
+        Enhanced feature vectors with potentially better class separation.
+    """
+    print(f"{TermColors.CYAN}ℹ Applying contrastive learning to increase class separability...{TermColors.ENDC}")
+    set_seeds() # Ensure reproducibility within this step if needed
+
+    # Normalize features first? Optional, depends on whether features are already scaled.
+    # X_norm = normalize_feature_vectors(X_train) # Assuming normalize_feature_vectors exists
+    X_norm = X_train # Assuming features are already reasonably scaled (e.g., by StandardScaler)
+
+    enhanced_features = np.copy(X_norm) # Work on a copy
+    unique_classes = np.unique(y_train)
+
+    if len(unique_classes) < 2:
+        print(f"{TermColors.YELLOW}⚠️ Only one class found. Skipping contrastive learning.{TermColors.ENDC}")
+        return X_train # Return original features
+
+    # Create class-wise centroids
+    centroids = {}
+    for cls in unique_classes:
+        class_mask = (y_train == cls)
+        if np.sum(class_mask) > 0:
+            centroids[cls] = np.mean(X_norm[class_mask], axis=0)
+        else:
+             # Handle case where a class might have no samples after potential filtering
+             centroids[cls] = np.zeros_like(X_norm[0])
+
+
+    # Apply contrastive transformation
+    for i in tqdm(range(X_norm.shape[0]), desc="Contrastive Enhancement"):
+        x = X_norm[i]
+        y = y_train[i]
+        own_centroid = centroids[y]
+        shift_vector = np.zeros_like(x)
+
+        # Pull towards own centroid
+        pull_direction = own_centroid - x
+        shift_vector += pull_factor * pull_direction
+
+        # Push away from other centroids
+        push_force_total = np.zeros_like(x)
+        num_other_centroids = 0
+        for other_cls, other_centroid in centroids.items():
+            if other_cls != y:
+                push_direction = x - other_centroid
+                distance_sq = np.sum(push_direction**2)
+                # Apply push force inversely proportional to distance (stronger push from closer centroids)
+                # Avoid division by zero
+                push_force = push_direction / (distance_sq + 1e-6)
+                push_force_total += push_force
+                num_other_centroids += 1
+
+        if num_other_centroids > 0:
+             shift_vector += push_factor * (push_force_total / num_other_centroids) # Average push force
+
+        # Limit the magnitude of the shift to prevent instability
+        shift_norm = np.linalg.norm(shift_vector)
+        if shift_norm > max_shift_norm:
+            shift_vector = (shift_vector / shift_norm) * max_shift_norm
+
+        # Apply the shift
+        enhanced_features[i] = x + shift_vector
+
+    # Optional: Renormalize features after shifting
+    # enhanced_features = normalize_feature_vectors(enhanced_features)
+
+    print(f"{TermColors.GREEN}✅ Feature enhancement completed with contrastive learning.{TermColors.ENDC}")
+
+    # Check if enhancement actually changed features
+    if np.allclose(X_train, enhanced_features):
+         print(f"{TermColors.YELLOW}⚠️ Contrastive learning did not significantly alter features. Check factors/logic.{TermColors.ENDC}")
+
+
+    return enhanced_features # Return the modified features
+
 def calibrate_model_temperature(model, X_val, y_val, initial_temp=1.0):
     """Calibrate model confidence using temperature scaling
     
@@ -2258,55 +2356,28 @@ def generate_explanation_text(model_output, class_names, heatmap_analysis=None):
     return explanation
 
 # In your build_model function, add attention mechanism
-def build_model(feature_dim, num_classes):
-    """Build model with attention mechanism for better plant feature focus
-    
-    Args:
-        feature_dim: Input feature dimension
-        num_classes: Number of output classes
-        
-    Returns:
-        Compiled Keras model
-    """
-    inputs = tf.keras.Input(shape=(feature_dim,))
-    
-    # First dense block
-    x = tf.keras.layers.Dense(1024, activation='relu')(inputs)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Dropout(0.3)(x)
-    
-    # Second dense block
-    x = tf.keras.layers.Dense(512, activation='relu')(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.Dropout(0.3)(x)
-    
-    # Attention mechanism
-    attention = tf.keras.layers.Dense(512, activation='tanh')(x)
-    attention = tf.keras.layers.Dense(1, activation='sigmoid')(attention)
-    attention = tf.keras.layers.Reshape((512,))(attention)
-    
-    # Apply attention
-    x = tf.keras.layers.Multiply()([x, attention])
-    
-    # Final classification layer
-    x = tf.keras.layers.Dense(256, activation='relu')(x)
-    x = tf.keras.layers.Dropout(0.2)(x)
-    outputs = tf.keras.layers.Dense(num_classes)(x)
-    
-    # Build model
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    
-    # Define custom top-k accuracy metric
-    def sparse_top_k_accuracy(y_true, y_pred, k=5):
-        return tf.keras.metrics.sparse_top_k_categorical_accuracy(y_true, y_pred, k)
-    
-    # Compile model
+def build_model(input_dim, num_classes, l2_reg=1e-4):
+    """Builds a simple MLP model for classification with L2 regularization."""
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(1024, activation='relu', input_shape=(input_dim,),
+                              kernel_regularizer=tf.keras.regularizers.l2(l2_reg), name="dense_1"),
+        tf.keras.layers.BatchNormalization(name="bn_1"),
+        tf.keras.layers.Dropout(0.4, name="dropout_1"), # Slightly increased dropout
+        tf.keras.layers.Dense(512, activation='relu',
+                              kernel_regularizer=tf.keras.regularizers.l2(l2_reg), name="dense_2"),
+        tf.keras.layers.BatchNormalization(name="bn_2"),
+        tf.keras.layers.Dropout(0.4, name="dropout_2"),
+        tf.keras.layers.Dense(num_classes, name="output") # Output logits
+    ])
+    # Using AdamW optimizer (Adam with decoupled weight decay) is often preferred
+    optimizer = tfa.optimizers.AdamW(weight_decay=1e-5, learning_rate=1e-3) # Requires tensorflow-addons
+    # optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3) # Fallback if tfa not available
+
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        optimizer=optimizer,
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=['accuracy', sparse_top_k_accuracy]
+        metrics=['accuracy', sparse_top_k_accuracy] # Assuming sparse_top_k_accuracy is defined
     )
-    
     return model
 
 def build_triplet_model(feature_dim, num_classes, margin=0.5):
@@ -3319,14 +3390,16 @@ def train_plants_advanced():
     print(f"STARTING ADVANCED PLANT RECOGNITION TRAINING PIPELINE")
     print(f"(Applying Contrastive Learning Enhancement)")
     print(f"{'='*60}{TermColors.ENDC}")
+    set_seeds() # Set seeds at the beginning of the pipeline
 
     # 1. Check for Feature Extraction
-    # Look for features inside chunk directories first, as that seems to be the structure
+    # Look for features inside chunk directories first
     feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*", "features.npz")))
 
     if not feature_files:
         # Fallback: Check root FEATURES_DIR if not found in subdirs
         feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*_features.npz")))
+        # If using fallback, need to adjust path logic below or reorganize features
 
     if not feature_files:
         print(f"{TermColors.RED}❌ No feature files found in {FEATURES_DIR} or its subdirectories. Feature extraction is required.{TermColors.ENDC}")
@@ -3334,9 +3407,7 @@ def train_plants_advanced():
         print(f"{TermColors.CYAN}ℹ Attempting to run feature extraction pipeline automatically...{TermColors.ENDC}")
         try:
             # Assuming a function like 'run_feature_extraction_pipeline' exists
-            # This function should handle extracting features and saving them correctly
-            # (e.g., into FEATURES_DIR/chunk_X/features.npz)
-            run_feature_extraction_pipeline() # You need to ensure this function is defined and works
+            run_feature_extraction_pipeline() # Ensure this saves to chunk subdirs
             # Re-check for feature files after attempting extraction
             feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*", "features.npz")))
             if not feature_files:
@@ -3361,6 +3432,8 @@ def train_plants_advanced():
         try:
             # Assumes path like ".../chunk_X/features.npz"
             chunk_idx = int(os.path.basename(os.path.dirname(features_file)).split("_")[1])
+            chunk_feature_dir = os.path.dirname(features_file)
+            class_mapping_file = os.path.join(chunk_feature_dir, "class_mapping.json")
         except (IndexError, ValueError):
              print(f"{TermColors.YELLOW}⚠️ Could not determine chunk index from path {features_file}. Skipping.{TermColors.ENDC}")
              continue
@@ -3372,68 +3445,102 @@ def train_plants_advanced():
             print(f"{TermColors.GREEN}✅ Chunk {chunk_idx} already completed, skipping...{TermColors.ENDC}")
             continue
 
-        # Load features for the current chunk
+        # Load features and metadata for the current chunk
         try:
-            print(f"{TermColors.CYAN}ℹ Loading features from {features_file}...{TermColors.ENDC}")
+            print(f"{TermColors.CYAN}ℹ Loading features and metadata from {features_file}...{TermColors.ENDC}")
             with np.load(features_file) as data:
                 features = data['features']
-                labels = data['labels']
+                labels = data['labels'] # Local indices
+            if not os.path.exists(class_mapping_file):
+                 raise FileNotFoundError(f"Class mapping not found: {class_mapping_file}")
+            with open(class_mapping_file) as f:
+                class_mapping = json.load(f) # {str(local_idx): class_name}
+
             print(f"{TermColors.GREEN}✅ Loaded {len(features)} samples for chunk {chunk_idx}.{TermColors.ENDC}")
+            feature_dim = features.shape[1]
 
             # Apply contrastive learning enhancement
             print(f"{TermColors.CYAN}ℹ Applying contrastive learning enhancement to features for chunk {chunk_idx}...{TermColors.ENDC}")
-            # Ensure contrastive_feature_learning exists and handles potential errors
             try:
-                # Assuming contrastive_feature_learning is defined elsewhere
-                features, labels = contrastive_feature_learning(features, labels)
-                print(f"{TermColors.GREEN}✅ Contrastive enhancement applied.{TermColors.ENDC}")
+                features_enhanced = contrastive_feature_learning(features, labels) # Pass original features/labels
             except NameError:
-                 print(f"{TermColors.RED}❌ 'contrastive_feature_learning' function not found. Cannot apply enhancement. Training with original features.{TermColors.ENDC}")
+                 print(f"{TermColors.RED}❌ 'contrastive_feature_learning' function not found. Training with original features.{TermColors.ENDC}")
+                 features_enhanced = features # Use original features
             except Exception as cle:
                  print(f"{TermColors.RED}❌ Error during contrastive learning for chunk {chunk_idx}: {cle}. Training with original features.{TermColors.ENDC}")
                  traceback.print_exc()
+                 features_enhanced = features # Use original features
 
+            # Standardize features (AFTER potential enhancement)
+            print(f"{TermColors.CYAN}ℹ Standardizing features...{TermColors.ENDC}")
+            scaler = StandardScaler()
+            features_scaled = scaler.fit_transform(features_enhanced)
+            # Consider saving the scaler per chunk if needed later
+            # joblib.dump(scaler, os.path.join(chunk_feature_dir, "scaler.joblib"))
 
-            # Split the (potentially enhanced) features into training and validation sets
+            # Split the scaled, enhanced features into training and validation sets
             print(f"{TermColors.CYAN}ℹ Splitting features into train/validation sets...{TermColors.ENDC}")
             X_train, X_val, y_train, y_val = train_test_split(
-                features, labels, test_size=0.2, random_state=42, stratify=labels
+                features_scaled, labels, test_size=0.2, random_state=SEED, stratify=labels # Use SEED
             )
             print(f"{TermColors.GREEN}✅ Data split: {len(X_train)} train, {len(X_val)} validation samples.{TermColors.ENDC}")
 
-            # Train the model for this chunk using the features
-            # Assuming train_chunk_model_with_swa is the preferred/best training function
+            # Balance the training data
+            print(f"{TermColors.CYAN}ℹ Balancing training data...{TermColors.ENDC}")
+            X_train_balanced, y_train_balanced = balance_training_data(X_train, y_train) # Assuming implemented
+
+            # Augment the balanced training data in feature space
+            print(f"{TermColors.CYAN}ℹ Augmenting training data in feature space...{TermColors.ENDC}")
+            X_train_aug, y_train_aug = augment_feature_space(X_train_balanced, y_train_balanced, augmentation_factor=0.3) # Assuming implemented
+
+            # Analyze features (optional, for metadata)
+            confusability = 0.0
+            try:
+                 # Assuming analyze_plant_features works on scaled/enhanced features
+                 confusability = analyze_plant_features(features_scaled, labels) # Assuming implemented
+            except NameError:
+                 print(f"{TermColors.YELLOW}⚠️ 'analyze_plant_features' not found. Skipping confusability metric.{TermColors.ENDC}")
+            except Exception as analyze_err:
+                 print(f"{TermColors.YELLOW}⚠️ Error during feature analysis: {analyze_err}.{TermColors.ENDC}")
+
+
+            # Train the model for this chunk using the prepared data
             print(f"{TermColors.CYAN}ℹ Starting training for chunk {chunk_idx} using SWA...{TermColors.ENDC}")
             try:
-                # Assuming train_chunk_model_with_swa is defined elsewhere and takes these args
-                train_chunk_model_with_swa(X_train, y_train, X_val, y_val, chunk_idx, training_state)
+                # Pass all necessary arguments
+                train_chunk_model_with_swa(
+                    X_train=X_train_aug,
+                    y_train=y_train_aug,
+                    X_val=X_val,
+                    y_val=y_val,
+                    chunk_idx=chunk_idx,
+                    training_state=training_state,
+                    class_mapping=class_mapping,
+                    feature_dim=feature_dim,
+                    confusability=confusability
+                )
             except NameError:
-                 print(f"{TermColors.RED}❌ 'train_chunk_model_with_swa' function not found. Attempting 'train_chunk_model'.{TermColors.ENDC}")
-                 try:
-                     # Assuming train_chunk_model is defined elsewhere
-                     train_chunk_model(X_train, y_train, X_val, y_val, chunk_idx, training_state)
-                 except NameError:
-                     print(f"{TermColors.RED}❌ Neither 'train_chunk_model_with_swa' nor 'train_chunk_model' found. Cannot train chunk {chunk_idx}.{TermColors.ENDC}")
-                     continue # Skip to next chunk if no training function found
-                 except Exception as e_train:
-                     print(f"{TermColors.RED}❌ Error during training chunk {chunk_idx} with 'train_chunk_model': {e_train}{TermColors.ENDC}")
-                     traceback.print_exc()
-                     continue # Skip to next chunk on error
-            except Exception as e_swa:
-                 print(f"{TermColors.RED}❌ Error during training chunk {chunk_idx} with SWA: {e_swa}{TermColors.ENDC}")
+                 print(f"{TermColors.RED}❌ 'train_chunk_model_with_swa' function not found. Cannot train chunk {chunk_idx}.{TermColors.ENDC}")
+                 continue # Skip to next chunk if no training function found
+            except Exception as e_train:
+                 print(f"{TermColors.RED}❌ Error during training chunk {chunk_idx}: {e_train}{TermColors.ENDC}")
                  traceback.print_exc()
                  continue # Skip to next chunk on error
 
 
             # Add memory cleanup between chunks
             print(f"{TermColors.CYAN}ℹ Cleaning up memory after chunk {chunk_idx}...{TermColors.ENDC}")
-            del features, labels, X_train, X_val, y_train, y_val # Explicitly delete large arrays
+            del features, labels, features_enhanced, features_scaled, X_train, X_val, y_train, y_val
+            del X_train_balanced, y_train_balanced, X_train_aug, y_train_aug # Delete intermediate arrays
             gc.collect()
             tf.keras.backend.clear_session()
             time.sleep(1) # Short pause
 
-        except FileNotFoundError:
-            print(f"{TermColors.RED}❌ Feature file not found: {features_file}. Skipping chunk.{TermColors.ENDC}")
+            # Prune features (consider if this should happen earlier or if needed at all)
+            # prune_features_rolling_window(chunk_idx) # Assuming implemented
+
+        except FileNotFoundError as e:
+            print(f"{TermColors.RED}❌ File not found error for chunk {chunk_idx}: {e}. Skipping chunk.{TermColors.ENDC}")
             continue
         except Exception as e:
             print(f"{TermColors.RED}❌ Error processing chunk {chunk_idx}: {e}{TermColors.ENDC}")
@@ -3656,226 +3763,163 @@ def train_meta_model():
     gc.collect()
     tf.keras.backend.clear_session()
 
-def train_chunk_model_with_swa(features_file, chunk_idx, training_state=None):
-    """Train a model on extracted features with Stochastic Weight Averaging for better generalization"""
+def train_chunk_model_with_swa(X_train, y_train, X_val, y_val, chunk_idx, training_state=None, class_mapping=None, feature_dim=None, confusability=0.0):
+    """Train a model on extracted features with Stochastic Weight Averaging for better generalization.
+       Assumes X_train, X_val are already scaled and augmented.
+    """
     print(f"{TermColors.HEADER}\n{'='*50}")
-    print(f"TRAINING MODEL WITH SWA FOR CHUNK {chunk_idx+1}")
+    print(f"TRAINING MODEL WITH SWA FOR CHUNK {chunk_idx}")
     print(f"{'='*50}{TermColors.ENDC}")
-    
-    # Extract directory and verify files
-    chunk_feature_dir = os.path.dirname(features_file)
-    class_mapping_file = os.path.join(chunk_feature_dir, "class_mapping.json")
-    
-    if not os.path.exists(class_mapping_file):
-        print(f"{TermColors.RED}❌ Class mapping file not found: {class_mapping_file}{TermColors.ENDC}")
-        return None
-    
-    # Load class mapping
-    with open(class_mapping_file) as f:
-        class_mapping = json.load(f)
-    
+    set_seeds() # Set seeds for reproducible training run
+
+    if class_mapping is None or feature_dim is None:
+         print(f"{TermColors.RED}❌ Missing class_mapping or feature_dim for chunk {chunk_idx}. Cannot train.{TermColors.ENDC}")
+         return None
+
     num_classes = len(class_mapping)
-    print(f"{TermColors.CYAN}ℹ Found {num_classes} classes in this chunk{TermColors.ENDC}")
-    
+    print(f"{TermColors.CYAN}ℹ Training for {num_classes} classes with {feature_dim} input features.{TermColors.ENDC}")
+    print(f"{TermColors.CYAN}ℹ Data shapes: Train X={X_train.shape}, Train y={y_train.shape}, Val X={X_val.shape}, Val y={y_val.shape}{TermColors.ENDC}")
+
     try:
-        # Load features and analyze
-        features, labels = analyze_features(features_file)
-        if features is None or labels is None:
-            print(f"{TermColors.RED}❌ Failed to load features for chunk {chunk_idx}{TermColors.ENDC}")
-            return
-            
-        # Further analyze plant-specific characteristics
-        confusability = analyze_plant_features(features, labels)
-        
-        # Standardize features
-        print(f"{TermColors.CYAN}ℹ Standardizing features{TermColors.ENDC}")
-        scaler = StandardScaler()
-        features_scaled = scaler.fit_transform(features)
-        
-        X_train, X_val, y_train, y_val = train_test_split(
-            features_scaled, labels, test_size=0.2, random_state=42, stratify=labels
-        )
-
-        print(f"{TermColors.GREEN}✅ Data split: {X_train.shape[0]} training, {X_val.shape[0]} validation samples{TermColors.ENDC}")
-
-        # THEN balance the training data to reduce bias
-        X_train, y_train = balance_training_data(X_train, y_train)
-
-        # THEN augment the training data after balancing
-        print(f"{TermColors.CYAN}ℹ Augmenting training data for better class separation{TermColors.ENDC}")
-        X_train, y_train = augment_feature_space(X_train, y_train, augmentation_factor=0.3)
-        
-        # Build model
-        feature_dim = features.shape[1]
-        print(f"{TermColors.CYAN}ℹ Building model for {num_classes} classes with {feature_dim} input features{TermColors.ENDC}")
-        
+        # Build model (now includes L2 reg)
         model = build_model(feature_dim, num_classes)
-        
-        # Compute class weights if imbalanced
+        model.summary(print_fn=lambda x: print(f"{TermColors.CYAN}{x}{TermColors.ENDC}"))
+
+        # Compute class weights if imbalanced (use balanced weights function)
         class_weights = None
-        if len(np.unique(y_train)) > 1:  # Only if we have multiple classes
+        if len(np.unique(y_train)) > 1:
+            print(f"{TermColors.CYAN}ℹ Computing balanced class weights...{TermColors.ENDC}")
             try:
-                # Use our new balanced class weight function
-                print(f"{TermColors.CYAN}ℹ Computing balanced class weights to handle class imbalance{TermColors.ENDC}")
+                # Ensure compute_balanced_class_weights is implemented correctly
                 class_weights = compute_balanced_class_weights(y_train)
-                
-                print(f"{TermColors.GREEN}✅ Class weights computed to balance training{TermColors.ENDC}")
-            except Exception as e:
-                print(f"{TermColors.YELLOW}⚠️ Could not compute class weights: {e}{TermColors.ENDC}")
-                # Fallback to manual calculation if the function fails
-                try:
-                    # Count samples per class
-                    unique_classes = np.unique(y_train)
-                    class_counts = {cls: np.sum(y_train == cls) for cls in unique_classes}
-                    
-                    # Check for imbalance
-                    max_count = max(class_counts.values())
-                    min_count = min(class_counts.values())
-                    
-                    if max_count / min_count > 2:  # Significant imbalance
-                        print(f"{TermColors.CYAN}ℹ Class imbalance detected (max/min ratio: {max_count/min_count:.1f}){TermColors.ENDC}")
-                        
-                        # Compute balanced weights
-                        weights = compute_class_weight(class_weight='balanced', classes=unique_classes, y=y_train)
-                        class_weights = {i: w for i, w in zip(unique_classes, weights)}
-                        
-                        # Cap extreme weights
-                        for cls, weight in class_weights.items():
-                            if weight > 5:
-                                class_weights[cls] = 5.0  # Cap at 5x
-                                
-                        print(f"{TermColors.CYAN}ℹ Using class weights to balance training{TermColors.ENDC}")
-                except Exception as e:
-                    print(f"{TermColors.YELLOW}⚠️ Could not compute class weights: {e}{TermColors.ENDC}")
-                    class_weights = None
-        
-        # Keep track of weight snapshots
-        weight_snapshots = []
-        
+                print(f"{TermColors.GREEN}✅ Class weights computed.{TermColors.ENDC}")
+            except Exception as cw_err:
+                 print(f"{TermColors.YELLOW}⚠️ Failed to compute class weights: {cw_err}. Proceeding without weights.{TermColors.ENDC}")
+
+
         # Custom callback for SWA
         class SWACallback(tf.keras.callbacks.Callback):
-            def __init__(self, start_epoch=10):
+            def __init__(self, start_epoch, swa_model):
                 super().__init__()
                 self.start_epoch = start_epoch
-                self.snapshots = []
-                
+                self.swa_model = swa_model # Use the main model instance
+                self.swa_weights = None
+                self.n_averaged = tf.Variable(0, dtype=tf.int64)
+
             def on_epoch_end(self, epoch, logs=None):
                 if epoch >= self.start_epoch:
-                    print(f"Taking weight snapshot at epoch {epoch+1}")
-                    self.snapshots.append(self.model.get_weights())
-        
+                    print(f"{TermColors.MAGENTA} SWA: Averaging weights for epoch {epoch+1}{TermColors.ENDC}")
+                    current_weights = self.model.get_weights()
+                    if self.swa_weights is None:
+                        self.swa_weights = [np.copy(w) for w in current_weights]
+                    else:
+                        # Update moving average: avg = (avg * n + current) / (n + 1)
+                        self.swa_weights = [
+                            (swa_w * tf.cast(self.n_averaged, swa_w.dtype) + current_w) / tf.cast(self.n_averaged + 1, swa_w.dtype)
+                            for swa_w, current_w in zip(self.swa_weights, current_weights)
+                        ]
+                    self.n_averaged.assign_add(1)
+
+            def get_swa_weights(self):
+                 return self.swa_weights if self.swa_weights is not None else self.model.get_weights()
+
+            def get_n_averaged(self):
+                 return self.n_averaged.numpy()
+
+
         # Setup callbacks
+        swa_start_epoch = 15 # Start SWA after initial convergence
+        swa_callback = SWACallback(start_epoch=swa_start_epoch, swa_model=model)
+
+        # Ensure other callbacks are defined or remove them if not implemented
+        # dynamic_optimizer = DynamicTrainingOptimizer(patience=5) # Assuming implemented
+        # adaptive_reg = AdaptiveRegularization(model) # Assuming implemented
+        metrics_display = MetricsDisplayCallback(
+                total_epochs=EPOCHS, # Assuming EPOCHS is defined globally
+                validation_data=(X_val, y_val),
+                training_state=training_state,
+                chunk_idx=chunk_idx # Pass chunk_idx for logging
+            )
+
         callbacks = [
-            # Checkpoints to save best model
             ModelCheckpoint(
                 filepath=os.path.join(CHECKPOINT_DIR, f"chunk_{chunk_idx}_best.keras"),
                 save_best_only=True,
-                monitor='val_loss',
+                monitor='val_loss', # Monitor validation loss for best checkpoint
                 mode='min',
-                verbose=1
+                verbose=0 # Less verbose checkpoint saving
             ),
-            
-            # Early stopping to prevent overfitting
             EarlyStopping(
-                monitor='val_loss',
-                patience=12,  # Longer patience for SWA
-                restore_best_weights=True, 
+                monitor='val_loss', # Stop based on validation loss
+                patience=15, # Increased patience
+                restore_best_weights=True, # Restore best weights found during early stopping
                 verbose=1
             ),
-            
-            # Dynamic optimizer for automatic learning rate adjustments
-            DynamicTrainingOptimizer(patience=2),
-            
-            # SWA callback to collect weight snapshots
-            SWACallback(start_epoch=15),  # Start collecting after 15 epochs
-            
-            # Adaptive regularization based on overfitting detection
-            AdaptiveRegularization(model),
-            
-            # Display progress with custom metrics visualization
-            MetricsDisplayCallback(
-                total_epochs=EPOCHS,
-                validation_data=(X_val, y_val),
-                training_state=training_state
-            )
+            # dynamic_optimizer, # Include if implemented
+            swa_callback, # Add SWA callback
+            # adaptive_reg, # Include if implemented
+            metrics_display
         ]
-        
+
         # Check if we're resuming training
         start_epoch = 0
-        if training_state and training_state.current_chunk == chunk_idx:
-            start_epoch = training_state.current_epoch
-            print(f"{TermColors.CYAN}ℹ Resuming training from epoch {start_epoch + 1}{TermColors.ENDC}")
-        
+        # Resume logic needs refinement - loading weights might interfere with SWA start
+        # Simplification: Always start from epoch 0 for now unless resume logic is robustly handled
+        # if training_state and training_state.current_chunk == chunk_idx:
+        #     start_epoch = training_state.current_epoch
+        #     print(f"{TermColors.YELLOW}⚠️ Resuming training from epoch {start_epoch}{TermColors.ENDC}")
+        #     # Need to load weights carefully here
+
         # Train the model
-        print(f"{TermColors.CYAN}ℹ Training model for up to {EPOCHS} epochs{TermColors.ENDC}")
-        swa_callback = callbacks[3]  # The SWACallback
-        
+        print(f"{TermColors.CYAN}ℹ Training model for up to {EPOCHS} epochs (SWA starts epoch {swa_start_epoch})...{TermColors.ENDC}")
+
         history = model.fit(
             X_train, y_train,
             validation_data=(X_val, y_val),
             epochs=EPOCHS,
             initial_epoch=start_epoch,
-            batch_size=BATCH_SIZE,
+            batch_size=BATCH_SIZE, # Assuming BATCH_SIZE is defined globally
             callbacks=callbacks,
             class_weight=class_weights,
-            verbose=0  # We use our own progress display
+            verbose=0 # Use MetricsDisplayCallback for progress
         )
-        
-        # Apply SWA if we have snapshots
-        snapshots = swa_callback.snapshots
-        if snapshots:
-            print(f"{TermColors.CYAN}ℹ Applying Stochastic Weight Averaging with {len(snapshots)} snapshots{TermColors.ENDC}")
-            # Compute average weights
-            avg_weights = []
-            for i in range(len(snapshots[0])):
-                # Average weights from all snapshots for each layer
-                layer_avg = np.mean([s[i] for s in snapshots], axis=0)
-                avg_weights.append(layer_avg)
-            
-            # Create a copy of model with averaged weights
-            swa_model = tf.keras.models.clone_model(model)
-            swa_model.set_weights(avg_weights)
-            swa_model.compile(
-                optimizer=model.optimizer, 
-                loss='sparse_categorical_crossentropy',
-                metrics=['accuracy', sparse_top_k_accuracy]
-            )
-            
-            # Evaluate both models
-            orig_loss, orig_acc, orig_top_k = model.evaluate(X_val, y_val, verbose=0)
-            swa_loss, swa_acc, swa_top_k = swa_model.evaluate(X_val, y_val, verbose=0)
-            
-            print(f"{TermColors.CYAN}ℹ Original model: Acc={orig_acc:.4f}, Top-{TOP_K}={orig_top_k:.4f}{TermColors.ENDC}")
-            print(f"{TermColors.CYAN}ℹ SWA model: Acc={swa_acc:.4f}, Top-{TOP_K}={swa_top_k:.4f}{TermColors.ENDC}")
-            
-            # Use SWA model if it's better
-            if swa_acc > orig_acc:
-                print(f"{TermColors.GREEN}✅ SWA model performs better! Using SWA weights.{TermColors.ENDC}")
-                model = swa_model
-                val_loss, val_acc, val_top_k = swa_loss, swa_acc, swa_top_k
-            else:
-                print(f"{TermColors.YELLOW}⚠️ Original model performs better. Keeping original weights.{TermColors.ENDC}")
-                val_loss, val_acc, val_top_k = orig_loss, orig_acc, orig_top_k
+
+        final_epoch = start_epoch + len(history.history['loss'])
+
+        # Apply SWA weights if averaging occurred
+        swa_weights = swa_callback.get_swa_weights()
+        n_averaged = swa_callback.get_n_averaged()
+        used_swa = False
+        if n_averaged > 0:
+            print(f"{TermColors.MAGENTA}Applying SWA weights (averaged over {n_averaged} epochs)...{TermColors.ENDC}")
+            model.set_weights(swa_weights)
+            used_swa = True
+            # Optional: Re-compile SWA model if optimizer state matters (usually not needed for evaluation)
+            # model.compile(...)
         else:
-            # If no snapshots (training was too short), evaluate original model
-            val_loss, val_acc, val_top_k = model.evaluate(X_val, y_val, verbose=0)
-            
+            print(f"{TermColors.YELLOW}⚠️ SWA did not run (training stopped before epoch {swa_start_epoch}). Using best weights from EarlyStopping.{TermColors.ENDC}")
+            # Weights should already be the best ones due to restore_best_weights=True
+
+        # Evaluate the final model (potentially with SWA weights)
+        print(f"{TermColors.CYAN}ℹ Evaluating final model...{TermColors.ENDC}")
+        val_loss, val_acc, val_top_k = model.evaluate(X_val, y_val, verbose=0)
+
         # Print final metrics
-        print(f"\n{TermColors.HEADER}FINAL VALIDATION METRICS:{TermColors.ENDC}")
+        print(f"\n{TermColors.HEADER}FINAL VALIDATION METRICS (Chunk {chunk_idx}):{TermColors.ENDC}")
         print(f"{TermColors.RED}Loss: {val_loss:.4f}{TermColors.ENDC}")
         print(f"{TermColors.GREEN}Accuracy: {val_acc:.4f} ({val_acc:.1%}){TermColors.ENDC}")
-        print(f"{TermColors.GREEN}Top-{TOP_K} Accuracy: {val_top_k:.4f} ({val_top_k:.1%}){TermColors.ENDC}")
-        
-        # Save the model
+        print(f"{TermColors.GREEN}Top-{TOP_K} Accuracy: {val_top_k:.4f} ({val_top_k:.1%}){TermColors.ENDC}") # Assuming TOP_K is defined
+
+        # Save the final model (potentially SWA model)
         model_file = os.path.join(MODEL_DIR, f"chunk_{chunk_idx}_model.keras")
         model.save(model_file)
-        
-        # Save metadata
+
+        # --- Production Practice: Enhanced Metadata ---
         metadata = {
             "chunk_idx": chunk_idx,
             "num_classes": num_classes,
             "feature_dim": feature_dim,
-            "class_mapping": class_mapping,
+            "class_mapping": class_mapping, # Maps local index (str) to class name
             "performance": {
                 "val_loss": float(val_loss),
                 "val_accuracy": float(val_acc),
@@ -3883,107 +3927,472 @@ def train_chunk_model_with_swa(features_file, chunk_idx, training_state=None):
             },
             "training_samples": int(X_train.shape[0]),
             "validation_samples": int(X_val.shape[0]),
-            "confusability": float(confusability),
+            "confusability_metric": float(confusability), # Assuming analyze_plant_features returns this
+            "epochs_trained": final_epoch,
+            "stopped_early": final_epoch < EPOCHS,
+            "used_swa": used_swa,
+            "n_swa_averaged": int(n_averaged),
+            "l2_regularization": float(model.layers[0].kernel_regularizer.l2) if hasattr(model.layers[0].kernel_regularizer, 'l2') else 0.0,
+            "optimizer": model.optimizer.get_config(),
             "created": datetime.now().isoformat(),
-            "used_swa": len(snapshots) > 0
+            "seed": SEED
         }
-        
-        with open(os.path.join(MODEL_DIR, f"chunk_{chunk_idx}_metadata.json"), "w") as f:
-            json.dump(metadata, f, indent=2)
-            
+
+        metadata_file = os.path.join(MODEL_DIR, f"chunk_{chunk_idx}_metadata.json")
+        try:
+            with open(metadata_file, "w") as f:
+                 json.dump(metadata, f, indent=2)
+            print(f"{TermColors.GREEN}✅ Metadata saved to {metadata_file}{TermColors.ENDC}")
+        except Exception as json_err:
+             print(f"{TermColors.RED}❌ Error saving metadata: {json_err}{TermColors.ENDC}")
+
+
         print(f"{TermColors.GREEN}✅ Model saved to {model_file}{TermColors.ENDC}")
-        
-        # Mark chunk as processed
+
+        # Mark chunk as processed in training state
         if training_state:
-            training_state.mark_chunk_complete(chunk_idx)
-        
+            training_state.mark_chunk_completed(chunk_idx, final_epoch)
+
         # Clean up to prevent memory leaks
-        clean_memory()
-        
-        # Prune features to save disk space
-        prune_features_rolling_window(chunk_idx)
-        
-        return model
-        
+        del model, history, X_train, y_train, X_val, y_val # Explicitly delete large arrays
+        gc.collect()
+        tf.keras.backend.clear_session()
+        time.sleep(1) # Short pause
+
+        # Pruning features is handled outside this function now in train_plants_advanced
+
+        return model_file # Return path instead of model object
+
     except Exception as e:
-        print(f"{TermColors.RED}❌ Error training model: {e}{TermColors.ENDC}")
+        print(f"{TermColors.RED}❌ Error training model for chunk {chunk_idx}: {e}{TermColors.ENDC}")
+        traceback.print_exc()
+        # Clean up even on error
+        gc.collect()
+        tf.keras.backend.clear_session()
+        return None
+
+def quantize_model(model, quantization_type="dynamic", representative_data_gen=None, output_dir=MODEL_DIR):
+    """Quantize Keras model to TFLite format.
+
+    Args:
+        model: Keras model to quantize.
+        quantization_type: Type of quantization ('dynamic', 'float16', or 'int8').
+        representative_data_gen: A generator function yielding samples for INT8 calibration. Required for 'int8'.
+        output_dir: Directory to save the quantized model.
+
+    Returns:
+        Path to the saved TFLite model file, or None if failed.
+    """
+    print(f"{TermColors.CYAN}ℹ Quantizing model to {quantization_type}{TermColors.ENDC}")
+    tflite_model = None
+    try:
+        converter = tf.lite.TFLiteConverter.from_keras_model(model)
+
+        if quantization_type == "dynamic":
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        elif quantization_type == "float16":
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+            converter.target_spec.supported_types = [tf.float16]
+        elif quantization_type == "int8":
+            if representative_data_gen is None:
+                print(f"{TermColors.RED}❌ Representative dataset generator required for INT8 quantization.{TermColors.ENDC}")
+                return None
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+            converter.representative_dataset = representative_data_gen # Use the generator directly
+            # Ensure INT8 input and output tensors. Adjust if your model uses float inputs/outputs.
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            # Assuming input features are scaled, float32 is common. Output depends on the final layer.
+            # Let's keep input/output float32 for broader compatibility unless specifically needed otherwise.
+            # converter.inference_input_type = tf.int8 # or tf.uint8
+            # converter.inference_output_type = tf.int8 # or tf.uint8
+            # If using float input/output with int8 ops:
+            converter.inference_input_type = tf.float32
+            converter.inference_output_type = tf.float32
+        else:
+            print(f"{TermColors.RED}❌ Unknown quantization type: {quantization_type}{TermColors.ENDC}")
+            return None
+
+        tflite_model = converter.convert()
+        original_size = model_size_mb(model) # Calculate before potentially deleting model
+        quantized_size = len(tflite_model) / (1024 * 1024)
+
+        # Define output path
+        model_name = model.name if model.name else "student_model"
+        output_filename = f"{model_name}_quantized_{quantization_type}.tflite"
+        output_path = os.path.join(output_dir, output_filename)
+
+        # Save the TFLite model
+        os.makedirs(output_dir, exist_ok=True) # Ensure output dir exists
+        with open(output_path, 'wb') as f:
+            f.write(tflite_model)
+
+        print(f"{TermColors.GREEN}✅ Model successfully quantized to {quantization_type}{TermColors.ENDC}")
+        print(f"{TermColors.YELLOW}⚠️ Original model size: {original_size:.2f} MB{TermColors.ENDC}")
+        print(f"{TermColors.GREEN}✅ Quantized model size: {quantized_size:.2f} MB{TermColors.ENDC}")
+        print(f"{TermColors.GREEN}✅ Saved quantized model to: {output_path}{TermColors.ENDC}")
+        return output_path # Return the path to the saved file
+
+    except Exception as e:
+        print(f"{TermColors.RED}❌ Error during TFLite conversion: {e}{TermColors.ENDC}")
         traceback.print_exc()
         return None
 
-def quantize_model(model, quantization_type="dynamic"):
-    """Quantize model for faster inference and smaller size
-    
-    Args:
-        model: Keras model to quantize
-        quantization_type: Type of quantization ('dynamic', 'float16', or 'int8')
-        
-    Returns:
-        Quantized model
+def get_teacher_predictions(X_data, chunk_models_info, batch_size=128):
     """
-    import tensorflow as tf
-    
-    print(f"{TermColors.CYAN}ℹ Quantizing model to {quantization_type}{TermColors.ENDC}")
-    
-    if quantization_type == "dynamic":
-        # Dynamic range quantization
-        converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        tflite_model = converter.convert()
-        
-        # Convert back to Keras model if possible
-        # Note: In real implementations, you would use the TFLite model directly
-        # This is just a placeholder for the conversion back to Keras
-        # In production, you would save the TFLite model and use the TFLite runtime
-        print(f"{TermColors.GREEN}✅ Model successfully quantized to dynamic range{TermColors.ENDC}")
-        print(f"{TermColors.YELLOW}⚠️ Original model size: {model_size_mb(model):.2f} MB{TermColors.ENDC}")
-        print(f"{TermColors.GREEN}✅ Quantized model size: {len(tflite_model)/1024/1024:.2f} MB{TermColors.ENDC}")
-        
-        return model  # In reality, would return or save the TFLite model
-        
-    elif quantization_type == "float16":
-        # Float16 quantization
-        converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        converter.target_spec.supported_types = [tf.float16]
-        tflite_model = converter.convert()
-        
-        print(f"{TermColors.GREEN}✅ Model successfully quantized to float16{TermColors.ENDC}")
-        print(f"{TermColors.YELLOW}⚠️ Original model size: {model_size_mb(model):.2f} MB{TermColors.ENDC}")
-        print(f"{TermColors.GREEN}✅ Quantized model size: {len(tflite_model)/1024/1024:.2f} MB{TermColors.ENDC}")
-        
-        return model
-        
-    elif quantization_type == "int8":
-        # Int8 quantization (requires representative dataset)
-        # This is a simplified version - production code would use a real dataset
-        def representative_dataset():
-            # Use a small subset of your training data here
-            for _ in range(100):
-                # Generate random input in the expected shape
-                input_shape = model.input_shape
-                if isinstance(input_shape, list):
-                    input_shape = input_shape[0]
-                    
-                # Remove batch dimension
-                if input_shape[0] is None:
-                    input_shape = list(input_shape[1:])
-                yield [np.random.random(input_shape).astype(np.float32)]
-        
-        converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        converter.representative_dataset = representative_dataset
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.inference_input_type = tf.int8
-        converter.inference_output_type = tf.int8
-        tflite_model = converter.convert()
-        
-        print(f"{TermColors.GREEN}✅ Model successfully quantized to int8{TermColors.ENDC}")
-        print(f"{TermColors.YELLOW}⚠️ Original model size: {model_size_mb(model):.2f} MB{TermColors.ENDC}")
-        print(f"{TermColors.GREEN}✅ Quantized model size: {len(tflite_model)/1024/1024:.2f} MB{TermColors.ENDC}")
-        
-        return model
-    
-    return model
+    Generates predictions from the ensemble of chunk models (teacher).
+    Loads models chunk by chunk to manage memory.
+    Assumes X_data is already scaled/preprocessed appropriately for the chunk models.
+    """
+    print(f"{TermColors.CYAN}ℹ Generating teacher predictions...{TermColors.ENDC}")
+    num_samples = X_data.shape[0]
+    # Initialize prediction array - assumes output is logits, adjust if softmax
+    # Need to know the total number of classes across all chunks
+    total_num_classes = chunk_models_info['total_num_classes']
+    all_teacher_preds = np.zeros((num_samples, total_num_classes), dtype=np.float32)
+
+    # Create a mapping from global class index to chunk index and local class index
+    global_to_local_map = chunk_models_info['global_to_local_map'] # {global_idx: (chunk_idx, local_idx)}
+    chunk_model_paths = chunk_models_info['chunk_model_paths'] # {chunk_idx: path}
+    # chunk_class_counts = chunk_models_info['chunk_class_counts'] # {chunk_idx: num_classes_in_chunk} # Not strictly needed here
+
+    # Process chunk by chunk to save memory
+    for chunk_idx, model_path in tqdm(chunk_model_paths.items(), desc="Teacher Prediction Chunks"):
+        model = None # Ensure model is reset
+        try:
+            model = tf.keras.models.load_model(model_path, custom_objects={
+                'sparse_top_k_accuracy': sparse_top_k_accuracy
+            }, compile=False)
+
+            # Predict for all data using this chunk model
+            chunk_preds = model.predict(X_data, batch_size=batch_size, verbose=0) # Shape: (num_samples, num_classes_in_chunk)
+
+            # Map chunk predictions back to the global prediction array
+            for global_idx, (c_idx, local_idx) in global_to_local_map.items():
+                if c_idx == chunk_idx:
+                    # Place the prediction in the correct global class slot
+                    # This assumes the chunk model outputs logits for its local classes
+                    if local_idx < chunk_preds.shape[1]: # Safety check
+                        all_teacher_preds[:, global_idx] = chunk_preds[:, local_idx]
+                    else:
+                         print(f"{TermColors.YELLOW}⚠️ Local index {local_idx} out of bounds for chunk {chunk_idx} preds shape {chunk_preds.shape}. Skipping global index {global_idx}.{TermColors.ENDC}")
+
+
+            del model # Free memory
+            gc.collect()
+            tf.keras.backend.clear_session()
+            time.sleep(0.1)
+
+        except Exception as e:
+            print(f"{TermColors.YELLOW}⚠️ Error processing teacher chunk {chunk_idx}: {e}. Skipping.{TermColors.ENDC}")
+            if model: del model
+            gc.collect()
+            tf.keras.backend.clear_session()
+            continue
+
+    print(f"{TermColors.GREEN}✅ Teacher predictions generated.{TermColors.ENDC}")
+    return all_teacher_preds
+
+def run_distillation_process(student_model_name="student_model", num_samples_per_chunk=50, val_split=0.2):
+    """
+    Orchestrates the knowledge distillation process.
+    Loads data from chunks, gets teacher predictions, trains and saves student.
+    """
+    print(f"{TermColors.CYAN}ℹ Starting Distillation Orchestration...{TermColors.ENDC}")
+
+    # --- 1. Load Data for Student Training ---
+    # Load a balanced subset of features/labels from across chunks
+    print(f"{TermColors.CYAN}ℹ Loading data subset for distillation...{TermColors.ENDC}")
+    all_features = []
+    all_labels = [] # Global labels
+    global_class_to_idx = {}
+    global_idx_to_class = {}
+    next_global_idx = 0
+    chunk_model_paths = {}
+    chunk_class_counts = {}
+    global_to_local_map = {}
+
+    feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*", "features.npz")))
+    if not feature_files:
+        print(f"{TermColors.RED}❌ No feature files found. Cannot run distillation.{TermColors.ENDC}")
+        return None
+
+    for features_file in tqdm(feature_files, desc="Loading Distillation Data"):
+        try:
+            chunk_idx = int(os.path.basename(os.path.dirname(features_file)).split("_")[1])
+            class_mapping_file = os.path.join(os.path.dirname(features_file), "class_mapping.json")
+            model_file = os.path.join(MODEL_DIR, f"chunk_{chunk_idx}_model.keras")
+            metadata_file = os.path.join(MODEL_DIR, f"chunk_{chunk_idx}_metadata.json")
+
+            if not os.path.exists(class_mapping_file) or not os.path.exists(model_file) or not os.path.exists(metadata_file):
+                print(f"{TermColors.YELLOW}⚠️ Missing files for chunk {chunk_idx}. Skipping.{TermColors.ENDC}")
+                continue
+
+            with open(class_mapping_file) as f:
+                chunk_map = json.load(f) # {str(local_idx): class_name}
+            with open(metadata_file) as f:
+                metadata = json.load(f)
+
+            chunk_model_paths[chunk_idx] = model_file
+            chunk_class_counts[chunk_idx] = metadata['num_classes']
+
+            with np.load(features_file) as data:
+                chunk_features = data['features']
+                chunk_labels = data['labels'] # Local indices
+
+            # Sample data from this chunk
+            indices = np.arange(len(chunk_features))
+            np.random.shuffle(indices)
+            sampled_indices = indices[:num_samples_per_chunk]
+
+            for i in sampled_indices:
+                local_label = chunk_labels[i]
+                class_name = chunk_map.get(str(local_label))
+                if class_name is None: continue
+
+                # Assign global index if new
+                if class_name not in global_class_to_idx:
+                    global_class_to_idx[class_name] = next_global_idx
+                    global_idx_to_class[next_global_idx] = class_name
+                    next_global_idx += 1
+                global_idx = global_class_to_idx[class_name]
+
+                all_features.append(chunk_features[i])
+                all_labels.append(global_idx) # Store global index
+
+                # Update global_to_local map
+                if global_idx not in global_to_local_map:
+                     global_to_local_map[global_idx] = (chunk_idx, int(local_label))
+
+        except Exception as e:
+            print(f"{TermColors.YELLOW}⚠️ Error loading data from {features_file}: {e}{TermColors.ENDC}")
+            continue
+
+    if not all_features:
+         print(f"{TermColors.RED}❌ Failed to load any features for distillation.{TermColors.ENDC}")
+         return None
+
+    total_num_classes = len(global_class_to_idx)
+    X_all = np.array(all_features)
+    y_all = np.array(all_labels) # These are the hard global labels
+
+    # Standardize features (fit scaler on this subset)
+    scaler = StandardScaler()
+    X_all_scaled = scaler.fit_transform(X_all)
+    # Save the scaler used for the student model
+    scaler_path = os.path.join(MODEL_DIR, f"{student_model_name}_scaler.joblib")
+    joblib.dump(scaler, scaler_path)
+    print(f"{TermColors.GREEN}✅ Saved student model scaler to {scaler_path}{TermColors.ENDC}")
+
+    # Split data
+    X_train, X_val, y_train_hard, y_val_hard = train_test_split(
+        X_all_scaled, y_all, test_size=val_split, random_state=42, stratify=y_all
+    )
+    print(f"{TermColors.GREEN}✅ Loaded and split data: {len(X_train)} train, {len(X_val)} val samples. Total classes: {total_num_classes}{TermColors.ENDC}")
+
+    # --- 2. Prepare Teacher Model Information ---
+    if not chunk_model_paths:
+        print(f"{TermColors.RED}❌ No valid chunk models found for teacher.{TermColors.ENDC}")
+        return None
+
+    chunk_models_info = {
+        'total_num_classes': total_num_classes,
+        'chunk_model_paths': chunk_model_paths,
+        'chunk_class_counts': chunk_class_counts,
+        'global_to_local_map': global_to_local_map
+    }
+    print(f"{TermColors.GREEN}✅ Teacher info gathered for {len(chunk_model_paths)} chunks.{TermColors.ENDC}")
+
+    # --- 3. Generate Soft Targets ---
+    teacher_train_preds = get_teacher_predictions(X_train, chunk_models_info)
+    teacher_val_preds = get_teacher_predictions(X_val, chunk_models_info) # For validation loss
+
+    # --- 4. Define Student Architecture ---
+    input_shape = (X_train.shape[1],) # Feature dimension
+    student_model = tf.keras.Sequential([
+        tf.keras.layers.Dense(512, activation='relu', input_shape=input_shape, name="student_dense_1"),
+        tf.keras.layers.Dropout(0.3, name="student_dropout_1"),
+        tf.keras.layers.Dense(256, activation='relu', name="student_dense_2"),
+        tf.keras.layers.BatchNormalization(name="student_bn_1"),
+        tf.keras.layers.Dense(total_num_classes, name="student_output") # Output logits
+    ], name=student_model_name)
+    student_model.summary(print_fn=lambda x: print(f"{TermColors.CYAN}{x}{TermColors.ENDC}"))
+
+    # --- 5. Run Distillation Training ---
+    temperature = 3.0
+    alpha = 0.7 # Weight for soft loss
+
+    # Apply temperature scaling to teacher predictions (logits)
+    soft_targets_train = tf.nn.softmax(teacher_train_preds / temperature).numpy()
+    soft_targets_val = tf.nn.softmax(teacher_val_preds / temperature).numpy()
+
+    # Define distillation loss function
+    # Using sparse categorical crossentropy for hard loss component
+    scce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+    def distillation_loss_fn(y_true_hard, y_pred_logits):
+        # y_true_hard are the actual hard labels (global indices)
+        # We need the corresponding soft targets from the outer scope
+
+        # Find indices corresponding to y_true_hard in the training/validation set
+        # This is complex if using tf.data. Instead, we pass soft targets directly in fit()
+
+        # Soft target loss (KL divergence)
+        # Assuming y_true_soft is passed via model.fit y argument
+        y_true_soft = y_true_hard # Placeholder name, will be soft targets in fit()
+        student_log_probs_scaled = tf.nn.log_softmax(y_pred_logits / temperature)
+        kl_div = tf.reduce_sum(y_true_soft * (tf.math.log(y_true_soft + 1e-8) - student_log_probs_scaled), axis=1)
+        soft_loss = kl_div * (temperature**2)
+
+        # Hard target loss (standard cross-entropy with true labels)
+        # Need the actual hard labels for this. We'll pass them separately or use a custom training loop.
+        # For simplicity with model.fit, let's try passing a tuple (soft_targets, hard_labels)
+        # and modify the loss. OR, we can define a metric for hard label accuracy.
+
+        # Let's stick to the simpler approach: train only on soft targets for now.
+        # A more advanced setup would handle both.
+        return soft_loss # Simplified: Using only soft loss
+
+    # Define a metric for hard label accuracy
+    def hard_label_accuracy(y_true_hard, y_pred_logits):
+         # y_true_hard are the actual hard labels
+         return tf.keras.metrics.sparse_categorical_accuracy(y_true_hard, y_pred_logits)
+
+    student_model.compile(
+        optimizer=tf.keras.optimizers.Adam(1e-3),
+        loss=distillation_loss_fn, # Trains on soft targets passed as y
+        metrics=[hard_label_accuracy] # Evaluates accuracy using hard labels
+    )
+
+    print(f"{TermColors.CYAN}ℹ Training student model on distilled knowledge...{TermColors.ENDC}")
+    callbacks = [
+        tf.keras.callbacks.EarlyStopping(monitor='val_hard_label_accuracy', mode='max', patience=10, restore_best_weights=True, verbose=1),
+        tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4, verbose=1)
+    ]
+
+    # Train using soft targets as 'y', but pass hard labels for the metric
+    # We need to structure the validation data correctly for the metric
+    # Option 1: Custom training loop (more complex)
+    # Option 2: Pass validation data as (X_val, (soft_targets_val, y_val_hard)) - requires loss/metric adjustments
+    # Option 3: Use soft targets for loss, evaluate hard accuracy separately after training. (Simplest for now)
+
+    history = student_model.fit(
+        X_train, soft_targets_train, # Train loss uses soft targets
+        validation_data=(X_val, soft_targets_val), # Validation loss uses soft targets
+        epochs=75, # Increase epochs for distillation
+        batch_size=128,
+        callbacks=callbacks,
+        verbose=1
+    )
+
+    # Evaluate final hard accuracy separately
+    val_loss, val_hard_acc = student_model.evaluate(X_val, y_val_hard, verbose=0) # Use hard labels for final eval
+    print(f"{TermColors.GREEN}✅ Final Validation Hard Accuracy: {val_hard_acc:.4f}{TermColors.ENDC}")
+
+
+    # --- 6. Save Student Model ---
+    student_model_path = os.path.join(MODEL_DIR, f"{student_model_name}.keras")
+    student_model.save(student_model_path)
+    print(f"{TermColors.GREEN}✅ Student model saved to {student_model_path}{TermColors.ENDC}")
+
+    # Save global class mapping for the student model
+    student_class_map_path = os.path.join(MODEL_DIR, f"{student_model_name}_class_mapping.json")
+    global_idx_to_class_str = {str(k): v for k, v in global_idx_to_class.items()}
+    with open(student_class_map_path, 'w') as f:
+        json.dump(global_idx_to_class_str, f, indent=2)
+    print(f"{TermColors.GREEN}✅ Student class mapping saved to {student_class_map_path}{TermColors.ENDC}")
+
+
+    # --- 7. Cleanup ---
+    del X_train, y_train_hard, X_val, y_val_hard, X_all, y_all, X_all_scaled
+    del teacher_train_preds, teacher_val_preds, soft_targets_train, soft_targets_val
+    gc.collect()
+    tf.keras.backend.clear_session()
+
+    return student_model_path # Return path to the saved student model
+
+def run_quantization_process(student_model_path, quantization_type="int8", num_calibration_samples=200):
+    """
+    Orchestrates the model quantization process.
+    """
+    print(f"{TermColors.CYAN}ℹ Starting Quantization Orchestration...{TermColors.ENDC}")
+
+    if not os.path.exists(student_model_path):
+        print(f"{TermColors.RED}❌ Student model not found at {student_model_path}. Cannot quantize.{TermColors.ENDC}")
+        return None
+
+    # --- 1. Load Student Model ---
+    print(f"{TermColors.CYAN}ℹ Loading student model from {student_model_path}...{TermColors.ENDC}")
+    try:
+        # Need custom objects if student model uses them
+        student_model = tf.keras.models.load_model(student_model_path, custom_objects={
+             'distillation_loss_fn': distillation_loss_fn, # If saved with custom loss
+             'hard_label_accuracy': hard_label_accuracy # If saved with custom metric
+        }, compile=False) # Compile=False is fine for conversion
+        print(f"{TermColors.GREEN}✅ Student model loaded.{TermColors.ENDC}")
+    except Exception as e:
+        print(f"{TermColors.RED}❌ Error loading student model: {e}{TermColors.ENDC}")
+        traceback.print_exc()
+        return None
+
+    # --- 2. Prepare Representative Dataset (for INT8) ---
+    representative_data_gen = None
+    if quantization_type == "int8":
+        print(f"{TermColors.CYAN}ℹ Preparing representative dataset for INT8 quantization...{TermColors.ENDC}")
+        try:
+            # Load the scaler saved during distillation
+            scaler_path = student_model_path.replace(".keras", "_scaler.joblib")
+            if not os.path.exists(scaler_path):
+                 raise FileNotFoundError(f"Scaler not found at {scaler_path}")
+            scaler = joblib.load(scaler_path)
+
+            # Load a small subset of features (similar to distillation loading)
+            calibration_features = []
+            feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*", "features.npz")))
+            if not feature_files: raise ValueError("No feature files found for calibration.")
+
+            samples_needed = num_calibration_samples
+            for features_file in feature_files:
+                if samples_needed <= 0: break
+                with np.load(features_file) as data:
+                    chunk_features = data['features']
+                    num_to_take = min(samples_needed, len(chunk_features), 10) # Take few per chunk
+                    indices = np.random.choice(len(chunk_features), num_to_take, replace=False)
+                    calibration_features.extend(chunk_features[indices])
+                    samples_needed -= num_to_take
+
+            if not calibration_features: raise ValueError("Failed to load calibration features.")
+
+            X_calib = np.array(calibration_features)
+            X_calib_scaled = scaler.transform(X_calib)
+
+            # Define the generator function required by TFLiteConverter
+            def representative_dataset_gen():
+                for i in range(X_calib_scaled.shape[0]):
+                    # Yield NumPy array with batch dimension and correct dtype
+                    yield [np.expand_dims(X_calib_scaled[i], axis=0).astype(np.float32)]
+
+            representative_data_gen = representative_dataset_gen # Assign the function itself
+            print(f"{TermColors.GREEN}✅ Representative dataset generator created with {len(calibration_features)} samples.{TermColors.ENDC}")
+
+        except Exception as e:
+            print(f"{TermColors.RED}❌ Error preparing representative dataset: {e}. Cannot perform INT8 quantization.{TermColors.ENDC}")
+            traceback.print_exc()
+            return None # Cannot proceed with INT8 without data
+
+    # --- 3. Call Quantization ---
+    tflite_model_path = quantize_model(
+        student_model,
+        quantization_type=quantization_type,
+        representative_data_gen=representative_data_gen, # Pass the generator function
+        output_dir=MODEL_DIR
+    )
+
+    # --- 4. Cleanup ---
+    del student_model
+    gc.collect()
+    tf.keras.backend.clear_session()
+
+    return tflite_model_path # Return path to the .tflite file
 
 def model_size_mb(model):
     """Calculate model size in MB"""
@@ -4635,12 +5044,60 @@ if __name__ == "__main__":
              print(f"{TermColors.YELLOW}⚠️ Running on CPU (No GPU detected){TermColors.ENDC}")
 
 
-        # --- AUTOMATICALLY RUN BEST MODEL TRAINING ---
-        print(f"\n{TermColors.HEADER}AUTOMATIC MODE: Training Best Model{TermColors.ENDC}")
-        print(f"{TermColors.CYAN}This will extract features (if needed), apply contrastive learning, and train chunk models.{TermColors.ENDC}")
+        # --- AUTOMATICALLY RUN FULL PIPELINE ---
+        print(f"\n{TermColors.HEADER}AUTOMATIC MODE: Full Pipeline (Train -> Distill -> Quantize){TermColors.ENDC}")
 
-        # Call the main training function which now includes contrastive learning
+        # Step 1: Train the best possible 'teacher' models (chunk models)
+        print(f"\n{TermColors.CYAN}--- STEP 1: Running Advanced Training ---{TermColors.ENDC}")
+        print(f"{TermColors.CYAN}This will extract features (if needed), apply contrastive learning, and train chunk models.{TermColors.ENDC}")
         train_plants_advanced()
+        print(f"{TermColors.GREEN}✅ Advanced Training Completed.{TermColors.ENDC}")
+
+        # Step 2: Distill knowledge into a single 'student' model
+        print(f"\n{TermColors.CYAN}--- STEP 2: Running Knowledge Distillation ---{TermColors.ENDC}")
+        # NOTE: You need to implement 'run_distillation_process' below.
+        # This function should:
+        # 1. Define/load the 'teacher' model logic (e.g., using the ensemble of chunk models).
+        # 2. Load appropriate training/validation data (features & labels).
+        # 3. Call 'distill_model(teacher_model, X_train, y_train, X_val, y_val, ...)'
+        # 4. Save the trained 'student_model' (e.g., to 'models/student_model.keras').
+        try:
+            # Placeholder function call - IMPLEMENT THIS FUNCTION
+            student_model_path = run_distillation_process()
+            if student_model_path and os.path.exists(student_model_path):
+                 print(f"{TermColors.GREEN}✅ Knowledge Distillation Completed. Student model saved to {student_model_path}{TermColors.ENDC}")
+
+                 # Step 3: Quantize the student model
+                 print(f"\n{TermColors.CYAN}--- STEP 3: Running Model Quantization ---{TermColors.ENDC}")
+                 # NOTE: You need to implement 'run_quantization_process' below.
+                 # This function should:
+                 # 1. Load the 'student_model' from the path returned by distillation.
+                 # 2. Define the desired quantization type (e.g., 'int8').
+                 # 3. Call 'quantize_model(student_model, quantization_type=...)'.
+                 #    Ensure quantize_model saves the .tflite file and returns its path.
+                 try:
+                     # Placeholder function call - IMPLEMENT THIS FUNCTION
+                     tflite_model_path = run_quantization_process(student_model_path, quantization_type="int8")
+                     if tflite_model_path and os.path.exists(tflite_model_path):
+                          print(f"{TermColors.GREEN}✅ Model Quantization Completed. TFLite model saved to {tflite_model_path}{TermColors.ENDC}")
+                     else:
+                          print(f"{TermColors.YELLOW}⚠️ Quantization did not produce a valid model file.{TermColors.ENDC}")
+                 except NameError:
+                      print(f"{TermColors.RED}❌ 'run_quantization_process' function not defined. Skipping quantization.{TermColors.ENDC}")
+                 except Exception as q_err:
+                      print(f"{TermColors.RED}❌ Error during quantization: {q_err}{TermColors.ENDC}")
+                      traceback.print_exc()
+
+            else:
+                 print(f"{TermColors.YELLOW}⚠️ Distillation did not produce a valid student model. Skipping quantization.{TermColors.ENDC}")
+
+        except NameError:
+             print(f"{TermColors.RED}❌ 'run_distillation_process' function not defined. Skipping distillation and quantization.{TermColors.ENDC}")
+        except Exception as d_err:
+             print(f"{TermColors.RED}❌ Error during distillation: {d_err}{TermColors.ENDC}")
+             traceback.print_exc()
+             print(f"{TermColors.YELLOW}⚠️ Skipping quantization due to distillation error.{TermColors.ENDC}")
+
         # --- END AUTOMATIC RUN ---
 
         print(f"\n{TermColors.GREEN}✅ Script execution finished.{TermColors.ENDC}")
