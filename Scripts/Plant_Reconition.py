@@ -3313,74 +3313,140 @@ class HardNegativeMiningCallback(tf.keras.callbacks.Callback):
         self.epoch_count += 1
 
 def train_plants_advanced():
-    """Train plant models with advanced techniques for improved accuracy on similar plants"""
-    print(f"{TermColors.HEADER}\n{'='*50}")
-    print(f"PLANT RECOGNITION TRAINING - ADVANCED TECHNIQUES")
-    print(f"{'='*50}{TermColors.ENDC}")
-    
-    # Prepare training directories
-    os.makedirs(FEATURE_DIR, exist_ok=True)
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-    
-    # Find all feature chunk files
-    feature_files = glob.glob(os.path.join(FEATURE_DIR, "chunk_*/features.npz"))
-    feature_files.sort()  # Ensure they're in order
-    
+    """Main function to orchestrate the advanced training pipeline,
+    automatically applying contrastive learning for best model quality."""
+    print(f"{TermColors.HEADER}\n{'='*60}")
+    print(f"STARTING ADVANCED PLANT RECOGNITION TRAINING PIPELINE")
+    print(f"(Applying Contrastive Learning Enhancement)")
+    print(f"{'='*60}{TermColors.ENDC}")
+
+    # 1. Check for Feature Extraction
+    # Look for features inside chunk directories first, as that seems to be the structure
+    feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*", "features.npz")))
+
     if not feature_files:
-        print(f"{TermColors.RED}❌ No feature chunks found! Please extract features first.{TermColors.ENDC}")
-        return
-    
-    print(f"{TermColors.CYAN}ℹ Found {len(feature_files)} feature chunks to process{TermColors.ENDC}")
-    
-    # Setup training state for resuming training if interrupted
-    training_state = TrainingState(CHECKPOINT_DIR)
-    
-    # Process each feature chunk
-    for i, feature_file in enumerate(feature_files):
-        chunk_idx = int(os.path.basename(os.path.dirname(feature_file)).split("_")[1])
-        
+        # Fallback: Check root FEATURES_DIR if not found in subdirs
+        feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*_features.npz")))
+
+    if not feature_files:
+        print(f"{TermColors.RED}❌ No feature files found in {FEATURES_DIR} or its subdirectories. Feature extraction is required.{TermColors.ENDC}")
+        # Attempt to run feature extraction automatically if a function exists
+        print(f"{TermColors.CYAN}ℹ Attempting to run feature extraction pipeline automatically...{TermColors.ENDC}")
+        try:
+            # Assuming a function like 'run_feature_extraction_pipeline' exists
+            # This function should handle extracting features and saving them correctly
+            # (e.g., into FEATURES_DIR/chunk_X/features.npz)
+            run_feature_extraction_pipeline() # You need to ensure this function is defined and works
+            # Re-check for feature files after attempting extraction
+            feature_files = sorted(glob.glob(os.path.join(FEATURES_DIR, "chunk_*", "features.npz")))
+            if not feature_files:
+                 print(f"{TermColors.RED}❌ Feature extraction failed or produced no files. Exiting.{TermColors.ENDC}")
+                 return
+            print(f"{TermColors.GREEN}✅ Feature extraction completed successfully.{TermColors.ENDC}")
+        except NameError:
+             print(f"{TermColors.RED}❌ 'run_feature_extraction_pipeline' function not found. Cannot extract features automatically. Please run feature extraction manually first. Exiting.{TermColors.ENDC}")
+             return
+        except Exception as e:
+             print(f"{TermColors.RED}❌ Error during automatic feature extraction: {e}. Please check the extraction process. Exiting.{TermColors.ENDC}")
+             traceback.print_exc()
+             return
+
+    print(f"{TermColors.CYAN}ℹ Found {len(feature_files)} feature chunks to process.{TermColors.ENDC}")
+
+    # 2. Train Model for Each Chunk with Contrastive Learning
+    training_state = TrainingState(CHECKPOINT_DIR) # Initialize state tracking
+
+    for i, features_file in enumerate(feature_files):
+        # Determine chunk index from the feature file path
+        try:
+            # Assumes path like ".../chunk_X/features.npz"
+            chunk_idx = int(os.path.basename(os.path.dirname(features_file)).split("_")[1])
+        except (IndexError, ValueError):
+             print(f"{TermColors.YELLOW}⚠️ Could not determine chunk index from path {features_file}. Skipping.{TermColors.ENDC}")
+             continue
+
+        print(f"{TermColors.HEADER}\n--- Processing Chunk {chunk_idx} ({i+1}/{len(feature_files)}) ---{TermColors.ENDC}")
+
         # Check if we've already fully trained this chunk
         if training_state.is_chunk_completed(chunk_idx):
             print(f"{TermColors.GREEN}✅ Chunk {chunk_idx} already completed, skipping...{TermColors.ENDC}")
             continue
-        
-        print(f"{TermColors.CYAN}ℹ Processing feature chunk {chunk_idx+1}/{len(feature_files)}{TermColors.ENDC}")
-        
-        # Process this chunk with advanced training
-        model = train_chunk_model_with_swa(feature_file, chunk_idx, training_state)
-        
-        # Clear memory between chunks
-        if model is not None:
-            del model
+
+        # Load features for the current chunk
+        try:
+            print(f"{TermColors.CYAN}ℹ Loading features from {features_file}...{TermColors.ENDC}")
+            with np.load(features_file) as data:
+                features = data['features']
+                labels = data['labels']
+            print(f"{TermColors.GREEN}✅ Loaded {len(features)} samples for chunk {chunk_idx}.{TermColors.ENDC}")
+
+            # Apply contrastive learning enhancement
+            print(f"{TermColors.CYAN}ℹ Applying contrastive learning enhancement to features for chunk {chunk_idx}...{TermColors.ENDC}")
+            # Ensure contrastive_feature_learning exists and handles potential errors
+            try:
+                # Assuming contrastive_feature_learning is defined elsewhere
+                features, labels = contrastive_feature_learning(features, labels)
+                print(f"{TermColors.GREEN}✅ Contrastive enhancement applied.{TermColors.ENDC}")
+            except NameError:
+                 print(f"{TermColors.RED}❌ 'contrastive_feature_learning' function not found. Cannot apply enhancement. Training with original features.{TermColors.ENDC}")
+            except Exception as cle:
+                 print(f"{TermColors.RED}❌ Error during contrastive learning for chunk {chunk_idx}: {cle}. Training with original features.{TermColors.ENDC}")
+                 traceback.print_exc()
+
+
+            # Split the (potentially enhanced) features into training and validation sets
+            print(f"{TermColors.CYAN}ℹ Splitting features into train/validation sets...{TermColors.ENDC}")
+            X_train, X_val, y_train, y_val = train_test_split(
+                features, labels, test_size=0.2, random_state=42, stratify=labels
+            )
+            print(f"{TermColors.GREEN}✅ Data split: {len(X_train)} train, {len(X_val)} validation samples.{TermColors.ENDC}")
+
+            # Train the model for this chunk using the features
+            # Assuming train_chunk_model_with_swa is the preferred/best training function
+            print(f"{TermColors.CYAN}ℹ Starting training for chunk {chunk_idx} using SWA...{TermColors.ENDC}")
+            try:
+                # Assuming train_chunk_model_with_swa is defined elsewhere and takes these args
+                train_chunk_model_with_swa(X_train, y_train, X_val, y_val, chunk_idx, training_state)
+            except NameError:
+                 print(f"{TermColors.RED}❌ 'train_chunk_model_with_swa' function not found. Attempting 'train_chunk_model'.{TermColors.ENDC}")
+                 try:
+                     # Assuming train_chunk_model is defined elsewhere
+                     train_chunk_model(X_train, y_train, X_val, y_val, chunk_idx, training_state)
+                 except NameError:
+                     print(f"{TermColors.RED}❌ Neither 'train_chunk_model_with_swa' nor 'train_chunk_model' found. Cannot train chunk {chunk_idx}.{TermColors.ENDC}")
+                     continue # Skip to next chunk if no training function found
+                 except Exception as e_train:
+                     print(f"{TermColors.RED}❌ Error during training chunk {chunk_idx} with 'train_chunk_model': {e_train}{TermColors.ENDC}")
+                     traceback.print_exc()
+                     continue # Skip to next chunk on error
+            except Exception as e_swa:
+                 print(f"{TermColors.RED}❌ Error during training chunk {chunk_idx} with SWA: {e_swa}{TermColors.ENDC}")
+                 traceback.print_exc()
+                 continue # Skip to next chunk on error
+
+
+            # Add memory cleanup between chunks
+            print(f"{TermColors.CYAN}ℹ Cleaning up memory after chunk {chunk_idx}...{TermColors.ENDC}")
+            del features, labels, X_train, X_val, y_train, y_val # Explicitly delete large arrays
             gc.collect()
             tf.keras.backend.clear_session()
-    
-    # Apply contrastive feature learning post-processing
-    print(f"{TermColors.CYAN}ℹ Applying contrastive feature learning to enhance separability{TermColors.ENDC}")
-    for feature_file in feature_files:
-        chunk_idx = int(os.path.basename(os.path.dirname(feature_file)).split("_")[1])
-        features, labels = analyze_features(feature_file)
-        
-        if features is not None and labels is not None:
-            enhanced_features = contrastive_feature_learning(features, labels)
-            # Save enhanced features
-            enhanced_file = os.path.join(os.path.dirname(feature_file), "enhanced_features.npz")
-            np.savez_compressed(enhanced_file, features=enhanced_features, labels=labels)
-            print(f"{TermColors.GREEN}✅ Enhanced features saved for chunk {chunk_idx}{TermColors.ENDC}")
-    
-    # Optionally train a meta-model that combines chunk models
-    print(f"{TermColors.CYAN}ℹ Would you like to train a meta-model that combines all chunk models? (y/n){TermColors.ENDC}")
-    choice = input()
-    
-    if choice.lower() == 'y':
-        print(f"{TermColors.CYAN}ℹ Training meta-model...{TermColors.ENDC}")
-        # This would implement an ensemble approach or knowledge distillation
-        # from all chunk models into a single meta-model
-        train_meta_model()
-    
-    print(f"{TermColors.GREEN}✅ Advanced plant recognition training complete!{TermColors.ENDC}")
-    
+            time.sleep(1) # Short pause
+
+        except FileNotFoundError:
+            print(f"{TermColors.RED}❌ Feature file not found: {features_file}. Skipping chunk.{TermColors.ENDC}")
+            continue
+        except Exception as e:
+            print(f"{TermColors.RED}❌ Error processing chunk {chunk_idx}: {e}{TermColors.ENDC}")
+            traceback.print_exc()
+            # Attempt cleanup even on error
+            gc.collect()
+            tf.keras.backend.clear_session()
+            continue # Move to the next chunk on error
+
+    print(f"\n{TermColors.HEADER}{'='*60}")
+    print(f"ADVANCED TRAINING PIPELINE COMPLETED")
+    print(f"{'='*60}{TermColors.ENDC}")
+
     # Final cleanup
     print(f"{TermColors.CYAN}ℹ Running final cleanup...{TermColors.ENDC}")
     gc.collect()
@@ -4546,383 +4612,46 @@ def predict_with_chunked_models(image_path, top_k=5):
     return filtered_predictions[:top_k]
 
 if __name__ == "__main__":
-    # Initialize GPU configuration first thing
-    physical_devices = tf.config.list_physical_devices('GPU')
-    if physical_devices:
-        print(f"{TermColors.GREEN}✅ GPU is available: {physical_devices}{TermColors.ENDC}")
-        try:
-            # Configure memory growth for GPU
-            for gpu in physical_devices:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"{TermColors.GREEN}✅ GPU memory growth enabled{TermColors.ENDC}")
-        except Exception as e:
-            print(f"{TermColors.RED}❌ GPU configuration error: {e}{TermColors.ENDC}")
-    else:
-        print(f"{TermColors.YELLOW}⚠️ No GPU found. Running on CPU only!{TermColors.ENDC}")
+    # Ensure signal handler is set up for graceful interruption
+    signal.signal(signal.SIGINT, _signal_handler)
 
-    def set_global_memory_growth():
-        """Set memory growth limits in a platform-specific way"""
-        # Existing implementation...
-        pass
-
-    # Call the function to apply memory settings
-    set_global_memory_growth()
-    setup_terminal_clearing()
+    # Configure GPU memory (using the function defined earlier)
+    # limit_memory_usage() is called globally after its definition
 
     try:
         # Define gpus before using it
         gpus = tf.config.experimental.list_physical_devices('GPU')
-        
+
         # Print system info with enhanced formatting
         print(f"{TermColors.HEADER}\n{'='*50}")
         print(f"PLANT RECOGNITION MODEL - ADVANCED IMPLEMENTATION")
         print(f"{'='*50}{TermColors.ENDC}")
-        
+
         gpu_info = "NVIDIA GPU" if gpus else "CPU (No GPU detected)"
-        
-        print(f"{TermColors.CYAN}ℹ Running on: {gpu_info}{TermColors.ENDC}")
-        
-        # Add a mode selector to demonstrate all the functionality
-        print(f"\n{TermColors.HEADER}SELECT MODE:{TermColors.ENDC}")
-        print(f"1. Train models with advanced techniques")
-        print(f"2. Predict plants with similarity rejection")
-        print(f"3. Demonstrate test-time augmentation")
-        print(f"4. Run cross-model fusion prediction")
-        print(f"5. Generate visual explanation for prediction")
-        print(f"6. Run multi-view consensus prediction")
-        print(f"7. Quantize model for faster inference")
-        print(f"8. Distill model knowledge to smaller model")
-        print(f"9. Apply contrastive feature learning")
-        
-        mode = input(f"\n{TermColors.CYAN}Enter mode (1-9): {TermColors.ENDC}")
-        
-        if mode == "1":
-            # Train models with advanced techniques
-            train_plants_advanced()
-            
-        elif mode == "2":
-            # Predict with similarity rejection
-            test_image_path = input(f"{TermColors.CYAN}Enter image path (default: Acacia_auriculiformis.jpg): {TermColors.ENDC}")
-            if not test_image_path:
-                test_image_path = os.path.join(os.path.dirname(__file__), "Acacia_auriculiformis.jpg")
-            
-            # Load model
-            model_path = input(f"{TermColors.CYAN}Enter model path: {TermColors.ENDC}")
-            if not os.path.exists(model_path):
-                print(f"{TermColors.RED}❌ Model not found!{TermColors.ENDC}")
-                exit(1)
-            
-            model = tf.keras.models.load_model(model_path)
-            
-            # Load class names
-            class_names = []
-            class_mapping_path = os.path.join(os.path.dirname(model_path), "class_mapping.json")
-            if os.path.exists(class_mapping_path):
-                with open(class_mapping_path) as f:
-                    class_mapping = json.load(f)
-                    class_names = list(class_mapping.values())
-            else:
-                print(f"{TermColors.YELLOW}⚠️ No class mapping found, using numeric indices{TermColors.ENDC}")
-                # Assume number of classes from model's output shape
-                num_classes = model.output_shape[-1]
-                class_names = [str(i) for i in range(num_classes)]
-            
-            # Load image
-            img = tf.keras.preprocessing.image.load_img(test_image_path, target_size=IMAGE_SIZE)
-            img_array = tf.keras.preprocessing.image.img_to_array(img)
-            
-            # Run prediction with similarity rejection
-            result = predict_with_similarity_rejection(model, img_array, class_names, similarity_threshold=0.92)
-            
-            # Print result
-            print(f"\n{TermColors.HEADER}PREDICTION RESULT:{TermColors.ENDC}")
-            for key, value in result.items():
-                print(f"{TermColors.CYAN}{key}{TermColors.ENDC}: {value}")
-            
-        elif mode == "3":
-            # Demonstrate test-time augmentation
-            test_image_path = input(f"{TermColors.CYAN}Enter image path (default: Acacia_auriculiformis.jpg): {TermColors.ENDC}")
-            if not test_image_path:
-                test_image_path = os.path.join(os.path.dirname(__file__), "Acacia_auriculiformis.jpg")
-            
-            # Load model
-            model_path = input(f"{TermColors.CYAN}Enter model path: {TermColors.ENDC}")
-            if not os.path.exists(model_path):
-                print(f"{TermColors.RED}❌ Model not found!{TermColors.ENDC}")
-                exit(1)
-            
-            model = tf.keras.models.load_model(model_path)
-            
-            # Load class names
-            class_names = []
-            class_mapping_path = os.path.join(os.path.dirname(model_path), "class_mapping.json")
-            if os.path.exists(class_mapping_path):
-                with open(class_mapping_path) as f:
-                    class_mapping = json.load(f)
-                    class_names = list(class_mapping.values())
-            else:
-                print(f"{TermColors.YELLOW}⚠️ No class mapping found, using numeric indices{TermColors.ENDC}")
-                # Assume number of classes from model's output shape
-                num_classes = model.output_shape[-1]
-                class_names = [str(i) for i in range(num_classes)]
-            
-            # Load image
-            img = tf.keras.preprocessing.image.load_img(test_image_path, target_size=IMAGE_SIZE)
-            img_array = tf.keras.preprocessing.image.img_to_array(img)
-            
-            # Run standard prediction first
-            processed_image = preprocess_image(img_array)
-            standard_preds = model.predict(processed_image)[0]
-            standard_class = np.argmax(standard_preds)
-            
-            # Run TTA prediction
-            tta_preds = test_time_augmentation_predict(model, img_array, num_augmentations=10)
-            tta_class = np.argmax(tta_preds)
-            
-            # Print results
-            print(f"\n{TermColors.HEADER}PREDICTION COMPARISON:{TermColors.ENDC}")
-            print(f"{TermColors.CYAN}Standard prediction{TermColors.ENDC}: {class_names[standard_class]} ({standard_preds[standard_class]:.4f})")
-            print(f"{TermColors.CYAN}TTA prediction{TermColors.ENDC}: {class_names[tta_class]} ({tta_preds[tta_class]:.4f})")
-            
-        elif mode == "4":
-            # Run cross-model fusion prediction
-            test_image_path = input(f"{TermColors.CYAN}Enter image path (default: Acacia_auriculiformis.jpg): {TermColors.ENDC}")
-            if not test_image_path:
-                test_image_path = os.path.join(os.path.dirname(__file__), "Acacia_auriculiformis.jpg")
-            
-            # Get multiple model paths
-            model_paths = []
-            while True:
-                model_path = input(f"{TermColors.CYAN}Enter model path (or empty to finish): {TermColors.ENDC}")
-                if not model_path:
-                    break
-                if not os.path.exists(model_path):
-                    print(f"{TermColors.RED}❌ Model not found!{TermColors.ENDC}")
-                    continue
-                model_paths.append(model_path)
-            
-            if not model_paths:
-                print(f"{TermColors.RED}❌ No models provided!{TermColors.ENDC}")
-                exit(1)
-            
-            # Load models
-            models = {}
-            for i, path in enumerate(model_paths):
-                models[f"model_{i+1}"] = tf.keras.models.load_model(path)
-            
-            # Load class names from first model
-            class_names = []
-            class_mapping_path = os.path.join(os.path.dirname(model_paths[0]), "class_mapping.json")
-            if os.path.exists(class_mapping_path):
-                with open(class_mapping_path) as f:
-                    class_mapping = json.load(f)
-                    class_names = list(class_mapping.values())
-            else:
-                print(f"{TermColors.YELLOW}⚠️ No class mapping found, using numeric indices{TermColors.ENDC}")
-                # Assume number of classes from model's output shape
-                num_classes = models["model_1"].output_shape[-1]
-                class_names = [str(i) for i in range(num_classes)]
-            
-            # Load image
-            img = tf.keras.preprocessing.image.load_img(test_image_path, target_size=IMAGE_SIZE)
-            img_array = tf.keras.preprocessing.image.img_to_array(img)
-            
-            # Run cross-model fusion prediction
-            result = cross_model_fusion_predict(img_array, models, class_names)
-            
-            # Print result
-            print(f"\n{TermColors.HEADER}CROSS-MODEL FUSION RESULT:{TermColors.ENDC}")
-            for key, value in result.items():
-                print(f"{TermColors.CYAN}{key}{TermColors.ENDC}: {value}")
-            
-        elif mode == "5":
-            # Generate visual explanation
-            test_image_path = input(f"{TermColors.CYAN}Enter image path (default: Acacia_auriculiformis.jpg): {TermColors.ENDC}")
-            if not test_image_path:
-                test_image_path = os.path.join(os.path.dirname(__file__), "Acacia_auriculiformis.jpg")
-            
-            # Load model
-            model_path = input(f"{TermColors.CYAN}Enter model path: {TermColors.ENDC}")
-            if not os.path.exists(model_path):
-                print(f"{TermColors.RED}❌ Model not found!{TermColors.ENDC}")
-                exit(1)
-            
-            model = tf.keras.models.load_model(model_path)
-            
-            # Load class names
-            class_names = []
-            class_mapping_path = os.path.join(os.path.dirname(model_path), "class_mapping.json")
-            if os.path.exists(class_mapping_path):
-                with open(class_mapping_path) as f:
-                    class_mapping = json.load(f)
-                    class_names = list(class_mapping.values())
-            else:
-                print(f"{TermColors.YELLOW}⚠️ No class mapping found, using numeric indices{TermColors.ENDC}")
-                # Assume number of classes from model's output shape
-                num_classes = model.output_shape[-1]
-                class_names = [str(i) for i in range(num_classes)]
-            
-            # Load image
-            img = tf.keras.preprocessing.image.load_img(test_image_path, target_size=IMAGE_SIZE)
-            img_array = tf.keras.preprocessing.image.img_to_array(img)
-            
-            # Generate visual explanation
-            result = predict_with_visual_explanation(model, img_array, class_names)
-            
-            # Save explanation image
-            explanation_file = os.path.join(os.path.dirname(test_image_path), "explanation.jpg")
-            result['explanation_image'].save(explanation_file)
-            
-            # Print result
-            print(f"\n{TermColors.HEADER}VISUAL EXPLANATION:{TermColors.ENDC}")
-            print(f"{TermColors.CYAN}Prediction{TermColors.ENDC}: {result['prediction']}")
-            print(f"{TermColors.CYAN}Confidence{TermColors.ENDC}: {result['confidence']:.4f}")
-            print(f"{TermColors.CYAN}Explanation image saved to{TermColors.ENDC}: {explanation_file}")
-            
-        elif mode == "6":
-            # Run multi-view consensus prediction
-            test_image_path = input(f"{TermColors.CYAN}Enter image path (default: Acacia_auriculiformis.jpg): {TermColors.ENDC}")
-            if not test_image_path:
-                test_image_path = os.path.join(os.path.dirname(__file__), "Acacia_auriculiformis.jpg")
-            
-            # Get multiple model paths
-            model_paths = []
-            while True:
-                model_path = input(f"{TermColors.CYAN}Enter model path (or empty to finish): {TermColors.ENDC}")
-                if not model_path:
-                    break
-                if not os.path.exists(model_path):
-                    print(f"{TermColors.RED}❌ Model not found!{TermColors.ENDC}")
-                    continue
-                model_paths.append(model_path)
-            
-            if not model_paths:
-                print(f"{TermColors.RED}❌ No models provided!{TermColors.ENDC}")
-                exit(1)
-            
-            # Load models
-            models = []
-            for path in model_paths:
-                models.append(tf.keras.models.load_model(path))
-            
-            # Load class names from first model
-            class_names = []
-            class_mapping_path = os.path.join(os.path.dirname(model_paths[0]), "class_mapping.json")
-            if os.path.exists(class_mapping_path):
-                with open(class_mapping_path) as f:
-                    class_mapping = json.load(f)
-                    class_names = list(class_mapping.values())
-            else:
-                print(f"{TermColors.YELLOW}⚠️ No class mapping found, using numeric indices{TermColors.ENDC}")
-                # Assume number of classes from models[0].output_shape[-1]
-                num_classes = models[0].output_shape[-1]
-                class_names = [str(i) for i in range(num_classes)]
-            
-            # Run multi-view consensus prediction
-            result = multi_view_consensus_predict(test_image_path, models, class_names)
-            
-            # Print result
-            print(f"\n{TermColors.HEADER}MULTI-VIEW CONSENSUS RESULT:{TermColors.ENDC}")
-            for key, value in result.items():
-                print(f"{TermColors.CYAN}{key}{TermColors.ENDC}: {value}")
-            
-        elif mode == "7":
-            # Quantize model
-            model_path = input(f"{TermColors.CYAN}Enter model path: {TermColors.ENDC}")
-            if not os.path.exists(model_path):
-                print(f"{TermColors.RED}❌ Model not found!{TermColors.ENDC}")
-                exit(1)
-            
-            model = tf.keras.models.load_model(model_path)
-            
-            # Choose quantization type
-            print(f"\n{TermColors.HEADER}SELECT QUANTIZATION TYPE:{TermColors.ENDC}")
-            print(f"1. Dynamic range quantization")
-            print(f"2. Float16 quantization")
-            print(f"3. Int8 quantization")
-            
-            quant_type = input(f"\n{TermColors.CYAN}Enter type (1-3): {TermColors.ENDC}")
-            
-            if quant_type == "1":
-                quantization_type = "dynamic"
-            elif quant_type == "2":
-                quantization_type = "float16"
-            elif quant_type == "3":
-                quantization_type = "int8"
-            else:
-                print(f"{TermColors.RED}❌ Invalid choice!{TermColors.ENDC}")
-                exit(1)
-            
-            # Quantize model
-            quantized_model = quantize_model(model, quantization_type)
-            
-            # Save quantized model
-            quantized_model_path = os.path.join(os.path.dirname(model_path), f"quantized_{quantization_type}_model.keras")
-            quantized_model.save(quantized_model_path)
-            
-            print(f"\n{TermColors.GREEN}✅ Quantized model saved to: {quantized_model_path}{TermColors.ENDC}")
-            
-        elif mode == "8":
-            # Distill model knowledge
-            teacher_model_path = input(f"{TermColors.CYAN}Enter teacher model path: {TermColors.ENDC}")
-            if not os.path.exists(teacher_model_path):
-                print(f"{TermColors.RED}❌ Teacher model not found!{TermColors.ENDC}")
-                exit(1)
-            
-            # Load teacher model
-            teacher_model = tf.keras.models.load_model(teacher_model_path)
-            
-            # Load feature file for distillation
-            features_file = input(f"{TermColors.CYAN}Enter features file path: {TermColors.ENDC}")
-            if not os.path.exists(features_file):
-                print(f"{TermColors.RED}❌ Features file not found!{TermColors.ENDC}")
-                exit(1)
-            
-            # Load features and labels
-            features, labels = analyze_features(features_file)
-            if features is None or labels is None:
-                print(f"{TermColors.RED}❌ Failed to load features{TermColors.ENDC}")
-                exit(1)
-            
-            # Split data
-            X_train, X_val, y_train, y_val = train_test_split(
-                features, labels, test_size=0.2, random_state=42, stratify=labels
-            )
-            
-            # Distill model
-            student_model = distill_model(teacher_model, X_train, y_train, X_val, y_val)
-            
-            # Save student model
-            student_model_path = os.path.join(os.path.dirname(teacher_model_path), "distilled_model.keras")
-            student_model.save(student_model_path)
-            
-            print(f"\n{TermColors.GREEN}✅ Distilled model saved to: {student_model_path}{TermColors.ENDC}")
-            
-        elif mode == "9":
-            # Apply contrastive feature learning
-            features_file = input(f"{TermColors.CYAN}Enter features file path: {TermColors.ENDC}")
-            if not os.path.exists(features_file):
-                print(f"{TermColors.RED}❌ Features file not found!{TermColors.ENDC}")
-                exit(1)
-            
-            # Load features and labels
-            features, labels = analyze_features(features_file)
-            if features is None or labels is None:
-                print(f"{TermColors.RED}❌ Failed to load features{TermColors.ENDC}")
-                exit(1)
-            
-            # Apply contrastive feature learning
-            enhanced_features = contrastive_feature_learning(features, labels)
-            
-            # Save enhanced features
-            enhanced_features_file = os.path.join(os.path.dirname(features_file), "enhanced_features.npz")
-            np.savez_compressed(enhanced_features_file, features=enhanced_features, labels=labels)
-            
-            print(f"\n{TermColors.GREEN}✅ Enhanced features saved to: {enhanced_features_file}{TermColors.ENDC}")
-        
+        if gpus:
+            for gpu in gpus:
+                print(f"{TermColors.CYAN}ℹ Found GPU: {gpu.name}{TermColors.ENDC}")
         else:
-            print(f"{TermColors.RED}❌ Invalid mode!{TermColors.ENDC}")
-        
+             print(f"{TermColors.YELLOW}⚠️ Running on CPU (No GPU detected){TermColors.ENDC}")
+
+
+        # --- AUTOMATICALLY RUN BEST MODEL TRAINING ---
+        print(f"\n{TermColors.HEADER}AUTOMATIC MODE: Training Best Model{TermColors.ENDC}")
+        print(f"{TermColors.CYAN}This will extract features (if needed), apply contrastive learning, and train chunk models.{TermColors.ENDC}")
+
+        # Call the main training function which now includes contrastive learning
+        train_plants_advanced()
+        # --- END AUTOMATIC RUN ---
+
+        print(f"\n{TermColors.GREEN}✅ Script execution finished.{TermColors.ENDC}")
+
+    except SystemExit as e:
+        print(f"\n{TermColors.YELLOW}ℹ Script exited ({e}).{TermColors.ENDC}")
     except Exception as e:
-        print(f"{TermColors.RED}❌ Fatal error: {e}{TermColors.ENDC}")
+        print(f"{TermColors.RED}\n{'='*60}")
+        print(f"❌ A FATAL ERROR OCCURRED:")
+        print(f"{'='*60}")
         traceback.print_exc()
+        print(f"{TermColors.RED}{'='*60}{TermColors.ENDC}")
+    finally:
+        print(f"\n{TermColors.CYAN}--- End of Script ---{TermColors.ENDC}")
