@@ -8,8 +8,6 @@ data/observations-561226.csv
 
 # Ignore checkpoints and models (large binary files)
 checkpoints/
-models/
-exported_model/
 
 # Ignore logs and stats
 logs/
