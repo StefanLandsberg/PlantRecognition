@@ -35,18 +35,17 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "data", "plant_images") # Where images are s
 CSV_FILE = os.path.join(BASE_DIR, "data", "observations-561226.csv") # Input file
 
 # Download parameters
-MAX_IMAGES_PER_OBSERVATION = 250         # Maximum images per observation
+MAX_IMAGES_PER_OBSERVATION = 250
+MAX_IMAGES_PER_CLASS = 400
 MAX_OBSERVATIONS = 99000                # Maximum number of observations to download
 IMAGE_QUALITY = "medium"                # Options: "original", "large", "medium", "small"
-BATCH_SIZE = 64000                      # Images per batch (doubled again for extreme bandwidth utilization)
-DOWNLOAD_THREADS = 1600                 # Concurrent downloads (doubled again for maximum network saturation)
 DOWNLOAD_RETRY_ATTEMPTS = 3             # Number of download retry attempts
-DOWNLOAD_TIMEOUT = 60                   # Timeout for download requests in seconds (increased for stability with high concurrency)
+DOWNLOAD_TIMEOUT = 60                   # Timeout for download requests in seconds
 
 # Pipeline configuration
-PREBATCHER_COUNT = 24                   # Number of prebatching threads (doubled for more CPU usage)
-QUEUE_SIZE_PER_PREBATCHER = 32          # Queue size for each prebatcher (doubled for more throughput)
-MAX_PARALLEL_DOWNLOADS = 32             # Max number of batches to download simultaneously (doubled again)
+PREBATCHER_COUNT = 32                   # Number of prebatching threads
+QUEUE_SIZE_PER_PREBATCHER = 32          # Queue size for each prebatcher
+MAX_PARALLEL_DOWNLOADS = 32             # Max number of batches to download simultaneously
 
 # Filtering options
 FILTER_BY_LICENSE = False               # Whether to filter by license type
@@ -54,11 +53,8 @@ LICENSE_TYPE = "CC0"                    # License to filter by if FILTER_BY_LICE
                                         # Common values: "CC0", "CC-BY", "CC-BY-NC"
 
 # Resource management
-MEMORY_LIMIT_PERCENT = 90              # Memory usage limit (increased to near maximum)
-USE_MULTIPROCESSING = False            # Use multiprocessing for downloads (disabled due to asyncio issues)
-MAX_PROCESSES = 1                      # Number of processes (single process to avoid asyncio issues)
-PROCESS_BATCH_SIZE = 5000              # Images per process (significantly increased)
-PREBATCH_SIZE = 40000                  # Number of images to prepare ahead of time (doubled again)
+MEMORY_LIMIT_PERCENT = 90              # Memory usage limit
+PREBATCH_SIZE = 40000                  # Number of images to prepare ahead of time
 # ----------------------------------------------------------------------------
 # =========================
 
@@ -107,11 +103,6 @@ def monitor_memory(limit_percent=MEMORY_LIMIT_PERCENT):
     thread.start()
     return thread
 
-# Clean memory function
-def clean_memory():
-    """Force garbage collection"""
-    gc.collect()
-
 # Checkpoint management for resumable downloads
 class DownloadProgress:
     def __init__(self, checkpoint_file="download_checkpoint.json"):
@@ -135,8 +126,11 @@ class DownloadProgress:
                 print(f"{TermColors.YELLOW}Error loading checkpoint: {e}{TermColors.ENDC}")
     
     def save_checkpoint(self):
-        """Save current download progress"""
+        """Save current download progress with proper locking"""
         try:
+            # Use file locking to prevent corruption when multiple processes write
+            import portalocker
+            
             # Create a deep copy of the dictionaries to avoid modification during iteration
             import copy
             completed_observations_copy = copy.deepcopy(self.completed_observations)
@@ -149,10 +143,26 @@ class DownloadProgress:
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
             }
             
-            with open(self.checkpoint_file, 'w') as f:
+            # Use exclusive lock when writing
+            with open(self.checkpoint_file + '.tmp', 'w') as f:
+                portalocker.lock(f, portalocker.LOCK_EX)
                 json.dump(data, f)
+                f.flush()
+                os.fsync(f.fileno())
+                
+            # Atomic rename for safer file replacement
+            if sys.platform == 'win32':
+                # Windows needs special handling for atomic rename
+                import os
+                if os.path.exists(self.checkpoint_file):
+                    os.replace(self.checkpoint_file + '.tmp', self.checkpoint_file)
+                else:
+                    os.rename(self.checkpoint_file + '.tmp', self.checkpoint_file)
+            else:
+                # Unix supports atomic rename
+                os.rename(self.checkpoint_file + '.tmp', self.checkpoint_file)
         except Exception as e:
-            # Suppress the error message to keep the terminal clean
+            # Log but continue - checkpoint saving shouldn't halt the process
             pass
     
     def observation_completed(self, observation_id):
@@ -196,6 +206,7 @@ class DownloadPipeline:
     2. Multiple prebatching stages - prepare batches in parallel
     3. Multiple download stages - download multiple batches simultaneously
     """
+
     def __init__(self, prebatcher_count=PREBATCHER_COUNT, queue_size=QUEUE_SIZE_PER_PREBATCHER):
         self.terminator = GracefulTerminator()
         self.progress = DownloadProgress()
@@ -280,6 +291,9 @@ class DownloadPipeline:
             small_batch_count = 0
             small_batch_threshold = 10  # Number of consecutive small batches before terminating
             
+            # Track images per class to enforce MAX_IMAGES_PER_CLASS
+            class_image_counts = {}
+            
             while self.current_obs_index < self.total_observations and not self.terminator.should_terminate():
                 # Process a batch of observations
                 batch_end = min(self.current_obs_index + 50, self.total_observations)
@@ -307,6 +321,12 @@ class DownloadPipeline:
                         self.progress.mark_observation_complete(obs_id)
                         continue
                     
+                    # Check if we've already hit MAX_IMAGES_PER_CLASS for this class
+                    if class_name in class_image_counts and class_image_counts[class_name] >= MAX_IMAGES_PER_CLASS:
+                        # Skip this observation as we already have enough images for this class
+                        self.progress.mark_observation_complete(obs_id)
+                        continue
+                    
                     # Create class directory
                     class_dir = os.path.join(self.output_dir, class_name)
                     if not os.path.exists(class_dir):
@@ -318,9 +338,17 @@ class DownloadPipeline:
                     # Mark this observation as current
                     self.progress.mark_observation_current(obs_id)
                     
-                    # Process each image URL (limit to MAX_IMAGES_PER_OBSERVATION)
+                    # Calculate how many more images we can add for this class
+                    if class_name not in class_image_counts:
+                        class_image_counts[class_name] = 0
+                    
+                    remaining_class_capacity = MAX_IMAGES_PER_CLASS - class_image_counts[class_name]
+                    
+                    # Process each image URL (limit to MAX_IMAGES_PER_OBSERVATION and remaining class capacity)
                     images_added_for_obs = 0
-                    for i, photo_url in enumerate(image_urls[:MAX_IMAGES_PER_OBSERVATION]):
+                    max_images_for_obs = min(MAX_IMAGES_PER_OBSERVATION, remaining_class_capacity)
+                    
+                    for i, photo_url in enumerate(image_urls[:max_images_for_obs]):
                         # Generate a unique ID for this image
                         photo_id = f"{obs_id}_{i}"
                         
@@ -337,6 +365,13 @@ class DownloadPipeline:
                         self._add_to_prebatcher(prebatcher_idx, item)
                         batch_images_added += 1
                         images_added_for_obs += 1
+                        
+                        # Update the class image count
+                        class_image_counts[class_name] += 1
+                        
+                        # Stop if we've reached the class limit
+                        if class_image_counts[class_name] >= MAX_IMAGES_PER_CLASS:
+                            break
                     
                     # Mark observation complete
                     self.progress.mark_observation_complete(obs_id)
@@ -559,7 +594,7 @@ class DownloadPipeline:
                 
                 # Use ThreadPoolExecutor with appropriate number of workers
                 sub_batch_success = 0
-                with ThreadPoolExecutor(max_workers=min(DOWNLOAD_THREADS, len(sub_batch))) as executor:
+                with ThreadPoolExecutor(max_workers=min(32, len(sub_batch))) as executor:
                     futures = {executor.submit(download_one, item): i for i, item in enumerate(sub_batch)}
                     
                     # Process futures as they complete
@@ -981,11 +1016,56 @@ def extract_observation_ids_from_csv(csv_file, target_count=MAX_OBSERVATIONS):
         }}
         return ["test_1"], observation_data
 
+def init_worker():
+        """Initialize worker process safely"""
+        # Set policy for Windows to use SelectEventLoopPolicy in each worker process
+        if sys.platform == 'win32':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
+        # Create a new event loop for this process
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Set up process-specific signal handlers
+        signal.signal(signal.SIGINT, signal.SIG_IGN)  # Parent process will handle this
+
+def process_observation_chunk(chunk_id, observation_ids, obs_data, output_dir, quality):
+    """Process a chunk of observations in a separate process"""
+    try:
+        print(f"{TermColors.BLUE}Process {chunk_id}: Starting with {len(observation_ids)} observations{TermColors.ENDC}")
+        
+        # Create a pipeline specific to this process
+        pipeline = DownloadPipeline(
+            prebatcher_count=max(2, PREBATCHER_COUNT // 2),
+            queue_size=QUEUE_SIZE_PER_PREBATCHER
+        )
+        
+        # Start the pipeline for this chunk
+        supervisor = pipeline.start(observation_ids, obs_data, output_dir, quality)
+        
+        # Wait for completion
+        while supervisor.is_alive():
+            try:
+                supervisor.join(1.0)
+            except KeyboardInterrupt:
+                # This shouldn't happen in child processes, but just in case
+                print(f"{TermColors.YELLOW}Process {chunk_id}: Interrupt received. Stopping...{TermColors.ENDC}")
+                pipeline.terminator.terminate = True
+                supervisor.join(10.0)
+                break
+        
+        print(f"{TermColors.GREEN}Process {chunk_id}: Completed processing {len(observation_ids)} observations{TermColors.ENDC}")
+        return True
+        
+    except Exception as e:
+        print(f"{TermColors.RED}Process {chunk_id} error: {e}{TermColors.ENDC}")
+        traceback.print_exc()
+        return False
+
 def process_observations_from_csv(csv_file, output_dir=OUTPUT_DIR, quality=IMAGE_QUALITY):
     """Process observations with the advanced multi-stage pipeline"""
     print(f"{TermColors.BLUE}Processing observations from {csv_file}{TermColors.ENDC}")
     print(f"{TermColors.BLUE}Target directory: {output_dir}{TermColors.ENDC}")
-    print(f"{TermColors.BLUE}License filtering: {'Enabled - ' + LICENSE_TYPE if FILTER_BY_LICENSE else 'Disabled - downloading all images'}{TermColors.ENDC}")
     
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
@@ -998,7 +1078,6 @@ def process_observations_from_csv(csv_file, output_dir=OUTPUT_DIR, quality=IMAGE
         print(f"{TermColors.RED}No observations found to process{TermColors.ENDC}")
         return False
     
-    # Create and start the pipeline
     pipeline = DownloadPipeline(
         prebatcher_count=PREBATCHER_COUNT,
         queue_size=QUEUE_SIZE_PER_PREBATCHER
@@ -1007,20 +1086,18 @@ def process_observations_from_csv(csv_file, output_dir=OUTPUT_DIR, quality=IMAGE
     # Start the pipeline
     supervisor = pipeline.start(observation_ids, obs_data, output_dir, quality)
     
+    # Wait for completion
     try:
-        # Wait for the supervisor to complete (this can be interrupted with Ctrl+C)
         while supervisor.is_alive():
             try:
-                supervisor.join(1.0)  # Check every second
+                supervisor.join(1.0)
             except KeyboardInterrupt:
                 print(f"{TermColors.YELLOW}Keyboard interrupt received. Gracefully stopping...{TermColors.ENDC}")
                 pipeline.terminator.terminate = True
-                supervisor.join(30.0)  # Give it up to 30 seconds to clean up
+                supervisor.join(30.0)
                 break
-    
     except Exception as e:
-        print(f"{TermColors.RED}Error during pipeline execution: {e}{TermColors.ENDC}")
-        traceback.print_exc()
+        print(f"{TermColors.RED}Error: {e}{TermColors.ENDC}")
         return False
     
     return True
@@ -1030,10 +1107,8 @@ def main():
     print(f"{TermColors.GREEN}===== iNaturalist Image Downloader ====={TermColors.ENDC}")
     print(f"{TermColors.GREEN}Pipeline configuration:{TermColors.ENDC}")
     print(f"  {TermColors.CYAN}Max memory usage: {MEMORY_LIMIT_PERCENT}%{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Download threads: {DOWNLOAD_THREADS}{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Processes: {MAX_PROCESSES}{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Prebatchers: {PREBATCHER_COUNT}{TermColors.ENDC}")
     print(f"  {TermColors.CYAN}Parallel downloads: {MAX_PARALLEL_DOWNLOADS}{TermColors.ENDC}")
+    print(f"  {TermColors.CYAN}Prebatchers: {PREBATCHER_COUNT}{TermColors.ENDC}")
     print(f"  {TermColors.CYAN}Max observations: {MAX_OBSERVATIONS}{TermColors.ENDC}")
     
     # Direct processing from CSV

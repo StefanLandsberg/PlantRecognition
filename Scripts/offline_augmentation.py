@@ -35,10 +35,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))    # Script directory
 BASE_DIR = os.path.dirname(SCRIPT_DIR)                     # Project root directory
 DATA_DIR = os.path.join(BASE_DIR, "data", "plant_images") # Where images are saved
 IMAGE_SIZE = (224, 224)
-AUGMENTATION_FACTOR = 30  # Increased from 20 to 30 for more diverse augmentations
-MIN_IMAGES_PER_CLASS = 150  # Increased minimum to ensure all classes have more images
-TARGET_IMAGES_PER_CLASS = 200  # Target more images per class for better training
-MAX_IMAGES_PER_CLASS = 500  # Increased maximum to allow for more augmentations
+MIN_IMAGES_PER_CLASS = 200  # Increased minimum to ensure all classes have more images
+MAX_IMAGES_PER_CLASS = 400  # Increased maximum to allow for more augmentations
 CHECKPOINT_FILE = "augmentation_checkpoint.json"
 # CPU and GPU optimization settings
 MAX_CPU_WORKERS = os.cpu_count()  # Use all cores
@@ -803,42 +801,43 @@ def create_augmentations(img, class_name=''):
     
     return augmented_images
 
-def calculate_class_specific_augmentation(class_dir, class_name, aug_factors):
+def calculate_class_specific_augmentation(class_dir, class_name, aug_factors=None):
     """
     Calculate how many augmentations to create for a specific class
-    based on the number of original images and target class balance
-    
-    Args:
-        class_dir: Path to the class directory
-        class_name: Name of the class
-        aug_factors: Dictionary of augmentation factors by class
-        
-    Returns:
-        Tuple of (original_images, target_count, augmentation_factor)
+    based on the number of original images and MIN/MAX limits
     """
     # Get original image files (excluding already augmented ones)
     image_files = [f for f in os.listdir(class_dir) 
-                   if f.lower().endswith(('.jpg', '.jpeg', '.png')) and not '_aug' in f]
+                  if f.lower().endswith(('.jpg', '.jpeg', '.png')) and not '_aug' in f]
     orig_count = len(image_files)
     
     if orig_count == 0:
         return [], 0, 0
+    
+    # Calculate how many augmentations we need to reach MIN_IMAGES_PER_CLASS
+    if orig_count < MIN_IMAGES_PER_CLASS:
+        # Calculate how many total augmented images we need
+        total_new_images_needed = MIN_IMAGES_PER_CLASS - orig_count
         
-    # For small classes, we want to reach exactly TARGET_IMAGES_PER_CLASS if possible
-    if orig_count < TARGET_IMAGES_PER_CLASS:
-        # Calculate how many augmentations per original image we need
-        needed_factor = math.ceil(TARGET_IMAGES_PER_CLASS / orig_count)
+        # Calculate how many augmentations per original image (can be fractional)
+        aug_per_image = total_new_images_needed / orig_count
         
         # Cap at maximum augmentation factor to prevent over-distortion
-        effective_factor = min(needed_factor, AUGMENTATION_FACTOR)
-        target_count = min(orig_count * effective_factor, MAX_IMAGES_PER_CLASS)
+        effective_factor = min(aug_per_image, MAX_AUGMENTATIONS_PER_IMAGE)
+        
+        # The actual target we'll reach
+        target_count = min(MIN_IMAGES_PER_CLASS, orig_count + int(total_new_images_needed))
     else:
-        # For large classes, we might need to downsample
-        effective_factor = 1  # Use originals only
-        target_count = min(orig_count, MAX_IMAGES_PER_CLASS)
+        # For classes that already have enough images, don't add more
+        effective_factor = 0
+        target_count = orig_count
+        
+        # If class exceeds MAX_IMAGES_PER_CLASS, and ENFORCE_EXACT_LIMITS is True, 
+        # we would downsample (not implemented in this version)
+        if ENFORCE_EXACT_LIMITS and orig_count > MAX_IMAGES_PER_CLASS:
+            print(f"{TermColors.YELLOW}⚠️ Class {class_name} has {orig_count} images which exceeds MAX_IMAGES_PER_CLASS ({MAX_IMAGES_PER_CLASS}). Consider manual downsampling.{TermColors.ENDC}")
     
-    # Prioritize reaching TARGET_IMAGES_PER_CLASS even with high augmentation
-    # This helps ensure class balance for training
+    # Return the exact count of augmentations we'll create
     return image_files, target_count, effective_factor
 
 def apply_feature_preserving_augmentation(img, plant_class):
@@ -2375,8 +2374,8 @@ def main():
         print(f"{TermColors.RED}❌ Error in main function: {e}{TermColors.ENDC}")
         traceback.print_exc()
 
-def augment_class_images(class_dir, class_name, aug_factors):
-    """Process all images in a class directory with appropriate augmentations"""
+def augment_class_images(class_dir, class_name, aug_factors=None):
+    """Process all images in a class directory to reach exactly MIN_IMAGES_PER_CLASS"""
     # Calculate class-specific augmentation parameters
     image_files, target_count, aug_factor = calculate_class_specific_augmentation(
         class_dir, class_name, aug_factors
@@ -2385,13 +2384,22 @@ def augment_class_images(class_dir, class_name, aug_factors):
     if not image_files:
         print(f"{TermColors.YELLOW}⚠️ No original images found in {class_name}, skipping.{TermColors.ENDC}")
         return class_name, 0
+    
+    # Get existing augmented images
+    existing_aug = [f for f in os.listdir(class_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png')) and '_aug' in f]
+    orig_count = len(image_files)
+    total_existing = orig_count + len(existing_aug)
+    
+    # Skip if we already meet the minimum target
+    if total_existing >= MIN_IMAGES_PER_CLASS:
+        print(f"{TermColors.GREEN}✓ Class {class_name} already has {total_existing} images (≥{MIN_IMAGES_PER_CLASS}). Skipping.{TermColors.ENDC}")
+        return class_name, 0
         
+    # Calculate exactly how many new augmented images we need
+    exact_new_needed = target_count - orig_count
+    
     # Create progress bar for this class
     pbar = tqdm(total=len(image_files), desc=f"Processing {class_name}", leave=True, position=0)
-    
-    # Calculate how many augmented images to create per original
-    augmentations_per_image = int(aug_factor)
-    extra_augmentations = int((aug_factor - augmentations_per_image) * len(image_files))
     
     # Counter for augmented images
     augmented_count = 0
@@ -2399,6 +2407,10 @@ def augment_class_images(class_dir, class_name, aug_factors):
     # Process each original image
     for i, img_file in enumerate(image_files):
         try:
+            # Stop if we've reached our target
+            if augmented_count >= exact_new_needed:
+                break
+                
             img_path = os.path.join(class_dir, img_file)
             
             # Load the original image
@@ -2413,21 +2425,20 @@ def augment_class_images(class_dir, class_name, aug_factors):
             # Resize to target size for consistency
             original_img = cv2.resize(original_img, IMAGE_SIZE, interpolation=cv2.INTER_AREA)
             
-            # Determine augmentations for this image
-            num_augmentations = augmentations_per_image
-            if i < extra_augmentations:
-                num_augmentations += 1
-                
+            # Calculate how many augmentations for this image to ensure even distribution
+            # Use ceiling division to ensure we make progress toward the target
+            images_left = len(image_files) - i
+            augs_per_image = math.ceil((exact_new_needed - augmented_count) / images_left)
+            augs_per_image = min(augs_per_image, MAX_AUGMENTATIONS_PER_IMAGE)  # Cap at max
+            
             # Create augmented versions
-            for aug_idx in range(num_augmentations):
-                # Apply random augmentations
-                intensity = 'medium'
-                if aug_idx % 3 == 0:
-                    intensity = 'high'  # Every 3rd augmentation is high intensity
-                elif aug_idx % 3 == 1:
-                    intensity = 'low'   # Every 3rd+1 augmentation is low intensity
-                
-                # Apply augmentation
+            for aug_idx in range(augs_per_image):
+                # Stop if we've reached our target
+                if augmented_count >= exact_new_needed:
+                    break
+                    
+                # Apply augmentation with random intensity
+                intensity = random.choice(['low', 'medium', 'medium', 'high'])
                 augmented = apply_augmentation(original_img.copy(), intensity)
                 
                 # Convert back to BGR for saving
@@ -2444,13 +2455,17 @@ def augment_class_images(class_dir, class_name, aug_factors):
                 
             # Update progress bar
             pbar.update(1)
-            pbar.set_postfix({"Augmentations": augmented_count})
+            pbar.set_postfix({"Augmentations": augmented_count, "Target": exact_new_needed})
                 
         except Exception as e:
             pbar.update(1)
+            print(f"{TermColors.RED}❌ Error processing image {img_file}: {e}{TermColors.ENDC}")
     
     # Close progress bar
     pbar.close()
+    
+    final_count = orig_count + augmented_count
+    print(f"{TermColors.GREEN}✓ Class {class_name}: Created {augmented_count} augmented images, now has {final_count} total images{TermColors.ENDC}")
     
     return class_name, augmented_count
 

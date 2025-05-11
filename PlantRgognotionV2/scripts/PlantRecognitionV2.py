@@ -38,20 +38,26 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.utils import class_weight as sk_class_weight
 from sklearn.linear_model import LogisticRegression # For Stacking
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+SAM_AVAILABLE = True
 
 # --- Utility Imports ---
 import colorama
 from PIL import Image
 import cv2
 import joblib # For saving sklearn models
-import optuna # Add Optuna import
-# from optuna.integration import PyTorchLightningPruningCallback # Not using Lightning
 
 # --- Optional/Advanced Libraries ---
+# Define global flags first
+TIMM_AVAILABLE = False
+TORCHMETRICS_AVAILABLE = False
+ALBUMENTATIONS_AVAILABLE = False
+ADAMP_AVAILABLE = False
+SAM_AVAILABLE = False
+
+# Now import each library once
 try:
     import timm
     TIMM_AVAILABLE = True
-    print("INFO: timm library found.")
 except ImportError:
     print("FATAL: timm library not found. Required. Install with 'pip install timm'.")
     sys.exit(1)
@@ -59,36 +65,47 @@ except ImportError:
 try:
     import torchmetrics
     TORCHMETRICS_AVAILABLE = True
-    print("INFO: torchmetrics library found.")
 except ImportError:
-    TORCHMETRICS_AVAILABLE = False
     print("WARN: torchmetrics library not found. Some metrics might be unavailable. Install with 'pip install torchmetrics'.")
 
 try:
     import albumentations as A
     from albumentations.pytorch import ToTensorV2
     ALBUMENTATIONS_AVAILABLE = True
-    print("INFO: albumentations library found.")
 except ImportError:
-    ALBUMENTATIONS_AVAILABLE = False
     print("WARN: albumentations library not found. Using torchvision transforms. Install with 'pip install albumentations'.")
 
 try:
     from adamp import AdamP
     ADAMP_AVAILABLE = True
-    print("INFO: adamp optimizer found.")
 except ImportError:
-    ADAMP_AVAILABLE = False
     print("WARN: adamp optimizer not found. Will use AdamW instead. Install with 'pip install adamp'.")
 
 try:
     from sam_optimizer.sam import SAM
     SAM_AVAILABLE = True
-    print("INFO: sam_optimizer found.")
 except ImportError:
-    SAM_AVAILABLE = False
     print("WARN: sam_optimizer not found. SAM optimizer will be disabled. Install from 'https://github.com/davda54/sam'.")
 
+# Print library info just once at startup
+_INITIALIZED = False
+
+def print_library_info():
+    global _INITIALIZED
+    if _INITIALIZED:
+        return
+    
+    print("INFO: timm library found.")
+    if TORCHMETRICS_AVAILABLE: 
+        print("INFO: torchmetrics library found.")
+    if ALBUMENTATIONS_AVAILABLE:
+        print("INFO: albumentations library found.")
+    if ADAMP_AVAILABLE:
+        print("INFO: adamp optimizer found.")
+    if SAM_AVAILABLE:
+        print("INFO: sam_optimizer found.")
+    
+    _INITIALIZED = True
 
 # --- Terminal Colors ---
 colorama.init(autoreset=True)
@@ -118,7 +135,6 @@ class TermColors:
     RED = '\033[91m'
     MAGENTA = '\033[95m'
     DIM = '\033[2m'
-
 
 # --- Configuration ---
 SEED = 42
@@ -155,32 +171,15 @@ GRADIENT_ACCUMULATION_STEPS = 2 if not DEBUG_MODE else 1
 LEARNING_RATE = 1e-4; WEIGHT_DECAY = 1e-5
 OPTIMIZER_TYPE = 'AdamP' if ADAMP_AVAILABLE else 'AdamW'
 USE_SAM = True if SAM_AVAILABLE else False
-SAM_RHO = 0.05; SAM_ADAPTIVE = False
+SAM_RHO = 0.05; SAM_ADAPTIVE = True
 GRADIENT_CLIP_VAL = 1.0
 PROGRESSIVE_RESIZING_STAGES = [
     (10 if not DEBUG_MODE else 1, (224, 224)),
     (15 if not DEBUG_MODE else 1, (384, 384)),
-    # (5 if not DEBUG_MODE else 1, (448, 448)), # Optional larger stage
+    (5 if not DEBUG_MODE else 1, (448, 448)), 
 ]
 TOTAL_EPOCHS_PER_FOLD = sum(s[0] for s in PROGRESSIVE_RESIZING_STAGES)
 CURRENT_IMAGE_SIZE = None # Will be set per stage
-
-# --- HPO Config ---
-RUN_HPO = True # Set to False to skip HPO and use defaults
-HPO_N_TRIALS = 30 if not DEBUG_MODE else 3 # Number of HPO trials to run
-HPO_EPOCHS_PER_TRIAL = 3 if not DEBUG_MODE else 1 # Short training for each trial
-HPO_IMAGE_SIZE = (224, 224) # Fixed image size for HPO trials
-HPO_BATCH_SIZE = BATCH_SIZE * 2 # Can potentially use larger batch for HPO
-HPO_ARCHITECTURES_TO_TRY = [ # Architectures Optuna can choose from
-    "tf_efficientnet_b0",
-    "mobilenetv3_small_100",
-    "resnet18",
-    "densenet121",
-    "tf_efficientnetv2_s", # Use variant with known pretrained weights
-]
-HPO_STUDY_NAME = "plant_recognition_hpo"
-HPO_STORAGE_DB = f"sqlite:///{BASE_CHECKPOINT_DIR}/hpo_study.db" # Store study results
-
 
 # --- Cross-Validation Config ---
 N_FOLDS = 5 if not DEBUG_MODE else 2
@@ -192,13 +191,13 @@ MIXED_PRECISION = True if DEVICE.type == 'cuda' else False
 USE_TORCH_COMPILE = False # Set to True to try torch.compile (requires PyTorch 2.0+)
 
 # --- Model Config (Defaults, will be updated by HPO if RUN_HPO=True) ---
-MODEL_NAMES = ["tf_efficientnet_b3"] # Default teacher backbones
+MODEL_NAMES = ["tf_efficientnetv2_l_in21ft1k", "convnext_large_in22ft1k"]
 DROP_PATH_RATE = 0.1; PRETRAINED = True; NUM_CLASSES = -1 # NUM_CLASSES updated after data loading
-EMBEDDING_SIZE = 512; DROPOUT_RATE = 0.3; GLOBAL_POOLING = 'avg'
+EMBEDDING_SIZE = 1024; DROPOUT_RATE = 0.3; GLOBAL_POOLING = 'avg'
 
 # --- Metric Learning Config (Defaults, potentially tuned by HPO) ---
 METRIC_LEARNING_TYPE = 'ArcFace'
-ARCFACE_S = 30.0; ARCFACE_M = 0.50
+ARCFACE_S = 30.0; ARCFACE_M = 0.6
 
 # --- Loss Function & Imbalance Handling ---
 LOSS_TYPE = 'CrossEntropy' # 'CrossEntropy', 'FocalLoss'
@@ -258,6 +257,9 @@ KD_LR = 1e-4
 KD_ALPHA = 0.5 # Weight for KD loss (KLDiv) vs CrossEntropy loss (1-alpha)
 KD_TEMPERATURE = 4.0 # Softening temperature for logits
 KD_STUDENT_MODEL_SAVE_PATH = os.path.join(BASE_MODEL_SAVE_DIR, f"kd_student_{KD_STUDENT_MODEL_NAME}.pth")
+
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD = [0.229, 0.224, 0.225]
 
 # --- Global Variables ---
 stop_requested = False; label_encoder = None; class_names = None
@@ -464,7 +466,7 @@ def log_misclassified(fold, model, dataloader, criterion, device, global_epoch, 
                     inputs, labels, paths = batch_data
                     inputs, labels = inputs.to(device), labels.to(device)
 
-                    with autocast(enabled=MIXED_PRECISION):
+                    with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')):
                         embeddings = model(inputs)
                         # Handle potential mismatch if model doesn't have metric_fc
                         if hasattr(model, 'metric_fc'):
@@ -683,84 +685,46 @@ class PlantDataset(Dataset):
             return image, label
 
 
-def get_transforms(image_size=PROGRESSIVE_RESIZING_STAGES[0][1], use_albumentations=ALBUMENTATIONS_AVAILABLE):
-    """Gets training and validation transforms."""
-    global TTA_TRANSFORMS # Allow modification of global TTA transforms
-    mean=[0.485, 0.456, 0.406]; std=[0.229, 0.224, 0.225]
-    print(f"{TermColors.CYAN}ℹ Generating transforms for image size: {image_size}{TermColors.ENDC}")
+def get_transforms(image_size=(224, 224), augmentations_config=None):
+    """
+    Generates simplified train and validation image transformations,
+    suitable for use with pre-augmented offline data.
+    """
+    print(f"{TermColors.CYAN}ℹ Generating SIMPLIFIED transforms for image size: {image_size}{TermColors.ENDC}")
+    h = int(image_size[0])
+    w = int(image_size[1])
 
-    if use_albumentations:
-        train_transform = A.Compose([
-            A.RandomResizedCrop(height=image_size[0], width=image_size[1], scale=(0.7, 1.0), ratio=(0.75, 1.33), p=1.0),
-            A.HorizontalFlip(p=0.5),
-            A.VerticalFlip(p=0.2), # Added vertical flip
-            A.RandomRotate90(p=0.5),
-            # Use border_mode instead of mode
-            A.Affine(scale=(0.9, 1.1), translate_percent=(-0.06, 0.06), rotate=(-15, 15), shear=(-5, 5), p=0.7, border_mode=cv2.BORDER_REFLECT),
-            A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.7),
-            A.OneOf([
-                A.GaussianBlur(blur_limit=(3, 7), p=0.5),
-                A.MotionBlur(p=0.5),
-                A.GaussNoise(var_limit=(10.0, 50.0), p=0.3) # Adjusted GaussNoise
-            ], p=0.4),
-            A.CoarseDropout(max_holes=8, max_height=int(image_size[0]*0.1), max_width=int(image_size[1]*0.1), min_holes=1, fill_value=0, p=0.3), # Added CoarseDropout
-            A.Normalize(mean=mean, std=std),
+    # --- Simplified Training Transforms ---
+    train_transform_list = [
+        A.Resize(height=h, width=w, interpolation=cv2.INTER_LINEAR),
+        A.HorizontalFlip(p=0.5),
+        A.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05, p=0.5),
+        A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ToTensorV2(),
+    ]
+    train_transform = A.Compose(train_transform_list)
+    print(f"{TermColors.CYAN}  Using minimal online training augmentations: Resize, HFlip, Mild ColorJitter, Normalize, ToTensorV2.{TermColors.ENDC}")
+
+
+    # --- Validation Transforms ---
+    val_transform = A.Compose([
+        A.Resize(height=h, width=w, interpolation=cv2.INTER_LINEAR),
+        A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ToTensorV2(),
+    ])
+
+    # --- TTA Transforms (Example: Horizontal Flip + Resize) ---
+    global TTA_TRANSFORMS 
+    if USE_TTA:
+        TTA_TRANSFORMS = A.Compose([
+            A.HorizontalFlip(p=1.0),
+            A.Resize(height=h, width=w, interpolation=cv2.INTER_LINEAR),
+            A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ToTensorV2(),
         ])
-
-        val_transform = A.Compose([
-            A.Resize(height=image_size[0], width=image_size[1]),
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2()
-        ])
-
-        # Define TTA transforms using Albumentations (e.g., horizontal flip)
-        TTA_TRANSFORMS = A.Compose([
-            A.Resize(height=image_size[0], width=image_size[1]),
-            A.HorizontalFlip(p=1.0), # Apply horizontal flip
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2()
-        ])
-        print(f"{TermColors.INFO}  Using Albumentations transforms.{TermColors.ENDC}")
-
-    else: # Fallback to torchvision
-        train_tf = [
-            transforms.RandomResizedCrop(size=image_size, scale=(0.7, 1.0)),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(15),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
-        ]
-        if USE_RAND_AUGMENT:
-             try:
-                 from torchvision.transforms import RandAugment
-                 train_tf.append(RandAugment(num_ops=RAND_AUGMENT_N, magnitude=RAND_AUGMENT_M))
-             except ImportError:
-                 print(f"{TermColors.YELLOW}Warn: RandAugment not available in this torchvision version. Skipping.{TermColors.ENDC}")
-
-        train_tf.extend([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-            transforms.RandomErasing(p=0.3, scale=(0.02, 0.2), ratio=(0.3, 3.3))
-        ])
-        train_transform = transforms.Compose(train_tf)
-
-        # Validation transform with slight resize then center crop
-        val_transform = transforms.Compose([
-            transforms.Resize(int(max(image_size)*1.1)), # Resize slightly larger
-            transforms.CenterCrop(size=image_size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)
-        ])
-
-        # Define TTA transforms using torchvision (e.g., horizontal flip)
-        TTA_TRANSFORMS = transforms.Compose([
-            transforms.Resize(int(max(image_size)*1.1)),
-            transforms.CenterCrop(size=image_size),
-            transforms.RandomHorizontalFlip(p=1.0), # Apply horizontal flip
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)
-        ])
-        print(f"{TermColors.INFO}  Using torchvision transforms.{TermColors.ENDC}")
+        print(f"{TermColors.CYAN}ℹ TTA transforms defined (Example: HFlip).{TermColors.ENDC}")
+    else:
+        TTA_TRANSFORMS = None
 
     return train_transform, val_transform
 
@@ -785,10 +749,13 @@ class ArcFace(nn.Module):
         self.mm = math.sin(math.pi - m) * m
 
     def forward(self, input, label):
-        # input: embedding features (batch_size, in_features)
-        # label: ground truth labels (batch_size)
         # --------------------------- cos(theta) & phi(theta) ---------------------------
         cosine = F.linear(F.normalize(input), F.normalize(self.weight))
+        
+        # If labels are None, we're in inference mode - just return cosine similarity * scale
+        if label is None:
+            return cosine * self.s
+            
         sine = torch.sqrt(1.0 - torch.pow(cosine, 2)).clamp(0, 1) # Sine component
         phi = cosine * self.cos_m - sine * self.sin_m # cos(theta + m)
         if self.easy_margin:
@@ -812,81 +779,128 @@ class CombinedModel(nn.Module):
     def __init__(self, model_names, num_classes, pretrained=True, global_pool='avg', dropout_rate=0.3, embedding_size=512,
                  drop_path_rate=0.1, arcface_s=ARCFACE_S, arcface_m=ARCFACE_M, metric_learning=METRIC_LEARNING_TYPE):
         super().__init__()
+        self.model_names = model_names
+        self.num_classes = num_classes
+        self.embedding_size = embedding_size
+        self.metric_learning = metric_learning
         self.backbones = nn.ModuleList()
-        total_features = 0
-        if isinstance(model_names, str): # Handle single model name (for HPO)
-            model_names = [model_names]
+        self.total_features = 0
+        self.feature_dims = {}  # To store special case feature dimensions
 
-        print(f"{TermColors.CYAN}ℹ Building Combined Model: {', '.join(model_names)}{TermColors.ENDC}")
+        print(f"{TermColors.INFO}ℹ Building Combined Model: {', '.join(model_names)}{TermColors.ENDC}")
+
         for name in model_names:
-            print(f"{TermColors.CYAN}  Loading backbone: {name}...{TermColors.ENDC}")
-            # Add drop_path_rate only if model supports it (common in EffNets, ViTs, ConvNeXt)
-            kwargs = {}
-            if drop_path_rate > 0 and any(s in name for s in ['convnext', 'efficientnet', 'vit', 'swin', 'resnet', 'densenet']): # Add more if needed
-                 kwargs['drop_path_rate'] = drop_path_rate
-                 print(f"    Applying drop_path_rate: {drop_path_rate}")
-
+            print(f"  Loading backbone: {name}...")
             try:
-                # Create model without final classifier (num_classes=0)
-                backbone = timm.create_model(name, pretrained=pretrained, num_classes=0, global_pool=global_pool, **kwargs)
-                self.backbones.append(backbone)
-                # Get the feature dimension after the global pool
-                if hasattr(backbone, 'num_features'):
-                    num_features = backbone.num_features
-                elif hasattr(backbone, 'feature_info'): # Some models store it here
-                    num_features = backbone.feature_info[-1]['num_chs']
-                else: # Try to infer (may be fragile)
-                    dummy_input = torch.randn(1, 3, 224, 224) # Assume 224x224 input
-                    dummy_output = backbone(dummy_input)
-                    num_features = dummy_output.shape[-1]
-                    print(f"{TermColors.YELLOW}Warn: Could not directly get num_features for {name}. Inferred: {num_features}{TermColors.ENDC}")
+                kwargs = {}
+                supported_families = ['efficientnet', 'convnext', 'vit', 'swin', 'beit', 'deit']
+                model_family = name.split('_')[0].lower() # Basic way to get family
 
-                total_features += num_features
-                print(f"    {name} loaded. Features: {num_features}")
+                if any(family in model_family for family in supported_families) and drop_path_rate > 0:
+                    kwargs['drop_path_rate'] = drop_path_rate
+                    print(f"    Applying drop_path_rate: {drop_path_rate}")
+
+                backbone = timm.create_model(name, pretrained=pretrained, num_classes=0, global_pool=global_pool, **kwargs)
+
+                # Get the correct feature dimension
+                # Handle special cases for models with mismatched num_features
+                if 'mobilenetv3' in name:
+                    # MobileNetV3 may return 1280 features instead of 960
+                    backbone_features = 1280
+                    print(f"    {name} loaded. Features: {backbone_features} (overriding reported {backbone.num_features})")
+                    self.feature_dims[name] = backbone_features
+                elif 'efficientnetv2' in name:
+                    # EfficientNetV2 models may also have mismatched feature dimensions
+                    if 's' in name:  # Small variant
+                        backbone_features = 1280
+                    elif 'm' in name:  # Medium variant
+                        backbone_features = 1280
+                    elif 'l' in name:  # Large variant
+                        backbone_features = 1280
+                    else:
+                        backbone_features = backbone.num_features
+                    print(f"    {name} loaded. Features: {backbone_features} (overriding reported {backbone.num_features})")
+                    self.feature_dims[name] = backbone_features
+                else:
+                    # For other models, use standard num_features attribute
+                    backbone_features = backbone.num_features
+                    print(f"    {name} loaded. Features: {backbone_features}")
+                    self.feature_dims[name] = backbone_features
+                
+                self.backbones.append(backbone)
+                self.total_features += backbone_features
+
             except Exception as e:
                 print(f"{TermColors.RED}❌ Backbone Load Fail {name}: {e}{TermColors.ENDC}")
-                traceback.print_exc()
-                raise e
+                # traceback.print_exc() # Uncomment for debugging
+                raise e # Re-raise the exception to stop execution if a backbone fails
 
-        print(f"  Total backbone features: {total_features}, Target Embedding: {embedding_size}")
-        self.embedding = nn.Linear(total_features, embedding_size) if total_features != embedding_size else nn.Identity()
-        self.bn = nn.BatchNorm1d(embedding_size)
+        print(f"  Total backbone features: {self.total_features}, Target Embedding: {self.embedding_size}")
+
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(self.total_features, self.embedding_size),
+            nn.BatchNorm1d(self.embedding_size),
+            nn.ReLU(inplace=True)
+        )
+        current_features = self.embedding_size
+        print(f"  Added embedding layer: {self.total_features} -> {self.embedding_size}")
+
+        # Dropout Layer
         self.dropout = nn.Dropout(dropout_rate)
 
-        self.metric_learning = metric_learning
+        # Final Classification Head (ArcFace or Linear)
         if self.metric_learning == 'ArcFace':
             print(f"  Using ArcFace head (S={arcface_s}, M={arcface_m})")
-            self.metric_fc = ArcFace(embedding_size, num_classes, s=arcface_s, m=arcface_m)
+            self.metric_fc = ArcFace(current_features, num_classes, s=arcface_s, m=arcface_m)
         else:
-            print("  Using standard Linear head")
-            self.metric_fc = nn.Linear(embedding_size, num_classes) # Standard linear classifier
+            print(f"  Using standard Linear head")
+            self.metric_fc = nn.Linear(current_features, num_classes)
 
-    def forward(self, x, labels=None): # Accept labels for ArcFace
-        features = [bb(x) for bb in self.backbones]
-        combined_features = torch.cat(features, dim=1)
 
-        embed = self.embedding(combined_features)
-        embed = self.bn(embed)
-        embed = self.dropout(embed) # Apply dropout after BN
+    def forward(self, x, labels=None):
+        """Forward pass through the combined model."""
+        # Extract features from all backbones
+        all_features = []
+        for i, backbone in enumerate(self.backbones):
+            features = backbone(x)
+            all_features.append(features)
 
-        # Pass labels to ArcFace if used, otherwise just pass embeddings
+        # Concatenate features if multiple backbones exist
+        if len(all_features) > 1:
+            combined_features = torch.cat(all_features, dim=1)
+        else:
+            combined_features = all_features[0]
+
+        # Pass through embedding layer (if exists) and dropout
+        embedding = self.embedding_layer(combined_features)
+        embedding = self.dropout(embedding)
+
+        # Pass through final classification head
         if self.metric_learning == 'ArcFace':
+            # ArcFace requires labels during training and potentially eval
             if labels is None:
-                raise ValueError("Labels must be provided when using ArcFace head during training/validation.")
-            output = self.metric_fc(embed, labels)
+                output = self.metric_fc(embedding, labels) # Pass None labels
+            else:
+                output = self.metric_fc(embedding, labels)
         else:
-            output = self.metric_fc(embed) # Standard linear layer doesn't need labels
+            # Standard linear layer
+            output = self.metric_fc(embedding)
 
-        return output # Return logits
+        return output
 
 
 def build_model(model_names=MODEL_NAMES, num_classes=NUM_CLASSES, pretrained=PRETRAINED, dropout_rate=DROPOUT_RATE,
                 embedding_size=EMBEDDING_SIZE, drop_path_rate=DROP_PATH_RATE, global_pool=GLOBAL_POOLING,
                 arcface_s=ARCFACE_S, arcface_m=ARCFACE_M, metric_learning=METRIC_LEARNING_TYPE):
     """Builds the combined model."""
-    return CombinedModel(model_names, num_classes, pretrained, global_pool, dropout_rate, embedding_size,
-                         drop_path_rate, arcface_s, arcface_m, metric_learning)
+    # Print exact model configuration for debugging
+    print(f"Building model with: model_names={model_names}, embedding_size={embedding_size}, num_classes={num_classes}")
 
+    # Create model instance
+    model = CombinedModel(model_names, num_classes, pretrained, global_pool, dropout_rate, embedding_size,
+                         drop_path_rate, arcface_s, arcface_m, metric_learning)
+    
+    return model
 
 # --- Loss Functions ---
 class FocalLoss(nn.Module):
@@ -930,30 +944,40 @@ def get_criterion(loss_type=LOSS_TYPE, label_smoothing=LABEL_SMOOTHING, class_we
 # --- Optimizer and Scheduler ---
 def get_optimizer(model, optimizer_type=OPTIMIZER_TYPE, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, use_sam=USE_SAM, sam_rho=SAM_RHO, sam_adaptive=SAM_ADAPTIVE):
     """Gets the optimizer."""
-    params = model.parameters()
+    # Get only trainable parameters
+    params = [p for p in model.parameters() if p.requires_grad]
+    
+    # Check if we have trainable parameters
+    if len(params) == 0:
+        print(f"{TermColors.RED}❌ Error: No trainable parameters found in model!{TermColors.ENDC}")
+        raise ValueError("No trainable parameters in model")
+        
     print(f"{TermColors.INFO}  Using Optimizer: {optimizer_type} (LR={lr:.1E}, WD={weight_decay:.1E}, SAM={use_sam}){TermColors.ENDC}")
 
     if use_sam and SAM_AVAILABLE:
-        # Use SAM with a base optimizer
-        if optimizer_type == 'AdamP' and ADAMP_AVAILABLE:
-            base_optimizer = AdamP(params, lr=lr, weight_decay=weight_decay, betas=(0.9, 0.999), nesterov=True)
-        elif optimizer_type == 'AdamW':
-            base_optimizer = optim.AdamW(params, lr=lr, weight_decay=weight_decay)
-        else: # Default base for SAM
-            print(f"{TermColors.YELLOW}Warn: SAM base optimizer '{optimizer_type}' not fully supported/tested. Using AdamW as base.{TermColors.ENDC}")
-            base_optimizer = optim.AdamW(params, lr=lr, weight_decay=weight_decay)
         print(f"    SAM settings: rho={sam_rho}, adaptive={sam_adaptive}")
+        
+        # Use partial to properly create optimizer function for SAM
+        from functools import partial
+        
+        if optimizer_type == 'AdamP' and ADAMP_AVAILABLE:
+            base_optimizer = partial(AdamP, lr=lr, weight_decay=weight_decay, betas=(0.9, 0.999), nesterov=True)
+        elif optimizer_type == 'AdamW':
+            base_optimizer = partial(optim.AdamW, lr=lr, weight_decay=weight_decay)
+        else:
+            base_optimizer = partial(optim.AdamW, lr=lr, weight_decay=weight_decay)
+            
         return SAM(params, base_optimizer, rho=sam_rho, adaptive=sam_adaptive)
     else:
-        # Standard optimizers
+        # Standard optimizers - no change needed
         if optimizer_type == 'AdamP' and ADAMP_AVAILABLE:
             return AdamP(params, lr=lr, weight_decay=weight_decay, betas=(0.9, 0.999), nesterov=True)
         elif optimizer_type == 'AdamW':
             return optim.AdamW(params, lr=lr, weight_decay=weight_decay)
         elif optimizer_type == 'SGD':
-            return optim.SGD(params, lr=lr, weight_decay=weight_decay, momentum=0.9)
+            return optim.SGD(params, lr=lr, weight_decay=weight_decay, momentum=0.9, nesterov=True)
         else:
-            print(f"{TermColors.WARNING}Warn: Unknown optimizer type '{optimizer_type}'. Defaulting to AdamW.{TermColors.ENDC}")
+            print(f"{TermColors.YELLOW}⚠️ Unknown optimizer '{optimizer_type}'. Using AdamW.{TermColors.ENDC}")
             return optim.AdamW(params, lr=lr, weight_decay=weight_decay)
 
 
@@ -1041,103 +1065,130 @@ def ema_avg_fn(averaged_model_parameter, model_parameter, num_averaged):
     """ Exponential Moving Average update rule. """
     return EMA_DECAY * averaged_model_parameter + (1 - EMA_DECAY) * model_parameter
 
-
 # --- Training & Validation Loops ---
 def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, global_epoch, stage_idx, stage_epoch, stage_total_epochs, device, writer, num_classes, ema_model,
                     mixup_alpha=MIXUP_ALPHA, cutmix_alpha=CUTMIX_ALPHA, aug_probability=AUG_PROBABILITY, grad_clip_val=GRADIENT_CLIP_VAL,
                     gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS, use_sam=USE_SAM, fold_num=0):
     """Trains the model for one epoch."""
-    model.train(); running_loss = 0.0; total_samples = 0; all_preds, all_labels = [], []
+    model.train()
+    running_loss = 0.0
+    total_samples = 0
+    all_preds, all_labels = [], []
     is_sam = hasattr(optimizer, 'base_optimizer') and use_sam # Check if SAM is active
 
-    # Adjust description based on whether it's HPO or main training
-    if fold_num == "HPO":
-        pbar_desc = f"HPO Trial Train Ep {global_epoch+1}/{stage_total_epochs}"
-    else:
-        pbar_desc = f"Fold {fold_num} Stage {stage_idx+1} Ep {stage_epoch+1}/{stage_total_epochs} (Glob {global_epoch+1}) Train"
+    # Simplified description - minimal string operations
+    pbar_desc = f"HPO Train Ep {global_epoch+1}/{stage_total_epochs}" if fold_num == "HPO" else f"F{fold_num} S{stage_idx+1} E{stage_epoch+1}/{stage_total_epochs} Tr"
 
-    progress_bar = tqdm(dataloader, desc=pbar_desc, leave=False)
+    # Use less verbose progress bar
+    progress_bar = tqdm(dataloader, desc=pbar_desc, leave=True, disable=fold_num == "HPO", 
+                       bar_format='{l_bar}{bar:30}{r_bar}{bar:-30b}')  # Enhanced progress bar format
     optimizer.zero_grad() # Zero grad at the beginning
+    
+    # Epoch progress bar to track overall epoch progress
+    total_batches = len(dataloader)
+    epoch_progress = tqdm(total=total_batches, desc=f"Epoch {global_epoch+1} Progress", 
+                         leave=True, position=0, bar_format='{desc}: {percentage:3.0f}%|{bar:50}{r_bar}')
 
     for batch_idx, batch_data in enumerate(progress_bar):
+        if check_keyboard_stop():
+            break
+            
         # Expect dataloader to yield (inputs, labels)
         if len(batch_data) != 2:
-             print(f"{TermColors.YELLOW}Warn: Skipping training batch, expected 2 items (inputs, labels), got {len(batch_data)}.{TermColors.ENDC}")
-             continue
+            continue
 
-        check_keyboard_stop();
-        if stop_requested: break
         inputs, labels = batch_data
-        inputs, labels = inputs.to(device), labels.to(device); batch_size = inputs.size(0)
+        inputs, labels = inputs.to(device), labels.to(device)
+        batch_size = inputs.size(0)
 
         # --- Apply Mixup/Cutmix ---
-        use_mixup, use_cutmix = False, False; r = np.random.rand()
+        use_mixup, use_cutmix = False, False
+        r = np.random.rand()
         if mixup_alpha > 0 and cutmix_alpha > 0 and r < aug_probability:
-            if np.random.rand() < 0.5: inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, mixup_alpha, device); use_mixup = True
-            else: inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels, cutmix_alpha, device); use_cutmix = True
-        elif mixup_alpha > 0 and r < aug_probability: inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, mixup_alpha, device); use_mixup = True
-        elif cutmix_alpha > 0 and r < aug_probability: inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels, cutmix_alpha, device); use_cutmix = True
-        else: # No mixup/cutmix
-            lam = 1.0; targets_a, targets_b = labels, labels
+            if np.random.rand() < 0.5:
+                inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, mixup_alpha, device)
+                use_mixup = True
+            else:
+                inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels, cutmix_alpha, device)
+                use_cutmix = True
+        elif mixup_alpha > 0 and r < aug_probability:
+            inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, mixup_alpha, device)
+            use_mixup = True
+        elif cutmix_alpha > 0 and r < aug_probability:
+            inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels, cutmix_alpha, device)
+            use_cutmix = True
+        else:
+            lam = 1.0
+            targets_a, targets_b = labels, labels
 
         # --- Forward Pass ---
-        with autocast(enabled=MIXED_PRECISION):
-            # Define helper to get logits, handling ArcFace
-            def get_logits(current_embeddings, current_labels):
-                if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace':
-                    return model.metric_fc(current_embeddings, current_labels)
-                elif hasattr(model, 'metric_fc'): # Standard linear head
-                     return model.metric_fc(current_embeddings)
-                else: # Should not happen with CombinedModel, but as fallback
-                    print(f"{TermColors.YELLOW}Warn: Model has no 'metric_fc'. Assuming direct output is logits.{TermColors.ENDC}")
-                    return current_embeddings # Assume the embedding IS the output
-
-            # Define helper for loss calculation, handling logit adjust and mixup/cutmix
-            def get_loss(current_outputs, current_labels_a, current_labels_b, current_lam):
-                adj_outputs = current_outputs
+        with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and device.type == 'cuda')):
+            # Helper function definitions moved outside loop for efficiency
+            if is_sam:
+                # First forward-backward pass
+                embeddings = model(inputs)
+                outputs = model.metric_fc(embeddings, targets_a) if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace' else model.metric_fc(embeddings) if hasattr(model, 'metric_fc') else embeddings
+                
+                # Apply logit adjustment if needed
+                adj_outputs = outputs
                 if IMBALANCE_STRATEGY == 'LogitAdjust' and CLASS_PRIORS is not None:
                     logit_adj = LOGIT_ADJUSTMENT_TAU * torch.log(CLASS_PRIORS + 1e-12)
-                    adj_outputs = current_outputs + logit_adj.unsqueeze(0)
-
+                    adj_outputs = outputs + logit_adj.unsqueeze(0)
+                
+                # Calculate loss
                 if use_mixup or use_cutmix:
-                    loss = mixup_criterion(criterion, adj_outputs, current_labels_a, current_labels_b, current_lam)
+                    loss1 = mixup_criterion(criterion, adj_outputs, targets_a, targets_b, lam)
                 else:
-                    loss = criterion(adj_outputs, current_labels_a) # Use labels_a (same as labels_b if no mixup)
-                return loss, adj_outputs # Return potentially adjusted outputs for accuracy calc
-
-            # --- SAM Optimizer Steps ---
-            if is_sam:
-                # First forward-backward pass (calculates gradient based on original batch)
-                embeddings = model(inputs)
-                # Pass appropriate labels to get_logits
-                outputs = get_logits(embeddings, targets_a if use_mixup or use_cutmix else labels)
-                loss1, adjusted_outputs1 = get_loss(outputs, targets_a, targets_b, lam)
+                    loss1 = criterion(adj_outputs, targets_a)
+                    
                 loss1_scaled = loss1 / gradient_accumulation_steps
                 scaler.scale(loss1_scaled).backward()
-                # First optimizer step (calculates perturbation)
-                optimizer.first_step(zero_grad=True) # zero_grad=True essential for SAM
-
-                # Second forward-backward pass (calculates gradient based on perturbed weights)
+                
+                # First optimizer step
+                optimizer.first_step(zero_grad=True)
+                
+                # Second forward-backward pass
                 embeddings_perturbed = model(inputs)
-                # Pass appropriate labels again
-                outputs_perturbed = get_logits(embeddings_perturbed, targets_a if use_mixup or use_cutmix else labels)
-                loss2, adjusted_outputs_final = get_loss(outputs_perturbed, targets_a, targets_b, lam)
+                outputs_perturbed = model.metric_fc(embeddings_perturbed, targets_a) if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace' else model.metric_fc(embeddings_perturbed) if hasattr(model, 'metric_fc') else embeddings_perturbed
+                
+                # Apply logit adjustment again
+                adj_outputs_final = outputs_perturbed
+                if IMBALANCE_STRATEGY == 'LogitAdjust' and CLASS_PRIORS is not None:
+                    adj_outputs_final = outputs_perturbed + logit_adj.unsqueeze(0)
+                
+                # Calculate second loss
+                if use_mixup or use_cutmix:
+                    loss2 = mixup_criterion(criterion, adj_outputs_final, targets_a, targets_b, lam)
+                else:
+                    loss2 = criterion(adj_outputs_final, targets_a)
+                    
                 loss2_scaled = loss2 / gradient_accumulation_steps
                 scaler.scale(loss2_scaled).backward()
-                # Second optimizer step (updates model weights)
-                # Gradient clipping happens *before* the second step inside SAM logic if grad_clip_val > 0
-                optimizer.second_step(zero_grad=True) # zero_grad=True essential
-
-                loss_final = loss2 # Use loss from second step for reporting
-
-            # --- Standard Optimizer Steps ---
+                
+                # Second optimizer step
+                optimizer.second_step(zero_grad=True)
+                
+                loss_final = loss2  # Use loss from second step for reporting
             else:
+                # Standard training path
                 embeddings = model(inputs)
-                # Pass appropriate labels
-                outputs = get_logits(embeddings, targets_a if use_mixup or use_cutmix else labels)
-                loss, adjusted_outputs_final = get_loss(outputs, targets_a, targets_b, lam)
-                loss_final = loss # Loss for reporting
+                outputs = model.metric_fc(embeddings, targets_a) if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace' else model.metric_fc(embeddings) if hasattr(model, 'metric_fc') else embeddings
+                
+                # Apply logit adjustment if needed
+                adj_outputs_final = outputs
+                if IMBALANCE_STRATEGY == 'LogitAdjust' and CLASS_PRIORS is not None:
+                    logit_adj = LOGIT_ADJUSTMENT_TAU * torch.log(CLASS_PRIORS + 1e-12)
+                    adj_outputs_final = outputs + logit_adj.unsqueeze(0)
+                
+                # Calculate loss
+                if use_mixup or use_cutmix:
+                    loss = mixup_criterion(criterion, adj_outputs_final, targets_a, targets_b, lam)
+                else:
+                    loss = criterion(adj_outputs_final, targets_a)
+                    
+                loss_final = loss  # For reporting
                 loss_scaled = loss / gradient_accumulation_steps
+                
                 # Backward pass
                 scaler.scale(loss_scaled).backward()
 
@@ -1159,32 +1210,45 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
             if USE_EMA and ema_model:
                 ema_model.update() # Update EMA model after optimizer step
 
-        # --- Loss and Accuracy Tracking ---
+        # --- Loss and Accuracy Tracking (more efficient) ---
         if not torch.isnan(loss_final) and not torch.isinf(loss_final):
-             current_step_loss = loss_final.item(); running_loss += current_step_loss * batch_size; total_samples += batch_size
-             # Use adjusted outputs for accuracy calculation
-             # Use original labels (not mixed) for accuracy calculation
-             preds_for_acc = torch.argmax(adjusted_outputs_final, dim=1)
-             all_preds.append(preds_for_acc.detach().cpu()); all_labels.append(labels.detach().cpu()) # Store on CPU
-             progress_bar.set_postfix(loss=f"{current_step_loss:.4f}", lr=f"{optimizer.param_groups[0]['lr']:.1E}")
+            current_step_loss = loss_final.item()
+            running_loss += current_step_loss * batch_size
+            total_samples += batch_size
+            
+            # Use adjusted outputs for accuracy calculation
+            preds_for_acc = torch.argmax(adj_outputs_final, dim=1)
+            all_preds.append(preds_for_acc.detach().cpu())
+            all_labels.append(labels.detach().cpu())
+            
+            # Update progress bar less frequently to reduce overhead
+            if batch_idx % 5 == 0:
+                progress_bar.set_postfix(loss=f"{current_step_loss:.3f}", 
+                                        lr=f"{optimizer.param_groups[0]['lr']:.1E}",
+                                        batch=f"{batch_idx+1}/{total_batches}")
         else:
-             print(f"{TermColors.RED}Warn: NaN/Inf loss detected @ batch {batch_idx}. Skipping batch.{TermColors.ENDC}")
-             # If loss is NaN/Inf, gradients might be bad, so zero them before next batch if accumulating
-             if (batch_idx + 1) % gradient_accumulation_steps != 0: # If not already zeroed by step
-                  optimizer.zero_grad()
+            # If loss is NaN/Inf and we're accumulating gradients, zero them
+            if (batch_idx + 1) % gradient_accumulation_steps != 0:
+                optimizer.zero_grad()
+        
+        # Update epoch progress bar
+        epoch_progress.update(1)
 
-
+    # Close the epoch progress bar
+    epoch_progress.close()
+    
     # --- End of Epoch ---
-    if stop_requested: return None, None # Indicate interruption
+    if stop_requested:
+        return None, None # Indicate interruption
 
     epoch_loss = running_loss / total_samples if total_samples > 0 else 0
 
     # Calculate accuracy from collected predictions and labels
+    epoch_acc = 0.0
     if all_preds and all_labels:
-        all_preds_tensor = torch.cat(all_preds); all_labels_tensor = torch.cat(all_labels)
+        all_preds_tensor = torch.cat(all_preds)
+        all_labels_tensor = torch.cat(all_labels)
         epoch_acc = (all_preds_tensor == all_labels_tensor).sum().item() / total_samples if total_samples > 0 else 0
-    else:
-        epoch_acc = 0.0
 
     # --- Learning Rate Scheduler Step ---
     # Step the scheduler after the epoch (except for ReduceLROnPlateau which needs metrics)
@@ -1197,13 +1261,11 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
         writer.add_scalar('Loss/train', epoch_loss, global_epoch)
         writer.add_scalar('Accuracy/train', epoch_acc, global_epoch)
         writer.add_scalar('LearningRate', optimizer.param_groups[0]['lr'], global_epoch)
-        writer.add_scalar('Stage/Index', stage_idx, global_epoch)
-        writer.add_scalar('Stage/Epoch', stage_epoch, global_epoch)
 
     return epoch_loss, epoch_acc
 
 
-def validate_one_epoch(model, dataloader, criterion, device, global_epoch, writer, num_classes, swa_model=None, ema_model=None, return_preds=False, fold_num=0):
+def validate_one_epoch(model, dataloader, criterion, device, global_epoch, writer, num_classes, scheduler=None, swa_model=None, ema_model=None, return_preds=False, fold_num=0): # Added scheduler=None
     """Validates the model for one epoch."""
     model.eval() # Set model to evaluation mode
     if swa_model: swa_model.eval()
@@ -1246,7 +1308,7 @@ def validate_one_epoch(model, dataloader, criterion, device, global_epoch, write
                 inputs, labels = inputs.to(device), labels.to(device); batch_size = inputs.size(0)
 
                 # --- Standard Inference ---
-                with autocast(enabled=MIXED_PRECISION):
+                with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')):
                     embeddings = current_model(inputs)
                     # Handle potential mismatch if model doesn't have metric_fc
                     if hasattr(current_model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace':
@@ -1278,7 +1340,7 @@ def validate_one_epoch(model, dataloader, criterion, device, global_epoch, write
                              inputs_tta_list.append(augmented['image'])
                         inputs_tta = torch.stack(inputs_tta_list).to(device)
 
-                        with autocast(enabled=MIXED_PRECISION):
+                        with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')):
                             embed_tta = current_model(inputs_tta)
                             if hasattr(current_model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace':
                                 out_tta = current_model.metric_fc(embed_tta, labels) # Pass labels
@@ -1342,7 +1404,7 @@ def validate_one_epoch(model, dataloader, criterion, device, global_epoch, write
     oof_indices_concat = torch.cat(oof_data['indices']).numpy() if oof_data['indices'] else None
 
     # Step ReduceLROnPlateau scheduler if used
-    if scheduler and isinstance(scheduler, ReduceLROnPlateau):
+    if scheduler and isinstance(scheduler, ReduceLROnPlateau): # Check if scheduler exists and is the correct type
         metric_to_monitor = base_loss if PLATEAU_MONITOR == 'val_loss' else base_acc
         scheduler.step(metric_to_monitor)
         print(f"  ReduceLROnPlateau stepped with {PLATEAU_MONITOR}={metric_to_monitor:.4f}")
@@ -1383,6 +1445,150 @@ def train_stacking_meta_model(oof_preds, oof_labels, save_path):
         print(f"{TermColors.RED}❌ Error training stacking meta-model: {e}{TermColors.ENDC}")
         traceback.print_exc()
 
+# --- Auto Training Configuration ---
+class AutoTrainingConfig:
+    """Automatically adjusts training parameters based on performance to prevent underfitting and overfitting."""
+    def __init__(self, initial_lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY):
+        self.initial_lr = initial_lr
+        self.weight_decay = weight_decay
+        self.plateau_count = 0
+        self.overfit_count = 0
+        self.best_val_loss = float('inf')
+        self.best_val_acc = 0.0
+        self.train_losses = []
+        self.val_losses = []
+        self.train_accs = []
+        self.val_accs = []
+        self.lr_history = []
+        self.wd_history = []
+        self.adjustment_log = []
+        
+    def update(self, train_loss, train_acc, val_loss, val_acc, optimizer):
+        """Monitor metrics and adjust training parameters as needed."""
+        # Store metrics for trend analysis
+        self.train_losses.append(train_loss)
+        self.val_losses.append(val_loss)
+        self.train_accs.append(train_acc)
+        self.val_accs.append(val_acc)
+        
+        # Get current LR and WD
+        current_opt = optimizer.base_optimizer if hasattr(optimizer, 'base_optimizer') else optimizer
+        current_lr = current_opt.param_groups[0]['lr']
+        current_wd = current_opt.param_groups[0]['weight_decay']
+        self.lr_history.append(current_lr)
+        self.wd_history.append(current_wd)
+        
+        # Check if validation metrics improved
+        val_loss_improved = val_loss < self.best_val_loss
+        val_acc_improved = val_acc > self.best_val_acc
+        
+        if val_loss_improved:
+            self.best_val_loss = val_loss
+            self.plateau_count = 0
+            print(f"{TermColors.GREEN}✅ Val loss improved to {val_loss:.4f}{TermColors.ENDC}")
+        else:
+            self.plateau_count += 1
+            print(f"{TermColors.YELLOW}⚠ Val loss plateau: {self.plateau_count} epochs without improvement{TermColors.ENDC}")
+        
+        if val_acc_improved:
+            self.best_val_acc = val_acc
+            print(f"{TermColors.GREEN}✅ Val accuracy improved to {val_acc:.4f}{TermColors.ENDC}")
+        
+        # Detect overfitting
+        is_overfitting = False
+        if len(self.train_losses) >= 3:
+            # Signs of overfitting:
+            # 1. Train loss decreases while val loss increases
+            # 2. Gap between train and val loss is growing
+            train_decreasing = self.train_losses[-1] < self.train_losses[-2]
+            val_increasing = self.val_losses[-1] > self.val_losses[-2]
+            gap_growing = (self.val_losses[-1] - self.train_losses[-1]) > (self.val_losses[-2] - self.train_losses[-2])
+            
+            if train_decreasing and (val_increasing or gap_growing):
+                self.overfit_count += 1
+                is_overfitting = True
+                print(f"{TermColors.YELLOW}⚠ Potential overfitting detected (count: {self.overfit_count}){TermColors.ENDC}")
+            else:
+                self.overfit_count = max(0, self.overfit_count - 0.5)  # Gradually reduce counter if not overfitting
+        
+        # Apply adjustments based on detected issues
+        adjustments_made = False
+        
+        # Handle plateau (underfitting)
+        if self.plateau_count >= 3:
+            # If we're plateauing, try increasing learning rate slightly or reducing regularization
+            if current_lr < self.initial_lr * 1.5:  # Only increase up to 150% of initial LR
+                new_lr = current_lr * 1.2
+                new_wd = max(current_wd * 0.8, 1e-6)  # Reduce weight decay but keep it reasonable
+                
+                self._adjust_optimizer(optimizer, new_lr, new_wd)
+                self.adjustment_log.append(f"Increased LR to {new_lr:.2e} due to plateau")
+                adjustments_made = True
+                
+            self.plateau_count = 0  # Reset counter after adjustment
+        
+        # Handle overfitting
+        elif self.overfit_count >= 2:
+            # If we're overfitting, reduce learning rate and increase regularization
+            new_lr = current_lr * 0.7
+            new_wd = current_wd * 1.5
+            
+            self._adjust_optimizer(optimizer, new_lr, new_wd)
+            self.adjustment_log.append(f"Reduced LR to {new_lr:.2e}, increased WD to {new_wd:.2e} due to overfitting")
+            adjustments_made = True
+            
+            self.overfit_count = 0  # Reset counter after adjustment
+        
+        # For SAM specifically - adjust rho parameter based on detected patterns
+        if hasattr(optimizer, 'rho') and isinstance(optimizer, SAM):
+            self._adjust_sam_parameters(optimizer, is_overfitting)
+        
+        return adjustments_made
+    
+    def _adjust_optimizer(self, optimizer, new_lr, new_wd):
+        """Apply parameter adjustments to the optimizer."""
+        # Handle SAM optimizer which wraps another optimizer
+        opt_to_adjust = optimizer.base_optimizer if hasattr(optimizer, 'base_optimizer') else optimizer
+        
+        for i, param_group in enumerate(opt_to_adjust.param_groups):
+            old_lr = param_group['lr']
+            old_wd = param_group['weight_decay']
+            param_group['lr'] = new_lr
+            param_group['weight_decay'] = new_wd
+            
+            # Log the changes
+            print(f"{TermColors.CYAN}⚙ Group {i} - LR: {old_lr:.2e} → {new_lr:.2e}, WD: {old_wd:.2e} → {new_wd:.2e}{TermColors.ENDC}")
+    
+    def _adjust_sam_parameters(self, optimizer, is_overfitting):
+        """Adjust SAM-specific parameters based on training behavior."""
+        if not is_overfitting:
+            return  # Only adjust when overfitting is detected
+        
+        current_rho = optimizer.rho
+        # If overfitting, increase SAM's rho to find flatter minima
+        if is_overfitting and current_rho < 0.1:  # Cap at reasonable value
+            new_rho = min(current_rho * 1.2, 0.1)
+            if new_rho != current_rho:
+                optimizer.rho = new_rho
+                print(f"{TermColors.CYAN}⚙ Adjusted SAM rho: {current_rho:.4f} → {new_rho:.4f}{TermColors.ENDC}")
+                self.adjustment_log.append(f"Increased SAM rho to {new_rho:.4f}")
+    
+    def get_status_report(self):
+        """Get a summary report of training progression and adjustments."""
+        status = []
+        status.append(f"Best val loss: {self.best_val_loss:.4f}, Best val acc: {self.best_val_acc:.4f}")
+        status.append(f"Current learning rate: {self.lr_history[-1] if self.lr_history else 'N/A'}")
+        status.append(f"Current weight decay: {self.wd_history[-1] if self.wd_history else 'N/A'}")
+        
+        if self.adjustment_log:
+            status.append("Recent adjustments:")
+            for adj in self.adjustment_log[-3:]:  # Show last 3 adjustments
+                status.append(f"  - {adj}")
+        
+        return "\n".join(status)
+
+# Initialize auto training config
+auto_config = AutoTrainingConfig(initial_lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
 # --- Knowledge Distillation ---
 class DistillationLoss(nn.Module):
@@ -1501,7 +1707,8 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
     # --- KD Training Setup ---
     criterion_kd = DistillationLoss(alpha=KD_ALPHA, temperature=KD_TEMPERATURE, base_criterion=nn.CrossEntropyLoss())
     optimizer_kd = optim.AdamW(student_model.parameters(), lr=KD_LR, weight_decay=WEIGHT_DECAY) # Simple AdamW for student
-    scaler_kd = GradScaler(enabled=MIXED_PRECISION)
+    # scaler_kd = GradScaler(enabled=MIXED_PRECISION) # Old way
+    scaler_kd = torch.amp.GradScaler('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')) # Updated way
     # Simple scheduler for KD
     scheduler_kd = CosineAnnealingLR(optimizer_kd, T_max=KD_EPOCHS, eta_min=KD_LR * 0.01)
 
@@ -1518,29 +1725,19 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
 
         progress_bar_kd = tqdm(train_loader_kd, desc=f"KD Train Epoch {epoch+1}", leave=False)
         for batch_data in progress_bar_kd:
-            if len(batch_data) != 2: continue # Skip bad batches
+            if len(batch_data) != 2: # Simple check for (inputs, labels)
+                print(f"{TermColors.YELLOW}Warn: Skipping KD batch, expected 2 items, got {len(batch_data)}.{TermColors.ENDC}")
+                continue
             inputs, labels = batch_data
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE); batch_size = inputs.size(0)
 
             # Get teacher outputs (no grad)
             with torch.no_grad():
-                with autocast(enabled=MIXED_PRECISION):
-                    teacher_embeddings = teacher_model(inputs)
-                    # Teacher might use ArcFace, student might not. Get teacher logits.
-                    if hasattr(teacher_model, 'metric_fc') and isinstance(teacher_model.metric_fc, ArcFace):
-                         teacher_outputs = teacher_model.metric_fc(teacher_embeddings, labels) # Pass labels if ArcFace
-                    elif hasattr(teacher_model, 'metric_fc'):
-                         teacher_outputs = teacher_model.metric_fc(teacher_embeddings)
-                    else: teacher_outputs = teacher_model(inputs) # Fallback
+                teacher_outputs = teacher_model(inputs) # Assume teacher doesn't need labels for inference
 
             # Get student outputs and calculate loss
-            with autocast(enabled=MIXED_PRECISION):
-                # Student might or might not use ArcFace - handle accordingly
-                if hasattr(student_model, 'metric_fc') and isinstance(student_model.metric_fc, ArcFace):
-                     student_outputs = student_model(inputs, labels) # Pass labels if ArcFace
-                else: # Assume standard linear head or direct output
-                     student_outputs = student_model(inputs)
-
+            with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')):
+                student_outputs = student_model(inputs) # Assume student doesn't need labels for inference
                 loss = criterion_kd(student_outputs, teacher_outputs, labels)
 
             # Backward pass and optimizer step
@@ -1550,15 +1747,15 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
             scaler_kd.update()
 
             if not torch.isnan(loss) and not torch.isinf(loss):
-                running_loss_kd += loss.item() * batch_size
-                total_samples_kd += batch_size
-                progress_bar_kd.set_postfix(loss=f"{loss.item():.4f}", lr=f"{optimizer_kd.param_groups[0]['lr']:.1E}")
+                running_loss_kd += loss.item() * batch_size; total_samples_kd += batch_size
+                progress_bar_kd.set_postfix(loss=f"{loss.item():.4f}")
             else:
-                print(f"{TermColors.RED}Warn: NaN/Inf KD loss. Skipping batch.{TermColors.ENDC}")
+                print(f"{TermColors.RED}Warn: NaN/Inf loss detected in KD training. Skipping batch.{TermColors.ENDC}")
 
             # Check for interrupt
-            if signal.getsignal(signal.SIGINT) != handle_interrupt: # Check if handler was reset (e.g., by external lib)
-                 signal.signal(signal.SIGINT, handle_interrupt)
+            if signal.getsignal(signal.SIGINT) != handle_interrupt: # Check if handler is still active
+                 print(f"{TermColors.CRITICAL}SIGINT handler detached! Exiting KD loop.{TermColors.ENDC}")
+                 kd_stop_requested = True; break
             if stop_requested: kd_stop_requested = True; break
 
 
@@ -1572,27 +1769,22 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
         with torch.no_grad():
             progress_bar_val_kd = tqdm(val_loader_kd, desc=f"KD Validate Epoch {epoch+1}", leave=False)
             for batch_data in progress_bar_val_kd:
-                if len(batch_data) != 2: continue
+                if len(batch_data) != 2: continue # Skip if not (inputs, labels)
                 inputs, labels = batch_data
                 inputs, labels = inputs.to(DEVICE), labels.to(DEVICE); batch_size = inputs.size(0)
 
-                with autocast(enabled=MIXED_PRECISION):
-                    # Get student outputs for validation
-                    if hasattr(student_model, 'metric_fc') and isinstance(student_model.metric_fc, ArcFace):
-                         student_outputs = student_model(inputs, labels)
-                    else:
-                         student_outputs = student_model(inputs)
-                    # Use standard CE loss for validation metric
-                    val_loss = F.cross_entropy(student_outputs, labels)
+                with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')):
+                    outputs = student_model(inputs)
+                    # Use standard CE loss for validation metric (not KD loss)
+                    val_loss = F.cross_entropy(outputs, labels)
 
                 if not torch.isnan(val_loss) and not torch.isinf(val_loss):
-                    running_val_loss_kd += val_loss.item() * batch_size
-                    total_val_samples_kd += batch_size
-                    preds = torch.argmax(student_outputs, dim=1)
+                    running_val_loss_kd += val_loss.item() * batch_size; total_val_samples_kd += batch_size
+                    preds = torch.argmax(outputs, dim=1)
                     all_preds_kd.append(preds.cpu())
                     all_labels_kd.append(labels.cpu())
                 else:
-                     print(f"{TermColors.RED}Warn: NaN/Inf KD validation loss. Skipping batch.{TermColors.ENDC}")
+                    print(f"{TermColors.RED}Warn: NaN/Inf loss detected in KD validation. Skipping batch.{TermColors.ENDC}")
 
 
         epoch_val_loss_kd = running_val_loss_kd / total_val_samples_kd if total_val_samples_kd > 0 else 0
@@ -1609,11 +1801,11 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
             best_kd_val_acc = epoch_val_acc_kd
             print(f"{TermColors.OKGREEN}🏆 New best KD validation accuracy: {best_kd_val_acc:.4f}. Saving student model...{TermColors.ENDC}")
             try:
-                # Save the student model's state_dict directly
+                # Save only the state_dict
                 torch.save(student_model.state_dict(), student_save_path)
-                print(f"   Student model saved to {student_save_path}")
+                print(f"  Student model state_dict saved to: {student_save_path}")
             except Exception as e:
-                print(f"{TermColors.RED}❌ Error saving student model: {e}{TermColors.ENDC}")
+                print(f"{TermColors.RED}❌ Error saving student model state_dict: {e}{TermColors.ENDC}")
 
         scheduler_kd.step() # Step scheduler
 
@@ -1622,108 +1814,6 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
     del teacher_model, student_model, train_loader_kd, val_loader_kd, optimizer_kd, criterion_kd, scaler_kd, scheduler_kd
     if DEVICE.type == 'cuda': torch.cuda.empty_cache()
     gc.collect()
-
-
-# --- HPO Objective Function ---
-def objective(trial, df_train, df_val, image_dir, num_classes):
-    """Optuna objective function for HPO."""
-    # --- Suggest Hyperparameters ---
-    lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True) # Wider LR range
-    wd = trial.suggest_float("weight_decay", 1e-6, 1e-4, log=True) # Wider WD range
-    dropout = trial.suggest_float("dropout_rate", 0.1, 0.6) # Dropout range
-    arc_margin = trial.suggest_float("arcface_margin", 0.3, 0.7) # ArcFace margin range
-    optimizer_type = trial.suggest_categorical("optimizer", ["AdamW", "AdamP"] if ADAMP_AVAILABLE else ["AdamW"])
-    architecture = trial.suggest_categorical("architecture", HPO_ARCHITECTURES_TO_TRY)
-    # embedding_size = trial.suggest_categorical("embedding_size", [256, 512, 768]) # Optional: Tune embedding size
-
-    print(f"\n--- HPO Trial {trial.number} ---")
-    print(f"Params: LR={lr:.1E}, WD={wd:.1E}, Dropout={dropout:.3f}, ArcM={arc_margin:.3f}, Optim={optimizer_type}, Arch={architecture}")
-
-    trial_best_val_acc = 0.0 # Track best acc within this trial
-
-    try:
-        # --- Build Model ---
-        # Use suggested architecture and params
-        model = build_model(
-            model_names=[architecture],
-            num_classes=num_classes,
-            pretrained=True, # Always use pretrained for HPO trials
-            dropout_rate=dropout,
-            # embedding_size=embedding_size, # Use if tuning embedding size
-            arcface_m=arc_margin,
-            metric_learning='ArcFace' # Assume ArcFace for HPO, adjust if needed
-        )
-        model = model.to(DEVICE)
-        # Optional: Compile model (might slow down HPO significantly)
-        # if USE_TORCH_COMPILE and hasattr(torch, 'compile'): model = torch.compile(model)
-
-        # --- Dataloaders for HPO ---
-        # Use fixed HPO image size and batch size
-        train_tf_hpo, val_tf_hpo = get_transforms(image_size=HPO_IMAGE_SIZE)
-        # Pass the HPO dataframes (already split) to PlantDataset
-        train_ds_hpo = PlantDataset(df_train, image_dir, train_tf_hpo, None, False, HPO_IMAGE_SIZE)
-        val_ds_hpo = PlantDataset(df_val, image_dir, val_tf_hpo, None, False, HPO_IMAGE_SIZE)
-
-        print(f"{TermColors.CYAN}ℹ HPO Trial {trial.number}: Train dataset length: {len(train_ds_hpo)}, Val dataset length: {len(val_ds_hpo)}{TermColors.ENDC}")
-
-        if len(train_ds_hpo) == 0: raise optuna.exceptions.TrialPruned("Training dataset is empty")
-        if len(val_ds_hpo) == 0: raise optuna.exceptions.TrialPruned("Validation dataset is empty")
-
-        # Use shuffle=True for training HPO loader
-        train_loader_hpo = DataLoader(train_ds_hpo, HPO_BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=True)
-        val_loader_hpo = DataLoader(val_ds_hpo, HPO_BATCH_SIZE*2, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
-
-        # --- Optimizer, Criterion, Scaler ---
-        optimizer = get_optimizer(model, optimizer_type=optimizer_type, lr=lr, weight_decay=wd, use_sam=False) # Keep HPO simple: no SAM
-        criterion = get_criterion(loss_type='CrossEntropy', label_smoothing=0.1) # Simple loss for HPO
-        scaler = GradScaler(enabled=MIXED_PRECISION)
-
-        # --- HPO Training Loop (Simplified) ---
-        for epoch in range(HPO_EPOCHS_PER_TRIAL):
-            print(f"HPO Trial {trial.number} Epoch {epoch+1}/{HPO_EPOCHS_PER_TRIAL}")
-            # Use fold_num="HPO" to simplify logging inside train/validate
-            train_loss, train_acc = train_one_epoch(
-                model, train_loader_hpo, criterion, optimizer, scaler, None, # No scheduler for HPO
-                epoch, 0, epoch, HPO_EPOCHS_PER_TRIAL, DEVICE, None, # No writer
-                num_classes, None, # No EMA
-                use_sam=False, fold_num="HPO"
-            )
-            if train_loss is None: # Handle potential interruption
-                 raise optuna.exceptions.TrialPruned("Training interrupted")
-
-            # Simplified validation, no OOF needed for HPO objective
-            val_loss, val_acc, _, _ = validate_one_epoch( # Get only loss and acc
-                model, val_loader_hpo, criterion, DEVICE, epoch, None, # No writer
-                num_classes, fold_num="HPO" # No SWA/EMA/OOF
-            )
-            if val_loss is None: # Handle potential interruption
-                 raise optuna.exceptions.TrialPruned("Validation interrupted")
-
-            print(f"  HPO Val Acc: {val_acc:.4f}")
-            trial_best_val_acc = max(trial_best_val_acc, val_acc) # Update best acc for this trial
-
-            # --- Optuna Pruning ---
-            trial.report(val_acc, epoch) # Report intermediate accuracy
-            if trial.should_prune():
-                raise optuna.exceptions.TrialPruned()
-
-        # Return the best validation accuracy achieved during the trial
-        return trial_best_val_acc
-
-    except optuna.exceptions.TrialPruned as e:
-        print(f"{TermColors.YELLOW}⏩ HPO Trial {trial.number} pruned. {e}{TermColors.ENDC}")
-        raise e # Re-raise prune exception
-    except Exception as e:
-        print(f"{TermColors.RED}❌ HPO Trial {trial.number} Error: {e}. Pruning.{TermColors.ENDC}")
-        traceback.print_exc()
-        # Raise prune exception if setup or training fails
-        raise optuna.exceptions.TrialPruned(f"Trial failed with error: {e}")
-    finally:
-        # Manual cleanup to free GPU memory after each trial
-        del model, optimizer, criterion, scaler, train_loader_hpo, val_loader_hpo, train_ds_hpo, val_ds_hpo
-        if DEVICE.type == 'cuda': torch.cuda.empty_cache()
-        gc.collect()
-
 
 # --- Main Execution ---
 def main():
@@ -1741,8 +1831,7 @@ def main():
     print(f"Device: {DEVICE}")
     print(f"Debug Mode: {DEBUG_MODE}")
     # Initial config print will show defaults
-    print(f"Initial Config: Folds={N_FOLDS}, Models={MODEL_NAMES}, Stages={len(PROGRESSIVE_RESIZING_STAGES)}, TotalEpPerFold={TOTAL_EPOCHS_PER_FOLD}, Batch={BATCH_SIZE}x{GRADIENT_ACCUMULATION_STEPS}, LR={LEARNING_RATE}, Optim={OPTIMIZER_TYPE}(SAM:{USE_SAM}), Loss={LOSS_TYPE}(LS:{LABEL_SMOOTHING}), Imbalance={IMBALANCE_STRATEGY}, Sched={SCHEDULER_TYPE}, Device={DEVICE}, MP={MIXED_PRECISION}, Compile={USE_TORCH_COMPILE}, Augs=Mixup/Cutmix/RandAug/Albu, SWA={USE_SWA}, EMA={USE_EMA}, TTA={USE_TTA}, Stacking={RUN_STACKING}, KD={RUN_KNOWLEDGE_DISTILLATION}, HPO={RUN_HPO}({HPO_N_TRIALS} trials)")
-    print(f"------------------------------------------------")
+    print(f"Initial Config: Folds={N_FOLDS}, Models={MODEL_NAMES}, Stages={len(PROGRESSIVE_RESIZING_STAGES)}, TotalEpPerFold={TOTAL_EPOCHS_PER_FOLD}, Batch={BATCH_SIZE}x{GRADIENT_ACCUMULATION_STEPS}, LR={LEARNING_RATE}, Optim={OPTIMIZER_TYPE}(SAM:{USE_SAM}), Loss={LOSS_TYPE}(LS:{LABEL_SMOOTHING}), Imbalance={IMBALANCE_STRATEGY}, Sched={SCHEDULER_TYPE}, Device={DEVICE}, MP={MIXED_PRECISION}, Compile={USE_TORCH_COMPILE}, Augs=Mixup/Cutmix/RandAug/Albu, SWA={USE_SWA}, EMA={USE_EMA}, TTA={USE_TTA}, Stacking={RUN_STACKING}, KD={RUN_KNOWLEDGE_DISTILLATION}")
 
 
     # --- Data Loading (Load full dataset info once) ---
@@ -1781,7 +1870,7 @@ def main():
         df_full.rename(columns={'scientific_name': 'scientificName'}, inplace=True)
 
         # --- Filter classes by min_samples ---
-        min_samples = 10
+        min_samples = 1
         print(f"Filtering classes with less than {min_samples} samples...")
         class_counts = df_full['scientificName'].value_counts()
         valid_classes = class_counts[class_counts >= min_samples].index
@@ -1868,76 +1957,6 @@ def main():
         print(f"{TermColors.RED}❌ Data Loading/Preprocessing Error: {e}{TermColors.ENDC}")
         traceback.print_exc(); sys.exit(1)
 
-
-    # --- HPO Phase ---
-    if RUN_HPO:
-        print(f"\n{TermColors.HEADER}--- STEP 2: Hyperparameter Optimization ({HPO_N_TRIALS} Trials) ---{TermColors.ENDC}")
-        try:
-            # Use a subset of data for HPO (e.g., Fold 0 indices from the potentially smaller df_full)
-            skf_hpo = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED)
-            # Use df_full which might have been reduced by DEBUG mode
-            train_idx_hpo, val_idx_hpo = next(iter(skf_hpo.split(df_full, df_full['label'])))
-            df_train_hpo = df_full.iloc[train_idx_hpo]
-            df_val_hpo = df_full.iloc[val_idx_hpo]
-            print(f"Using Fold 0 split for HPO: Train DF={len(df_train_hpo)}, Val DF={len(df_val_hpo)}")
-
-            # Create or load Optuna study
-            study = optuna.create_study(
-                study_name=HPO_STUDY_NAME,
-                storage=HPO_STORAGE_DB,
-                direction="maximize", # Maximize validation accuracy
-                load_if_exists=True,
-                pruner=optuna.pruners.MedianPruner(n_startup_trials=3, n_warmup_steps=1, interval_steps=1) # Example pruner config
-            )
-
-            # Define the objective function with necessary data
-            objective_with_data = lambda trial: objective(trial, df_train_hpo, df_val_hpo, IMAGE_DIR, NUM_CLASSES)
-
-            # Run optimization
-            study.optimize(objective_with_data, n_trials=HPO_N_TRIALS, timeout=None) # No timeout
-
-            # --- Apply Best Parameters ---
-            best_trial = study.best_trial
-            print(f"\n{TermColors.OKGREEN}===== HPO Finished =====")
-            print(f"Best Trial Number: {best_trial.number}")
-            print(f"Best Value (Val Acc): {best_trial.value:.4f}")
-            print("Best Parameters:")
-            for key, value in best_trial.params.items():
-                print(f"  {key}: {value}")
-
-            # Update global config variables
-            LEARNING_RATE = best_trial.params['lr']
-            WEIGHT_DECAY = best_trial.params['weight_decay']
-            DROPOUT_RATE = best_trial.params['dropout_rate']
-            ARCFACE_M = best_trial.params['arcface_margin']
-            OPTIMIZER_TYPE = best_trial.params['optimizer']
-            # Use the single best architecture found by HPO for the main training
-            MODEL_NAMES = [best_trial.params['architecture']] # Use single best model
-            # EMBEDDING_SIZE = best_trial.params.get('embedding_size', EMBEDDING_SIZE) # If embedding size was tuned
-
-            print("\nUpdated Configuration for Main Training:")
-            print(f"  LEARNING_RATE: {LEARNING_RATE:.1E}")
-            print(f"  WEIGHT_DECAY: {WEIGHT_DECAY:.1E}")
-            print(f"  DROPOUT_RATE: {DROPOUT_RATE:.3f}")
-            print(f"  ARCFACE_M: {ARCFACE_M:.3f}")
-            print(f"  OPTIMIZER_TYPE: {OPTIMIZER_TYPE}")
-            print(f"  MODEL_NAMES: {MODEL_NAMES}")
-            # print(f"  EMBEDDING_SIZE: {EMBEDDING_SIZE}") # If tuned
-
-            # Clean up HPO dataframes
-            del df_train_hpo, df_val_hpo, skf_hpo, study, objective_with_data
-            gc.collect()
-
-        except Exception as e:
-            print(f"{TermColors.RED}❌ HPO Error: {e}. Proceeding with default parameters.{TermColors.ENDC}")
-            traceback.print_exc()
-            # Optionally disable subsequent steps if HPO fails critically
-            # RUN_STACKING = False
-            # RUN_KNOWLEDGE_DISTILLATION = False
-    else:
-        print(f"{TermColors.YELLOW}⏩ Skipping HPO phase.{TermColors.ENDC}")
-
-
     # --- Cross-Validation Loop ---
     print(f"\n{TermColors.HEADER}--- STEP 3: Main K-Fold Cross-Validation ({N_FOLDS} Folds) ---{TermColors.ENDC}")
     # Use df_full (potentially reduced by DEBUG mode) for splitting
@@ -1980,7 +1999,7 @@ def main():
 
             criterion = get_criterion(class_weights=CLASS_WEIGHTS) # Get loss function (potentially with weights)
             optimizer = get_optimizer(model, optimizer_type=OPTIMIZER_TYPE, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, use_sam=USE_SAM)
-            scaler = GradScaler(enabled=MIXED_PRECISION)
+            scaler = torch.amp.GradScaler('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda'))
             scheduler = None # Scheduler is created per stage
             # SWA Model (reinitialized per fold)
             swa_model = AveragedModel(model, avg_fn=ema_avg_fn if USE_EMA else None) if USE_SWA else None # Use EMA decay for SWA if EMA is also on
@@ -1996,7 +2015,7 @@ def main():
             fold, model, optimizer, None, scaler, filename="latest_checkpoint.pth.tar" # Try loading latest first
         )
         # If best_metric is still initial value after loading 'latest', try loading 'best'
-        initial_best = float('-inf') if CHECKPOINT_MODE == 'max' else float('inf')
+        initial_best = float('-inf') if CHECKPOINT_MONITOR == 'max' else float('inf')
         if best_metric == initial_best:
              print(f"{TermColors.CYAN}ℹ No valid 'latest' checkpoint found or best metric invalid. Trying 'best_model.pth.tar'...{TermColors.ENDC}")
              start_glob_ep, start_stg_idx, start_stg_ep, best_metric, _, loaded_size, _ = load_checkpoint(
@@ -2014,7 +2033,10 @@ def main():
         fold_stop_requested = False # Use a fold-specific flag
         fold_best_val_loss = float('inf')
         fold_best_val_acc = 0.0
-        # OOF preds for this fold are stored directly into the main arrays using indices
+        # Initialize stage variables and scheduler before the loop in case of early interruption
+        stage_idx = start_stg_idx
+        stage_epoch = start_stg_ep
+        scheduler = None
 
         for stage_idx, (stage_epochs, stage_image_size) in enumerate(PROGRESSIVE_RESIZING_STAGES):
             if fold_stop_requested or stop_requested: break # Check global and fold flags
@@ -2112,25 +2134,34 @@ def main():
                     global_epoch_counter, stage_idx, stage_epoch, stage_epochs, DEVICE, writer, NUM_CLASSES, ema_model, use_sam=USE_SAM, fold_num=fold+1
                 )
                 if train_loss is None: fold_stop_requested = True; break # Handle interruption
-
+            
                 # --- Validation ---
                 # Pass val_loader which yields original indices
                 val_loss, val_acc, current_oof_preds, current_oof_indices = validate_one_epoch(
                     model, val_loader, criterion, DEVICE, global_epoch_counter, writer, NUM_CLASSES,
-                    swa_model=swa_model, ema_model=ema_model, return_preds=True, fold_num=fold+1, scheduler=scheduler # Pass scheduler for Plateau
+                    scheduler=scheduler, # Pass the scheduler here
+                    swa_model=swa_model, ema_model=ema_model, return_preds=True, fold_num=fold+1
                 )
-                if val_loss is None: fold_stop_requested = True; break # Handle interruption
+                if val_loss is None: fold_stop_requested = True; break # Stop fold if validation interrupted
+
+                auto_config.update(train_loss, train_acc, val_loss, val_acc, optimizer)
+
+                # Print status report every few epochs
+                if global_epoch_counter % 5 == 0:
+                    print(f"\n{TermColors.CYAN}=== Training Status Report ==={TermColors.ENDC}")
+                    print(auto_config.get_status_report())
+                    print(f"{TermColors.CYAN}==========================={TermColors.ENDC}\n")
 
                 print(f"Fold {fold+1} GlobEp {global_epoch_counter+1}: Train L={train_loss:.4f} A={train_acc:.4f} | Val L={val_loss:.4f} A={val_acc:.4f}")
 
                 # --- SWA Update ---
                 if USE_SWA and swa_model and stage_epoch >= swa_start_epoch_stage:
-                    swa_model.update_parameters(model)
+                    swa_model.update()
                     swa_scheduler.step()
-                    print(f"  SWA model updated. SWA LR: {swa_scheduler.get_last_lr()[0]:.1E}")
-                # Step the main scheduler only if not in SWA phase
-                elif scheduler and not isinstance(scheduler, ReduceLROnPlateau):
-                     scheduler.step()
+                    print(f"  SWA Model updated. SWA LR: {swa_scheduler.get_last_lr()[0]:.1E}")
+                elif scheduler and not isinstance(scheduler, ReduceLROnPlateau): # Step other schedulers (like Cosine) here
+                    scheduler.step()
+                    print(f"  Scheduler stepped. LR: {optimizer.param_groups[0]['lr']:.1E}")
 
 
                 # --- Checkpointing and Best OOF Preds Saving ---
@@ -2175,15 +2206,18 @@ def main():
             # --- End Stage ---
             if fold_stop_requested or stop_requested: break
             # Clean up stage-specific resources
+            # Note: scheduler is cleaned up here, but we need its value if interrupted
             del train_loader, val_loader, err_loader, train_ds, val_ds, err_ds, train_transform, val_transform, scheduler, swa_scheduler
+            scheduler = None # Explicitly set to None after deletion for clarity
             if DEVICE.type == 'cuda': torch.cuda.empty_cache(); gc.collect()
 
         # --- End Fold ---
         if fold_stop_requested or stop_requested:
              print(f"{TermColors.WARNING}Fold {fold+1} interrupted.{TermColors.ENDC}")
              # Save final state even if interrupted mid-fold
+             # scheduler will have the value from the last completed stage setup or None if interrupted before first stage
              save_checkpoint(fold, global_epoch_counter, stage_idx, stage_epoch, model, optimizer, scheduler, scaler, best_metric, "interrupted_checkpoint.pth.tar")
-             break # Break outer fold loop if global stop requested
+             break
 
         # --- SWA Final Evaluation ---
         if USE_SWA and swa_model and global_epoch_counter >= int(TOTAL_EPOCHS_PER_FOLD * SWA_START_EPOCH_GLOBAL_FACTOR):
@@ -2316,108 +2350,9 @@ def main():
 
     print(f"\n{TermColors.OKGREEN}🎉 All processes complete. Models/logs saved per fold. Stacking/KD models saved if run.{TermColors.ENDC}")
 
-
-# --- HPO Objective Function ---
-# (This function was already provided in the previous response, placing it here for completeness)
-def objective(trial, df_train, df_val, image_dir, num_classes):
-    """Optuna objective function for HPO."""
-    # --- Suggest Hyperparameters ---
-    lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True) # Wider LR range
-    wd = trial.suggest_float("weight_decay", 1e-6, 1e-4, log=True) # Wider WD range
-    dropout = trial.suggest_float("dropout_rate", 0.1, 0.6) # Dropout range
-    arc_margin = trial.suggest_float("arcface_margin", 0.3, 0.7) # ArcFace margin range
-    optimizer_type = trial.suggest_categorical("optimizer", ["AdamW", "AdamP"] if ADAMP_AVAILABLE else ["AdamW"])
-    architecture = trial.suggest_categorical("architecture", HPO_ARCHITECTURES_TO_TRY)
-    # embedding_size = trial.suggest_categorical("embedding_size", [256, 512, 768]) # Optional: Tune embedding size
-
-    print(f"\n--- HPO Trial {trial.number} ---")
-    print(f"Params: LR={lr:.1E}, WD={wd:.1E}, Dropout={dropout:.3f}, ArcM={arc_margin:.3f}, Optim={optimizer_type}, Arch={architecture}")
-
-    trial_best_val_acc = 0.0 # Track best acc within this trial
-
-    try:
-        # --- Build Model ---
-        # Use suggested architecture and params
-        model = build_model(
-            model_names=[architecture],
-            num_classes=num_classes,
-            pretrained=True, # Always use pretrained for HPO trials
-            dropout_rate=dropout,
-            # embedding_size=embedding_size, # Use if tuning embedding size
-            arcface_m=arc_margin,
-            metric_learning='ArcFace' # Assume ArcFace for HPO, adjust if needed
-        )
-        model = model.to(DEVICE)
-        # Optional: Compile model (might slow down HPO significantly)
-        # if USE_TORCH_COMPILE and hasattr(torch, 'compile'): model = torch.compile(model)
-
-        # --- Dataloaders for HPO ---
-        # Use fixed HPO image size and batch size
-        train_tf_hpo, val_tf_hpo = get_transforms(image_size=HPO_IMAGE_SIZE)
-        # Pass the HPO dataframes (already split) to PlantDataset
-        train_ds_hpo = PlantDataset(df_train, image_dir, train_tf_hpo, None, False, HPO_IMAGE_SIZE)
-        val_ds_hpo = PlantDataset(df_val, image_dir, val_tf_hpo, None, False, HPO_IMAGE_SIZE)
-
-        print(f"{TermColors.CYAN}ℹ HPO Trial {trial.number}: Train dataset length: {len(train_ds_hpo)}, Val dataset length: {len(val_ds_hpo)}{TermColors.ENDC}")
-
-        if len(train_ds_hpo) == 0: raise optuna.exceptions.TrialPruned("Training dataset is empty")
-        if len(val_ds_hpo) == 0: raise optuna.exceptions.TrialPruned("Validation dataset is empty")
-
-        # Use shuffle=True for training HPO loader
-        train_loader_hpo = DataLoader(train_ds_hpo, HPO_BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=True)
-        val_loader_hpo = DataLoader(val_ds_hpo, HPO_BATCH_SIZE*2, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
-
-        # --- Optimizer, Criterion, Scaler ---
-        optimizer = get_optimizer(model, optimizer_type=optimizer_type, lr=lr, weight_decay=wd, use_sam=False) # Keep HPO simple: no SAM
-        criterion = get_criterion(loss_type='CrossEntropy', label_smoothing=0.1) # Simple loss for HPO
-        scaler = GradScaler(enabled=MIXED_PRECISION)
-
-        # --- HPO Training Loop (Simplified) ---
-        for epoch in range(HPO_EPOCHS_PER_TRIAL):
-            print(f"HPO Trial {trial.number} Epoch {epoch+1}/{HPO_EPOCHS_PER_TRIAL}")
-            # Use fold_num="HPO" to simplify logging inside train/validate
-            train_loss, train_acc = train_one_epoch(
-                model, train_loader_hpo, criterion, optimizer, scaler, None, # No scheduler for HPO
-                epoch, 0, epoch, HPO_EPOCHS_PER_TRIAL, DEVICE, None, # No writer
-                num_classes, None, # No EMA
-                use_sam=False, fold_num="HPO"
-            )
-            if train_loss is None: # Handle potential interruption
-                 raise optuna.exceptions.TrialPruned("Training interrupted")
-
-            # Simplified validation, no OOF needed for HPO objective
-            val_loss, val_acc, _, _ = validate_one_epoch( # Get only loss and acc
-                model, val_loader_hpo, criterion, DEVICE, epoch, None, # No writer
-                num_classes, fold_num="HPO" # No SWA/EMA/OOF
-            )
-            if val_loss is None: # Handle potential interruption
-                 raise optuna.exceptions.TrialPruned("Validation interrupted")
-
-            print(f"  HPO Val Acc: {val_acc:.4f}")
-            trial_best_val_acc = max(trial_best_val_acc, val_acc) # Update best acc for this trial
-
-            # --- Optuna Pruning ---
-            trial.report(val_acc, epoch) # Report intermediate accuracy
-            if trial.should_prune():
-                raise optuna.exceptions.TrialPruned()
-
-        # Return the best validation accuracy achieved during the trial
-        return trial_best_val_acc
-
-    except optuna.exceptions.TrialPruned as e:
-        print(f"{TermColors.YELLOW}⏩ HPO Trial {trial.number} pruned. {e}{TermColors.ENDC}")
-        raise e # Re-raise prune exception
-    except Exception as e:
-        print(f"{TermColors.RED}❌ HPO Trial {trial.number} Error: {e}. Pruning.{TermColors.ENDC}")
-        traceback.print_exc()
-        # Raise prune exception if setup or training fails
-        raise optuna.exceptions.TrialPruned(f"Trial failed with error: {e}")
-    finally:
-        # Manual cleanup to free GPU memory after each trial
-        del model, optimizer, criterion, scaler, train_loader_hpo, val_loader_hpo, train_ds_hpo, val_ds_hpo
-        if DEVICE.type == 'cuda': torch.cuda.empty_cache()
-        gc.collect()
-
-
 if __name__ == "__main__":
+    # Print library info at script startup - only once
+    print_library_info()
+    
+    # Call your main function
     main()
