@@ -1,14 +1,11 @@
 import os
-import pandas as pd
 import time
 import gc
 import asyncio
-import aiohttp
 import signal
 import json
 import psutil
 import threading
-import gzip
 import csv
 import random
 import traceback
@@ -16,10 +13,6 @@ import atexit
 import sys
 import queue
 from tqdm.auto import tqdm
-import multiprocessing
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-import aiofiles
-import numpy as np
 
 # Set policy for Windows to use SelectEventLoopPolicy - this is a fix for Windows asyncio issues
 if sys.platform == 'win32':
@@ -1111,14 +1104,11 @@ def main():
     print(f"  {TermColors.CYAN}Prebatchers: {PREBATCHER_COUNT}{TermColors.ENDC}")
     print(f"  {TermColors.CYAN}Max observations: {MAX_OBSERVATIONS}{TermColors.ENDC}")
     
-    # Direct processing from CSV
-    csv_file = os.path.join(BASE_DIR, "data", "observations-561226.csv")
-    
-    if os.path.exists(csv_file):
-        print(f"{TermColors.GREEN}Found target CSV: {csv_file}{TermColors.ENDC}")
-        process_observations_from_csv(csv_file)
+    if os.path.exists(CSV_FILE):
+        print(f"{TermColors.GREEN}Found target CSV: {CSV_FILE}{TermColors.ENDC}")
+        process_observations_from_csv(CSV_FILE)
     else:
-        print(f"{TermColors.RED}Target CSV file not found: {csv_file}{TermColors.ENDC}")
+        print(f"{TermColors.RED}Target CSV file not found: {CSV_FILE}{TermColors.ENDC}")
 
 if __name__ == "__main__":
     main()

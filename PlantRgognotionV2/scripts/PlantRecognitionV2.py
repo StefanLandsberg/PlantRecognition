@@ -170,13 +170,14 @@ BATCH_SIZE = 32 if not DEBUG_MODE else 8
 GRADIENT_ACCUMULATION_STEPS = 2 if not DEBUG_MODE else 1
 LEARNING_RATE = 1e-4; WEIGHT_DECAY = 1e-5
 OPTIMIZER_TYPE = 'AdamP' if ADAMP_AVAILABLE else 'AdamW'
-USE_SAM = True if SAM_AVAILABLE else False
+USE_SAM = False
 SAM_RHO = 0.05; SAM_ADAPTIVE = True
 GRADIENT_CLIP_VAL = 1.0
 PROGRESSIVE_RESIZING_STAGES = [
     (10 if not DEBUG_MODE else 1, (224, 224)),
     (15 if not DEBUG_MODE else 1, (384, 384)),
     (5 if not DEBUG_MODE else 1, (448, 448)), 
+    (5 if not DEBUG_MODE else 1, (512, 512)), 
 ]
 TOTAL_EPOCHS_PER_FOLD = sum(s[0] for s in PROGRESSIVE_RESIZING_STAGES)
 CURRENT_IMAGE_SIZE = None # Will be set per stage
@@ -186,7 +187,7 @@ N_FOLDS = 5 if not DEBUG_MODE else 2
 
 # --- Hardware Config ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-NUM_WORKERS = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() > 1 else 0
+NUM_WORKERS = 7
 MIXED_PRECISION = True if DEVICE.type == 'cuda' else False
 USE_TORCH_COMPILE = False # Set to True to try torch.compile (requires PyTorch 2.0+)
 
@@ -548,7 +549,7 @@ class PlantDataset(Dataset):
 
         self.image_data = [] # List to store {'scientificName': ..., 'label': ..., 'image_path': ..., 'original_index': ...}
 
-        print(f"{TermColors.CYAN}ℹ Scanning for images based on input dataframe (Size: {self.image_size})...{TermColors.ENDC}")
+        print(f"{TermColors.CYAN}ℹ Initializing PlantDataset (Target Size: {self.image_size})...{TermColors.ENDC}")
 
         # Check required columns in the input dataframe
         required_cols = ['scientificName', 'id', 'label']
@@ -558,63 +559,106 @@ class PlantDataset(Dataset):
             self.dataframe = pd.DataFrame(self.image_data) # Create empty dataframe
             return # Stop init
 
+        # --- Pre-scan image directory to build a lookup ---
+        print(f"{TermColors.CYAN}  Pre-scanning image directory: {self.image_dir} to build file lookup...{TermColors.ENDC}")
+        image_path_lookup = defaultdict(list)
+        
+        if not os.path.isdir(self.image_dir):
+            print(f"{TermColors.RED}❌ Image directory not found: {self.image_dir}{TermColors.ENDC}")
+            self.dataframe = pd.DataFrame(self.image_data)
+            return
+
+        species_folder_names_in_fs = []
+        try:
+            species_folder_names_in_fs = [d for d in os.listdir(self.image_dir) if os.path.isdir(os.path.join(self.image_dir, d))]
+        except OSError as e:
+            print(f"{TermColors.RED}❌ Error listing directories in {self.image_dir}: {e}{TermColors.ENDC}")
+            self.dataframe = pd.DataFrame(self.image_data)
+            return
+
+        for species_dir_name_from_fs in tqdm(species_folder_names_in_fs, desc="Scanning species folders", leave=False, unit="folder"):
+            current_species_dir_path = os.path.join(self.image_dir, species_dir_name_from_fs)
+            prefix_to_strip = species_dir_name_from_fs + "_"
+            try:
+                for filename in os.listdir(current_species_dir_path):
+                    if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        full_path = os.path.join(current_species_dir_path, filename)
+                        try:
+                            if os.path.getsize(full_path) > 0:
+                                # Parse obs_id from filename
+                                if filename.startswith(prefix_to_strip):
+                                    id_part = filename[len(prefix_to_strip):]
+                                    obs_id_from_file = id_part.split('_')[0]
+                                    if '.' in obs_id_from_file: # Handle cases like "12345.jpg"
+                                        obs_id_from_file = obs_id_from_file.split('.')[0]
+                                    
+                                    if obs_id_from_file: # Ensure obs_id was parsed
+                                        image_path_lookup[(species_dir_name_from_fs, obs_id_from_file)].append(full_path)
+                        except OSError: # os.path.getsize can fail
+                            pass # Optionally log this error
+            except OSError: # os.listdir can fail
+                print(f"{TermColors.YELLOW}Warn: Could not read directory {current_species_dir_path}. Skipping.{TermColors.ENDC}")
+                continue
+        
+        print(f"{TermColors.GREEN}  Pre-scan complete. Found images for {len(image_path_lookup)} unique (species_dir_name, obs_id) pairs.{TermColors.ENDC}")
+
         # Store original index from input_df
         self.input_df['original_index'] = self.input_df.index
 
-        # Iterate through the original dataframe entries
-        for idx, row in tqdm(self.input_df.iterrows(), total=len(self.input_df), desc="Finding image files", leave=False):
+        # Iterate through the original dataframe entries and use the lookup
+        print(f"{TermColors.CYAN}  Matching CSV entries to pre-scanned images...{TermColors.ENDC}")
+        for idx, row in tqdm(self.input_df.iterrows(), total=len(self.input_df), desc="Processing CSV entries", leave=False, unit="row"):
             try:
-                species_name = str(row['scientificName'])
-                obs_id = str(row['id'])
+                species_name_csv = str(row['scientificName'])
+                obs_id_csv = str(row['id']) # Ensure obs_id from CSV is string
                 label = row['label'] # Get the pre-encoded label
                 original_index = row['original_index'] # Get the original index
 
-                # Construct species directory path
-                species_dir_name = species_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
-                species_dir_path = os.path.join(self.image_dir, species_dir_name)
+                # Derive the species directory name as it would appear on the filesystem
+                # This must match the key used in image_path_lookup (species_dir_name_from_fs)
+                species_dir_name_csv_derived = species_name_csv.replace(' ', '_').replace('/', '_').replace('\\', '_')
 
-                if os.path.isdir(species_dir_path):
-                    # Construct glob pattern to find original and augmented images for this ID
-                    # Pattern: SPECIES_NAME_ID_*.[jJ][pP]*[gG] (handles .jpg, .JPG, .jpeg, .JPEG)
-                    glob_pattern = os.path.join(species_dir_path, f"{species_dir_name}_{obs_id}_*.[jJ][pP]*[gG]")
-                    found_files = glob.glob(glob_pattern)
+                # Retrieve files from the lookup
+                # The key in lookup is (species_dir_name_from_fs, obs_id_from_file)
+                # So we use (species_dir_name_csv_derived, obs_id_csv)
+                found_files = image_path_lookup.get((species_dir_name_csv_derived, obs_id_csv), [])
 
-                    if not found_files: # Also try finding the base image if glob fails (e.g., no _0 suffix)
-                         base_pattern = os.path.join(species_dir_path, f"{species_dir_name}_{obs_id}.[jJ][pP]*[gG]")
-                         found_files = glob.glob(base_pattern)
-
-
-                    for full_path in found_files:
-                        if os.path.getsize(full_path) > 0:
-                            self.image_data.append({
-                                'scientificName': species_name,
-                                'label': label,
-                                'image_path': full_path, # Store the full path to the image file
-                                'original_index': original_index # Store original index for OOF mapping
-                            })
-                        # else: # Optional: log skipped empty files
-                        #    print(f"{TermColors.YELLOW}Warn: Skipping empty file: {full_path}{TermColors.ENDC}")
-
-                # else: # Optional: log missing species directories
-                #    if idx < 10: # Log only a few times
-                #        print(f"{TermColors.YELLOW}Warn: Species directory not found: {species_dir_path}{TermColors.ENDC}")
-
+                for full_path in found_files:
+                    self.image_data.append({
+                        'scientificName': species_name_csv,
+                        'label': label,
+                        'image_path': full_path, # Store the full path to the image file
+                        'original_index': original_index # Store original index for OOF mapping
+                    })
             except Exception as e:
-                print(f"{TermColors.RED}Error processing row {idx} (ID: {row.get('id', 'N/A')}): {e}{TermColors.ENDC}")
+                print(f"{TermColors.RED}Error processing CSV row {idx} (ID: {row.get('id', 'N/A')}): {e}{TermColors.ENDC}")
 
         # Create the final dataframe for the dataset from the found image data
         self.dataframe = pd.DataFrame(self.image_data)
 
         found_count = len(self.dataframe)
         if found_count == 0 and len(self.input_df) > 0:
-             print(f"{TermColors.RED}❌ Found 0 image files after scanning. Check image paths, filenames, and CSV IDs.{TermColors.ENDC}")
-             # Provide an example of the expected structure
-             example_row = self.input_df.iloc[0]
-             example_species_dir = str(example_row['scientificName']).replace(' ', '_').replace('/', '_').replace('\\', '_')
-             example_id = str(example_row['id'])
-             print(f"Example expected file pattern: {os.path.join(self.image_dir, example_species_dir, f'{example_species_dir}_{example_id}_*.jpg')}")
+             print(f"{TermColors.RED}❌ Found 0 image files after matching CSV to pre-scanned images. Check image paths, filenames, CSV IDs, and derived species directory names.{TermColors.ENDC}")
+             if not self.input_df.empty:
+                 example_row = self.input_df.iloc[0]
+                 example_species_csv = str(example_row['scientificName'])
+                 example_species_dir_derived = example_species_csv.replace(' ', '_').replace('/', '_').replace('\\', '_')
+                 example_id_csv = str(example_row['id'])
+                 print(f"  Example CSV derived species_dir_name: '{example_species_dir_derived}', obs_id: '{example_id_csv}'")
+                 print(f"  Check if files exist like: {os.path.join(self.image_dir, example_species_dir_derived, f'{example_species_dir_derived}_{example_id_csv}_*.jpg')}")
+                 # Check if the derived key exists in the lookup
+                 if (example_species_dir_derived, example_id_csv) in image_path_lookup:
+                     print(f"    Key ('{example_species_dir_derived}', '{example_id_csv}') IS in pre-scan lookup with {len(image_path_lookup[(example_species_dir_derived, example_id_csv)])} files.")
+                 else:
+                     print(f"    Key ('{example_species_dir_derived}', '{example_id_csv}') IS NOT in pre-scan lookup.")
+                     # Show some keys from the lookup for comparison
+                     if image_path_lookup:
+                         print("    Some example keys from pre-scan lookup:")
+                         for i, key_item in enumerate(image_path_lookup.keys()):
+                             if i < 5: print(f"      - {key_item}")
+                             else: break
         else:
-             print(f"{TermColors.GREEN}✅ Dataset initialized with {found_count} image files (including augmentations).{TermColors.ENDC}")
+             print(f"{TermColors.GREEN}✅ Dataset initialized with {found_count} image file entries after matching.{TermColors.ENDC}")
 
 
     def __len__(self):
@@ -1070,6 +1114,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
                     mixup_alpha=MIXUP_ALPHA, cutmix_alpha=CUTMIX_ALPHA, aug_probability=AUG_PROBABILITY, grad_clip_val=GRADIENT_CLIP_VAL,
                     gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS, use_sam=USE_SAM, fold_num=0):
     """Trains the model for one epoch."""
+    print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Entered function.{TermColors.ENDC}")
     model.train()
     running_loss = 0.0
     total_samples = 0
@@ -1080,26 +1125,38 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
     pbar_desc = f"HPO Train Ep {global_epoch+1}/{stage_total_epochs}" if fold_num == "HPO" else f"F{fold_num} S{stage_idx+1} E{stage_epoch+1}/{stage_total_epochs} Tr"
 
     # Use less verbose progress bar
+    print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Initializing tqdm for dataloader...{TermColors.ENDC}")
     progress_bar = tqdm(dataloader, desc=pbar_desc, leave=True, disable=fold_num == "HPO", 
-                       bar_format='{l_bar}{bar:30}{r_bar}{bar:-30b}')  # Enhanced progress bar format
+                       bar_format='{l_bar}{bar:30}{r_bar}{bar:-30b}')
+    print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: tqdm for dataloader initialized. Zeroing optimizer grad...{TermColors.ENDC}")
     optimizer.zero_grad() # Zero grad at the beginning
+    print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Optimizer grad zeroed.{TermColors.ENDC}")
     
     # Epoch progress bar to track overall epoch progress
     total_batches = len(dataloader)
     epoch_progress = tqdm(total=total_batches, desc=f"Epoch {global_epoch+1} Progress", 
                          leave=True, position=0, bar_format='{desc}: {percentage:3.0f}%|{bar:50}{r_bar}')
-
+    
+    print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Starting batch iteration loop...{TermColors.ENDC}")
+    first_batch_time_start = time.time()
     for batch_idx, batch_data in enumerate(progress_bar):
+        if batch_idx == 0:
+            first_batch_time_end = time.time()
+            print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: First batch received. Time taken: {first_batch_time_end - first_batch_time_start:.2f}s{TermColors.ENDC}")
+
         if check_keyboard_stop():
             break
             
         # Expect dataloader to yield (inputs, labels)
         if len(batch_data) != 2:
+            if batch_idx == 0: print(f"{TermColors.YELLOW}[{time.strftime('%H:%M:%S')}] train_one_epoch: First batch data length unexpected: {len(batch_data)}{TermColors.ENDC}")
             continue
 
+        if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Processing first batch. Moving to device...{TermColors.ENDC}")
         inputs, labels = batch_data
         inputs, labels = inputs.to(device), labels.to(device)
         batch_size = inputs.size(0)
+        if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: First batch moved to device.{TermColors.ENDC}")
 
         # --- Apply Mixup/Cutmix ---
         use_mixup, use_cutmix = False, False
@@ -1120,20 +1177,24 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
         else:
             lam = 1.0
             targets_a, targets_b = labels, labels
+        if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Mixup/Cutmix applied for first batch.{TermColors.ENDC}")
 
         # --- Forward Pass ---
+        if batch_idx == 0: forward_pass_start_time = time.time()
         with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and device.type == 'cuda')):
             # Helper function definitions moved outside loop for efficiency
             if is_sam:
                 # First forward-backward pass
-                embeddings = model(inputs)
-                outputs = model.metric_fc(embeddings, targets_a) if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace' else model.metric_fc(embeddings) if hasattr(model, 'metric_fc') else embeddings
+                # model() calls CombinedModel.forward(), which handles ArcFace internally if labels are provided.
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - First model call (outputs1)...{TermColors.ENDC}")
+                outputs1 = model(inputs, labels=targets_a) 
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - First model call done.{TermColors.ENDC}")
                 
                 # Apply logit adjustment if needed
-                adj_outputs = outputs
+                adj_outputs = outputs1
                 if IMBALANCE_STRATEGY == 'LogitAdjust' and CLASS_PRIORS is not None:
                     logit_adj = LOGIT_ADJUSTMENT_TAU * torch.log(CLASS_PRIORS + 1e-12)
-                    adj_outputs = outputs + logit_adj.unsqueeze(0)
+                    adj_outputs = outputs1 + logit_adj.unsqueeze(0)
                 
                 # Calculate loss
                 if use_mixup or use_cutmix:
@@ -1142,19 +1203,24 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
                     loss1 = criterion(adj_outputs, targets_a)
                     
                 loss1_scaled = loss1 / gradient_accumulation_steps
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - Backward pass for loss1...{TermColors.ENDC}")
                 scaler.scale(loss1_scaled).backward()
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - Backward pass for loss1 done.{TermColors.ENDC}")
                 
                 # First optimizer step
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - optimizer.first_step()...{TermColors.ENDC}")
                 optimizer.first_step(zero_grad=True)
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - optimizer.first_step() done.{TermColors.ENDC}")
                 
                 # Second forward-backward pass
-                embeddings_perturbed = model(inputs)
-                outputs_perturbed = model.metric_fc(embeddings_perturbed, targets_a) if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace' else model.metric_fc(embeddings_perturbed) if hasattr(model, 'metric_fc') else embeddings_perturbed
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - Second model call (outputs2)...{TermColors.ENDC}")
+                outputs2 = model(inputs, labels=targets_a)
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - Second model call done.{TermColors.ENDC}")
                 
                 # Apply logit adjustment again
-                adj_outputs_final = outputs_perturbed
+                adj_outputs_final = outputs2
                 if IMBALANCE_STRATEGY == 'LogitAdjust' and CLASS_PRIORS is not None:
-                    adj_outputs_final = outputs_perturbed + logit_adj.unsqueeze(0)
+                    adj_outputs_final = outputs2 + logit_adj.unsqueeze(0)
                 
                 # Calculate second loss
                 if use_mixup or use_cutmix:
@@ -1163,16 +1229,22 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
                     loss2 = criterion(adj_outputs_final, targets_a)
                     
                 loss2_scaled = loss2 / gradient_accumulation_steps
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - Backward pass for loss2...{TermColors.ENDC}")
                 scaler.scale(loss2_scaled).backward()
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - Backward pass for loss2 done.{TermColors.ENDC}")
                 
                 # Second optimizer step
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - optimizer.second_step()...{TermColors.ENDC}")
                 optimizer.second_step(zero_grad=True)
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: SAM - optimizer.second_step() done.{TermColors.ENDC}")
                 
                 loss_final = loss2  # Use loss from second step for reporting
             else:
                 # Standard training path
-                embeddings = model(inputs)
-                outputs = model.metric_fc(embeddings, targets_a) if hasattr(model, 'metric_fc') and METRIC_LEARNING_TYPE == 'ArcFace' else model.metric_fc(embeddings) if hasattr(model, 'metric_fc') else embeddings
+                # model() calls CombinedModel.forward(), which handles ArcFace internally if labels are provided.
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Standard - model call...{TermColors.ENDC}")
+                outputs = model(inputs, labels=targets_a)
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Standard - model call done.{TermColors.ENDC}")
                 
                 # Apply logit adjustment if needed
                 adj_outputs_final = outputs
@@ -1190,9 +1262,14 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
                 loss_scaled = loss / gradient_accumulation_steps
                 
                 # Backward pass
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Standard - backward pass...{TermColors.ENDC}")
                 scaler.scale(loss_scaled).backward()
+                if batch_idx == 0: print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: Standard - backward pass done.{TermColors.ENDC}")
 
-        # --- Gradient Accumulation & Optimizer Step ---
+        if batch_idx == 0:
+            forward_pass_end_time = time.time()
+            print(f"{TermColors.DEBUG}[{time.strftime('%H:%M:%S')}] train_one_epoch: First batch forward/backward pass completed. Time taken: {forward_pass_end_time - forward_pass_start_time:.2f}s{TermColors.ENDC}")
+
         if (batch_idx + 1) % gradient_accumulation_steps == 0:
             # Gradient Clipping (Applied before optimizer step)
             if grad_clip_val > 0 and not is_sam: # SAM handles clipping internally
@@ -1208,8 +1285,8 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
 
             # --- EMA Update ---
             if USE_EMA and ema_model:
-                ema_model.update() # Update EMA model after optimizer step
-
+                ema_model.update_parameters(model) # Update EMA model after optimizer step
+        
         # --- Loss and Accuracy Tracking (more efficient) ---
         if not torch.isnan(loss_final) and not torch.isinf(loss_final):
             current_step_loss = loss_final.item()
@@ -1222,8 +1299,18 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
             all_labels.append(labels.detach().cpu())
             
             # Update progress bar less frequently to reduce overhead
-            if batch_idx % 5 == 0:
-                progress_bar.set_postfix(loss=f"{current_step_loss:.3f}", 
+            if batch_idx % 5 == 0 or batch_idx == total_batches -1: # Update every 5 batches or on the last batch
+                current_acc = 0.0
+                if all_preds and all_labels and total_samples > 0:
+                    # Calculate accuracy based on all collected samples so far
+                    temp_preds_tensor = torch.cat(all_preds)
+                    temp_labels_tensor = torch.cat(all_labels)
+                    # Ensure total_samples for accuracy matches the number of items in temp_labels_tensor
+                    # This is because total_samples accumulates batch_size, which is correct here.
+                    current_acc = (temp_preds_tensor == temp_labels_tensor).sum().item() / len(temp_labels_tensor)
+
+                progress_bar.set_postfix(loss=f"{current_step_loss:.3f}",
+                                        acc=f"{current_acc:.3f}", # Added running accuracy
                                         lr=f"{optimizer.param_groups[0]['lr']:.1E}",
                                         batch=f"{batch_idx+1}/{total_batches}")
         else:
@@ -1691,9 +1778,7 @@ def train_student_model(teacher_model_path, student_model_name, student_save_pat
              print(f"{TermColors.RED}❌ KD Train or Val dataset is empty. Skipping KD.{TermColors.ENDC}")
              return
 
-        # Optional: Add weighted sampler for KD training too
         sampler_kd = None
-        # if IMBALANCE_STRATEGY == 'WeightedSampler' and CLASS_WEIGHTS is not None: ... (add sampler logic if needed)
 
         train_loader_kd = DataLoader(train_ds_kd, KD_BATCH_SIZE, sampler=sampler_kd, shuffle=(sampler_kd is None), num_workers=NUM_WORKERS, pin_memory=True, drop_last=True)
         val_loader_kd = DataLoader(val_ds_kd, KD_BATCH_SIZE*2, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
