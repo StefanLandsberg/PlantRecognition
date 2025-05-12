@@ -48,12 +48,12 @@ def setup_gpu():
     if USE_GPU:
         if torch.cuda.is_available():
             num_gpus = torch.cuda.device_count()
-            print(f"{TermColors.GREEN}✅ Found {num_gpus} GPU(s). Enabling GPU acceleration.{TermColors.ENDC}")
+            print(f"{TermColors.GREEN}Found {num_gpus} GPU(s). Enabling GPU acceleration.{TermColors.ENDC}")
 
             # Uses only the first GPU if multiple are present (PyTorch default behavior unless specified).
             if num_gpus > 1:
                 current_gpu_name = torch.cuda.get_device_name(0)
-                print(f"{TermColors.CYAN}ℹ Using GPU: {current_gpu_name}{TermColors.ENDC}")
+                print(f"{TermColors.CYAN}Using GPU: {current_gpu_name}{TermColors.ENDC}")
             
             # Performs a small tensor operation to test GPU initialisation.
             try:
@@ -61,13 +61,13 @@ def setup_gpu():
                 test_tensor = torch.randn(100, 100, device=device)
                 test_result = torch.matmul(test_tensor, test_tensor.T)
                 torch.sum(test_result).item()  # Force execution.
-                print(f"{TermColors.GREEN}✅ GPU test successful.{TermColors.ENDC}")
+                print(f"{TermColors.GREEN}GPU test successful.{TermColors.ENDC}")
                 return True
             except Exception as e:
-                print(f"{TermColors.YELLOW}⚠️ GPU initialised but test failed: {e}. Will use GPU selectively.{TermColors.ENDC}")
+                print(f"{TermColors.YELLOW}GPU initialised but test failed: {e}. Will use GPU selectively.{TermColors.ENDC}")
                 return False # Fallback to selective GPU usage if test fails
         else:
-            print(f"{TermColors.YELLOW}⚠️ No GPU found. Using CPU only.{TermColors.ENDC}")
+            print(f"{TermColors.YELLOW}No GPU found. Using CPU only.{TermColors.ENDC}")
             return False
     return False
 
@@ -134,7 +134,7 @@ def analyze_class_sizes():
     
     # Calculates dataset statistics.
     if not class_counts:
-        print(f"{TermColors.RED}❌ No classes found in {DATA_DIR}{TermColors.ENDC}")
+        print(f"{TermColors.RED}No classes found in {DATA_DIR}{TermColors.ENDC}")
         return {}
         
     total_classes = len(class_counts)
@@ -143,7 +143,7 @@ def analyze_class_sizes():
     max_images = max(class_counts.values()) if class_counts else 0
     avg_images = total_images / total_classes if total_classes > 0 else 0
     
-    print(f"{TermColors.CYAN}ℹ Dataset Statistics:{TermColors.ENDC}")
+    print(f"{TermColors.CYAN}Dataset Statistics:{TermColors.ENDC}")
     print(f"  - Total classes: {total_classes}")
     print(f"  - Total original images: {total_images}")
     print(f"  - Images per class range: {min_images} to {max_images}")
@@ -185,13 +185,13 @@ def analyze_class_sizes():
         augmentation_factors[class_name] = aug_factor
     
     # Prints examples of augmentation strategy.
-    print(f"\n{TermColors.CYAN}ℹ Augmentation Strategy Examples:{TermColors.ENDC}")
+    print(f"\n{TermColors.CYAN}Augmentation Strategy Examples:{TermColors.ENDC}")
     
     # Sorts classes by image count for display.
     sorted_classes = sorted(class_counts.items(), key=lambda x: x[1])
     
     # Prints details for the 3 smallest classes.
-    print(f"{TermColors.YELLOW}⚠️ Smallest Classes:{TermColors.ENDC}")
+    print(f"{TermColors.YELLOW}Smallest Classes:{TermColors.ENDC}")
     for class_name, count in sorted_classes[:3]:
         aug_factor = augmentation_factors.get(class_name, 0) 
         # Calculates final count after augmentation.
@@ -212,7 +212,7 @@ def analyze_class_sizes():
     # Prints details for 3 medium-sized classes.
     if len(sorted_classes) > 3:
         mid_idx = len(sorted_classes) // 2
-        print(f"{TermColors.GREEN}✅ Medium Classes:{TermColors.ENDC}")
+        print(f"{TermColors.GREEN}Medium Classes:{TermColors.ENDC}")
         for class_name, count in sorted_classes[mid_idx:min(mid_idx+3, len(sorted_classes))]:
             aug_factor = augmentation_factors.get(class_name, 0)
             if count == 0:
@@ -229,7 +229,7 @@ def analyze_class_sizes():
     
     # Prints details for the 3 largest classes.
     if len(sorted_classes) > 0:
-        print(f"{TermColors.BLUE}ℹ Largest Classes:{TermColors.ENDC}")
+        print(f"{TermColors.BLUE}Largest Classes:{TermColors.ENDC}")
         for class_name, count in sorted_classes[-3:]:
             aug_factor = augmentation_factors.get(class_name, 0)
             if count == 0:
@@ -874,7 +874,7 @@ def calculate_class_specific_augmentation(class_dir, class_name):
         
         # Indicates if class exceeds MAX_IMAGES_PER_CLASS.
         if orig_count > MAX_IMAGES_PER_CLASS:
-            print(f"{TermColors.YELLOW}⚠️ Class {class_name} has {orig_count} images which exceeds MAX_IMAGES_PER_CLASS ({MAX_IMAGES_PER_CLASS}), but no downsampling will be performed.{TermColors.ENDC}")
+            print(f"{TermColors.YELLOW}Class {class_name} has {orig_count} images which exceeds MAX_IMAGES_PER_CLASS ({MAX_IMAGES_PER_CLASS}), but no downsampling will be performed.{TermColors.ENDC}")
     
     # Returns the count of augmentations to create.
     return image_files, target_count, aug_per_image
@@ -2017,11 +2017,11 @@ def main():
         checkpoint = load_checkpoint()
         
         # Analyses dataset and determines augmentation factors.
-        print(f"\n{TermColors.CYAN}ℹ Analysing dataset...{TermColors.ENDC}")
+        print(f"\n{TermColors.CYAN}Analysing dataset...{TermColors.ENDC}")
         aug_factors = analyze_class_sizes()
         
         if not aug_factors:
-            print(f"{TermColors.RED}❌ No valid classes found. Check your dataset directory.{TermColors.ENDC}")
+            print(f"{TermColors.RED}No valid classes found. Check your dataset directory.{TermColors.ENDC}")
             return
             
         # Gets list of classes to process.
@@ -2036,13 +2036,13 @@ def main():
         if USE_GPU_SUCCESSFULLY:
             print(f"\n{TermColors.GREEN}✓ GPU acceleration enabled and working ({PYTORCH_DEVICE}){TermColors.ENDC}")
         elif USE_GPU: 
-            print(f"\n{TermColors.YELLOW}⚠️ GPU acceleration enabled but may not be optimal - will use selectively ({PYTORCH_DEVICE}){TermColors.ENDC}")
+            print(f"\n{TermColors.YELLOW}GPU acceleration enabled but may not be optimal - will use selectively ({PYTORCH_DEVICE}){TermColors.ENDC}")
         else: 
-            print(f"\n{TermColors.YELLOW}⚠️ Running in CPU-only mode ({PYTORCH_DEVICE}){TermColors.ENDC}")
+            print(f"\n{TermColors.YELLOW}Running in CPU-only mode ({PYTORCH_DEVICE}){TermColors.ENDC}")
         
         # Processes classes in parallel.
-        print(f"\n{TermColors.CYAN}ℹ Starting augmentation process...{TermColors.ENDC}")
-        print(f"ℹ Processing {PARALLEL_CLASSES} classes in parallel")
+        print(f"\n{TermColors.CYAN}Starting augmentation process...{TermColors.ENDC}")
+        print(f"Processing {PARALLEL_CLASSES} classes in parallel")
         
         # Uses ThreadPoolExecutor for parallel processing of classes.
         with ThreadPoolExecutor(max_workers=PARALLEL_CLASSES) as executor:
@@ -2071,7 +2071,7 @@ def main():
                     
                 except Exception as e:
                     # Retrieve class name from future if possible, though not directly stored
-                    print(f"{TermColors.RED}❌ Error processing a class: {e}{TermColors.ENDC}")
+                    print(f"{TermColors.RED}Error processing a class: {e}{TermColors.ENDC}")
                     import traceback
                     traceback.print_exc() # Print full traceback for debugging
                 
@@ -2079,7 +2079,7 @@ def main():
         
     except Exception as e:
         import traceback
-        print(f"{TermColors.RED}❌ Error in main function: {e}{TermColors.ENDC}")
+        print(f"{TermColors.RED}Error in main function: {e}{TermColors.ENDC}")
         traceback.print_exc()
 
 def augment_class_images(class_dir, class_name, aug_factors_all_classes=None): 
@@ -2099,13 +2099,13 @@ def augment_class_images(class_dir, class_name, aug_factors_all_classes=None):
             # No images of any kind in the directory, attempt to delete it
             try:
                 os.rmdir(class_dir)
-                print(f"{TermColors.YELLOW}ℹ Directory {class_name} contained no images and has been deleted.{TermColors.ENDC}")
+                print(f"{TermColors.YELLOW}Directory {class_name} contained no images and has been deleted.{TermColors.ENDC}")
             except OSError as e:
                 # This typically means the directory is not empty (e.g., contains non-image files or subdirectories)
-                print(f"{TermColors.RED}❌ Could not delete directory {class_name}. It contained no images, but was not empty (e.g., non-image files or subdirectories may be present): {e}{TermColors.ENDC}")
+                print(f"{TermColors.RED}Could not delete directory {class_name}. It contained no images, but was not empty (e.g., non-image files or subdirectories may be present): {e}{TermColors.ENDC}")
         else:
             # No original images to process, but other image files (e.g., existing augmentations) are present.
-            print(f"{TermColors.YELLOW}⚠️ No original images found in {class_name} to process, but other image files exist. Skipping augmentation for this class.{TermColors.ENDC}")
+            print(f"{TermColors.YELLOW}No original images found in {class_name} to process, but other image files exist. Skipping augmentation for this class.{TermColors.ENDC}")
         return class_name, 0 # Return 0 as no new augmentations were made
     
     # Gets existing augmented images.
@@ -2198,7 +2198,7 @@ def augment_class_images(class_dir, class_name, aug_factors_all_classes=None):
                     
             except Exception as e:
                 # Do not update pbar here if an original image fails, as pbar tracks augmentations.
-                print(f"{TermColors.RED}❌ Error processing image {img_file} in {class_name}: {e}{TermColors.ENDC}")
+                print(f"{TermColors.RED}Error processing image {img_file} in {class_name}: {e}{TermColors.ENDC}")
     
     final_count = orig_count + len(existing_aug) + augmented_count_this_run 
     

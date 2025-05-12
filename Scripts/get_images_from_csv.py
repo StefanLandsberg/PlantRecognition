@@ -192,13 +192,6 @@ class DownloadProgress:
 
 # Multi-stage pipeline architecture for continuous processing
 class DownloadPipeline:
-    """Advanced pipeline that keeps multiple batches in different stages of processing
-    
-    This creates a true pipeline with multiple stages:
-    1. CSV processing stage - reads observations and creates download items
-    2. Multiple prebatching stages - prepare batches in parallel
-    3. Multiple download stages - download multiple batches simultaneously
-    """
 
     def __init__(self, prebatcher_count=PREBATCHER_COUNT, queue_size=QUEUE_SIZE_PER_PREBATCHER):
         self.terminator = GracefulTerminator()
@@ -242,7 +235,6 @@ class DownloadPipeline:
         self.memory_monitor = monitor_memory()
     
     def start(self, observation_ids, obs_data, output_dir, quality):
-        """Start the pipeline with the given observation data"""
         self.observation_ids = observation_ids
         self.obs_data = obs_data
         self.total_observations = len(observation_ids)
@@ -276,7 +268,6 @@ class DownloadPipeline:
         return supervisor
     
     def _supervisor_worker(self):
-        """Supervisor thread that keeps the pipeline fed with observations"""
         try:
             print(f"{TermColors.BLUE}Starting pipeline supervisor{TermColors.ENDC}")
             
@@ -428,7 +419,6 @@ class DownloadPipeline:
             self.progress.save_checkpoint()
     
     def _add_to_prebatcher(self, prebatcher_idx, item):
-        """Add an item to a specific prebatcher"""
         prebatcher = self.prebatchers[prebatcher_idx]
         
         with prebatcher['lock']:
@@ -453,7 +443,6 @@ class DownloadPipeline:
                 pass
     
     def _prebatch_worker(self, prebatcher):
-        """Worker thread for a prebatch stage in the pipeline"""
         prebatcher_id = prebatcher['id']
         self.prebatch_stats[prebatcher_id] = {
             'batches_processed': 0,
@@ -498,7 +487,6 @@ class DownloadPipeline:
             traceback.print_exc()
     
     def _process_download_batch(self, batch, batch_id):
-        """Process a batch of downloads directly within the thread"""
         try:
             # Filter already downloaded images
             filtered_list = []
@@ -613,7 +601,6 @@ class DownloadPipeline:
             return 0
             
     def _update_progress_bar(self, batch_id, current, total, width=50):
-        """Update progress tracking without showing a progress bar - just completion status"""
         # Lock for thread-safe terminal output
         if not hasattr(self, '_print_lock'):
             self._print_lock = threading.Lock()
@@ -635,7 +622,6 @@ class DownloadPipeline:
                 print(f"{TermColors.GREEN}✓{TermColors.ENDC} Batch {batch_id} completed: {current}/{total} images [{download_rate:.1f} img/s]")
     
     def _download_worker(self, worker_id):
-        """Downloader thread that processes ready-to-download batches"""
         try:
             print(f"{TermColors.BLUE}Starting downloader {worker_id}{TermColors.ENDC}")
             # Track batch counter per worker to ensure unique batch IDs
@@ -684,7 +670,6 @@ class DownloadPipeline:
             traceback.print_exc()
     
     def _print_pipeline_status(self, final=False):
-        """Print current pipeline status"""
         # Only print status every 2 minutes, unless it's the final status
         current_time = time.time()
         if not hasattr(self, '_last_status_time'):
@@ -722,21 +707,20 @@ class DownloadPipeline:
         
         # Only show pipeline status (no final status box, even when finished)
         status = f"""
-{TermColors.CYAN}╔══════════════════════ Pipeline Status ══════════════════════╗{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Progress: {percentage:6.2f}% {progress_bar} {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Observations: {completed_obs}/{self.total_observations} processed               {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Images: {self.download_stats['successful_downloads']}/{self.download_stats['total_downloads']} downloaded                    {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Download rate: {download_rate:.1f} images/second                {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Pipeline queue: {total_queued} images waiting                  {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Estimated time to completion: {eta_str}                {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}║{TermColors.ENDC} Memory usage: {psutil.virtual_memory().percent}%                                 {TermColors.CYAN}║{TermColors.ENDC}
-{TermColors.CYAN}╚═════════════════════════════════════════════════════════════╝{TermColors.ENDC}
-"""
+        {TermColors.CYAN}╔══════════════════════ Pipeline Status ══════════════════════╗{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Progress: {percentage:6.2f}% {progress_bar} {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Observations: {completed_obs}/{self.total_observations} processed               {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Images: {self.download_stats['successful_downloads']}/{self.download_stats['total_downloads']} downloaded                    {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Download rate: {download_rate:.1f} images/second                {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Pipeline queue: {total_queued} images waiting                  {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Estimated time to completion: {eta_str}                {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}║{TermColors.ENDC} Memory usage: {psutil.virtual_memory().percent}%                                 {TermColors.CYAN}║{TermColors.ENDC}
+        {TermColors.CYAN}╚═════════════════════════════════════════════════════════════╝{TermColors.ENDC}
+        """
         print(status)
 
 # Register global exit handler to save progress on unexpected exit
 def register_exit_handler(progress):
-    """Register handlers to save progress on various exit scenarios"""
     def on_exit():
         print(f"\n{TermColors.YELLOW}Process ending: Saving download progress...{TermColors.ENDC}")
         progress.save_checkpoint()
@@ -757,7 +741,6 @@ def register_exit_handler(progress):
             pass
 
 def extract_observation_ids_from_csv(csv_file, target_count=MAX_OBSERVATIONS):
-    """Extract observation IDs and scientific names directly from the CSV"""
     print(f"{TermColors.BLUE}Loading observations from {csv_file}...{TermColors.ENDC}")
     
     # Data structures to store results
@@ -1010,7 +993,6 @@ def extract_observation_ids_from_csv(csv_file, target_count=MAX_OBSERVATIONS):
         return ["test_1"], observation_data
 
 def init_worker():
-        """Initialize worker process safely"""
         # Set policy for Windows to use SelectEventLoopPolicy in each worker process
         if sys.platform == 'win32':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -1023,7 +1005,6 @@ def init_worker():
         signal.signal(signal.SIGINT, signal.SIG_IGN)  # Parent process will handle this
 
 def process_observation_chunk(chunk_id, observation_ids, obs_data, output_dir, quality):
-    """Process a chunk of observations in a separate process"""
     try:
         print(f"{TermColors.BLUE}Process {chunk_id}: Starting with {len(observation_ids)} observations{TermColors.ENDC}")
         
@@ -1056,7 +1037,6 @@ def process_observation_chunk(chunk_id, observation_ids, obs_data, output_dir, q
         return False
 
 def process_observations_from_csv(csv_file, output_dir=OUTPUT_DIR, quality=IMAGE_QUALITY):
-    """Process observations with the advanced multi-stage pipeline"""
     print(f"{TermColors.BLUE}Processing observations from {csv_file}{TermColors.ENDC}")
     print(f"{TermColors.BLUE}Target directory: {output_dir}{TermColors.ENDC}")
     
@@ -1096,7 +1076,6 @@ def process_observations_from_csv(csv_file, output_dir=OUTPUT_DIR, quality=IMAGE
     return True
 
 def main():
-    """Main entry point"""
     print(f"{TermColors.GREEN}===== iNaturalist Image Downloader ====={TermColors.ENDC}")
     print(f"{TermColors.GREEN}Pipeline configuration:{TermColors.ENDC}")
     print(f"  {TermColors.CYAN}Max memory usage: {MEMORY_LIMIT_PERCENT}%{TermColors.ENDC}")
