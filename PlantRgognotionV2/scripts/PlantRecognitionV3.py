@@ -262,6 +262,9 @@ MLP_USE_SWA = True
 MLP_USE_EMA = True
 MLP_EMA_DECAY = 0.999
 MLP_USE_AUTO_TRAIN_CONFIG = False
+MLP_USE_SAM = True  # Toggle to enable/disable SAM for MLP
+MLP_SAM_RHO = 0.05  # Can be smaller than for CNNs (0.05 instead of 0.1-0.2)
+MLP_SAM_ADAPTIVE = False
 
 # --- MLP Hyperparameter Optimization (HPO) Config ---
 MLP_DO_HPO = True  # Set to True to run HPO for MLP parameters
@@ -396,8 +399,15 @@ def save_checkpoint(fold, global_epoch, stage_idx, stage_epoch, model, optimizer
     filepath = os.path.join(checkpoint_dir, filename)
     model_state_dict = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
     
-    is_sam_optimizer = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE and (USE_SAM if not is_mlp_checkpoint else False)
-    opt_state_dict = optimizer.base_optimizer.state_dict() if is_sam_optimizer else optimizer.state_dict()
+    # Determine if the optimizer being saved is a SAM optimizer
+    optimizer_is_sam_instance = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE
+    should_treat_as_sam_for_saving = False
+    if is_mlp_checkpoint:
+        should_treat_as_sam_for_saving = optimizer_is_sam_instance and MLP_USE_SAM
+    else: # For CombinedModel checkpoint
+        should_treat_as_sam_for_saving = optimizer_is_sam_instance and USE_SAM
+        
+    opt_state_dict = optimizer.base_optimizer.state_dict() if should_treat_as_sam_for_saving else optimizer.state_dict()
 
     state = {
         'fold': fold,
@@ -411,16 +421,16 @@ def save_checkpoint(fold, global_epoch, stage_idx, stage_epoch, model, optimizer
         'scaler': scaler.state_dict() if scaler else None,
         'best_metric': best_metric,
         'label_encoder_classes': list(label_encoder.classes_) if label_encoder else None,
-        'class_frequencies': CLASS_FREQUENCIES if not is_mlp_checkpoint else None
+        'class_frequencies': CLASS_FREQUENCIES if not is_mlp_checkpoint else None,
+        'is_sam_optimizer': should_treat_as_sam_for_saving # Store if it was a SAM optimizer
     }
     try:
         torch.save(state, filepath)
-        # More concise print statement
         metric_display = f"(Best {CHECKPOINT_MONITOR}: {best_metric:.4f})" if "best" in filename.lower() else ""
-        epoch_display = global_epoch # For MLP, global_epoch is the epoch number
-        if not is_mlp_checkpoint: # For CombinedModel, use stage_epoch if relevant, or global_epoch
+        epoch_display = global_epoch 
+        if not is_mlp_checkpoint:
             epoch_display = stage_epoch if stage_idx != -1 else global_epoch
-
+        # print(f"{TermColors.INFO}Checkpoint saved: {filepath} {metric_display} (Epoch {epoch_display}){TermColors.ENDC}")
     except Exception as e:
         print(f"{TermColors.RED}Error saving checkpoint {filepath}: {e}{TermColors.ENDC}")
 
@@ -445,25 +455,23 @@ def load_checkpoint(fold, model, optimizer, scheduler, scaler, filename="checkpo
             
             best_metric = ckpt.get('best_metric', best_metric)
             loaded_label_classes = ckpt.get('label_encoder_classes', None)
+            was_sam_optimizer_in_ckpt = ckpt.get('is_sam_optimizer', False)
+
 
             state_dict = ckpt['state_dict']
             new_state_dict = {}
             is_compiled = hasattr(model, '_orig_mod') 
             
-            # Handle state dict loading for compiled vs non-compiled, module vs no-module
             current_model_is_module = any(k.startswith('module.') for k in model.state_dict().keys())
             ckpt_is_module = any(k.startswith('module.') for k in state_dict.keys())
 
             for k, v in state_dict.items():
                 name = k
-                # Strip 'module.' from ckpt if model isn't currently a module
                 if ckpt_is_module and not current_model_is_module:
                     if name.startswith('module.'): name = name[len('module.'):]
-                # Add 'module.' to key if model is a module but ckpt isn't
                 elif not ckpt_is_module and current_model_is_module:
                     name = 'module.' + name
                 
-                # Handle torch.compile's _orig_mod prefix
                 if is_compiled and not name.startswith('_orig_mod.'): name = '_orig_mod.' + name
                 if not is_compiled and name.startswith('_orig_mod.'): name = name[len('_orig_mod.'):]
                 new_state_dict[name] = v
@@ -476,12 +484,31 @@ def load_checkpoint(fold, model, optimizer, scheduler, scaler, filename="checkpo
 
 
             if optimizer and 'optimizer' in ckpt and ckpt['optimizer']:
-                is_sam_optimizer_runtime = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE and (USE_SAM if not is_mlp_checkpoint else False)
-                opt_to_load = optimizer.base_optimizer if is_sam_optimizer_runtime else optimizer
-                try:
-                    opt_to_load.load_state_dict(ckpt['optimizer'])
-                    print(f"{TermColors.GREEN}  Optimizer state loaded.{TermColors.ENDC}")
-                except Exception as e: print(f"{TermColors.YELLOW}Optim Load Failed: {e}{TermColors.ENDC}")
+                # Determine if the current runtime optimizer is SAM based on config
+                current_optimizer_should_be_sam = False
+                if is_mlp_checkpoint:
+                    current_optimizer_should_be_sam = MLP_USE_SAM and SAM_AVAILABLE and hasattr(optimizer, 'base_optimizer')
+                else: # For CombinedModel
+                    current_optimizer_should_be_sam = USE_SAM and SAM_AVAILABLE and hasattr(optimizer, 'base_optimizer')
+
+                opt_to_load_state_into = None
+                if current_optimizer_should_be_sam and was_sam_optimizer_in_ckpt:
+                    opt_to_load_state_into = optimizer.base_optimizer
+                    print(f"{TermColors.DEBUG}  Attempting to load SAM base_optimizer state.{TermColors.ENDC}")
+                elif not current_optimizer_should_be_sam and not was_sam_optimizer_in_ckpt:
+                    opt_to_load_state_into = optimizer
+                    print(f"{TermColors.DEBUG}  Attempting to load standard optimizer state.{TermColors.ENDC}")
+                else:
+                    # Mismatch: e.g., current is SAM but ckpt was not, or vice-versa.
+                    # This might indicate a config change. Loading might fail or be partial.
+                    print(f"{TermColors.YELLOW}WARN: Optimizer type mismatch between checkpoint (SAM: {was_sam_optimizer_in_ckpt}) and current config (SAM: {current_optimizer_should_be_sam}). Attempting to load into {'base_optimizer' if current_optimizer_should_be_sam else 'optimizer directly'}.{TermColors.ENDC}")
+                    opt_to_load_state_into = optimizer.base_optimizer if current_optimizer_should_be_sam else optimizer
+                
+                if opt_to_load_state_into:
+                    try:
+                        opt_to_load_state_into.load_state_dict(ckpt['optimizer'])
+                        print(f"{TermColors.GREEN}  Optimizer state loaded.{TermColors.ENDC}")
+                    except Exception as e: print(f"{TermColors.YELLOW}Optim Load Failed: {e}{TermColors.ENDC}")
             
             if scheduler and 'scheduler' in ckpt and ckpt['scheduler']:
                  try:
@@ -882,26 +909,55 @@ def get_criterion(loss_type=LOSS_TYPE, label_smoothing=LABEL_SMOOTHING, class_we
     return nn.CrossEntropyLoss(label_smoothing=label_smoothing, weight=weights)
 
 # --- Optimizer and Scheduler ---
-def get_optimizer(model, optimizer_type=OPTIMIZER_TYPE, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, use_sam_flag=USE_SAM, sam_rho=SAM_RHO, sam_adaptive=SAM_ADAPTIVE, is_mlp_optimizer=False):
+def get_optimizer(model, optimizer_type=OPTIMIZER_TYPE, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, 
+                  use_sam_flag=USE_SAM, # This is the global USE_SAM for CombinedModel
+                  sam_rho=SAM_RHO,      # This is the global SAM_RHO for CombinedModel
+                  sam_adaptive=SAM_ADAPTIVE, # This is the global SAM_ADAPTIVE for CombinedModel
+                  is_mlp_optimizer=False):
     params = [p for p in model.parameters() if p.requires_grad]
     if not params: raise ValueError("No trainable parameters in model")
     
-    current_lr = lr if not is_mlp_optimizer else MLP_LEARNING_RATE
-    current_wd = weight_decay if not is_mlp_optimizer else MLP_WEIGHT_DECAY
-    current_optim_type = optimizer_type if not is_mlp_optimizer else MLP_OPTIMIZER_TYPE
-    current_use_sam = use_sam_flag if not is_mlp_optimizer else False # SAM typically not for MLP
+    current_lr, current_wd, current_optim_type = 0,0, ''
+    should_this_optimizer_use_sam = False
+    current_sam_rho_for_instance, current_sam_adaptive_for_instance = 0.0, False
 
-    actually_use_sam = current_use_sam and SAM_AVAILABLE
+    if is_mlp_optimizer:
+        current_lr = MLP_LEARNING_RATE
+        current_wd = MLP_WEIGHT_DECAY
+        current_optim_type = MLP_OPTIMIZER_TYPE
+        should_this_optimizer_use_sam = MLP_USE_SAM and SAM_AVAILABLE
+        current_sam_rho_for_instance = MLP_SAM_RHO
+        current_sam_adaptive_for_instance = MLP_SAM_ADAPTIVE
+    else: # For CombinedModel
+        current_lr = lr
+        current_wd = weight_decay
+        current_optim_type = optimizer_type
+        should_this_optimizer_use_sam = use_sam_flag and SAM_AVAILABLE
+        current_sam_rho_for_instance = sam_rho
+        current_sam_adaptive_for_instance = sam_adaptive
 
-    if actually_use_sam:
+    if should_this_optimizer_use_sam:
         from functools import partial
-        if current_optim_type == 'AdamP' and ADAMP_AVAILABLE: base_optimizer_fn = partial(AdamP, lr=current_lr, weight_decay=current_wd, betas=(0.9, 0.999), nesterov=True)
-        else: base_optimizer_fn = partial(optim.AdamW, lr=current_lr, weight_decay=current_wd)
-        return SAM(params, base_optimizer_fn, rho=sam_rho, adaptive=sam_adaptive)
+        base_optimizer_fn_choice = None
+        if current_optim_type == 'AdamP' and ADAMP_AVAILABLE:
+            base_optimizer_fn_choice = partial(AdamP, lr=current_lr, weight_decay=current_wd, betas=(0.9, 0.999), nesterov=True)
+        elif current_optim_type == 'AdamW':
+             base_optimizer_fn_choice = partial(optim.AdamW, lr=current_lr, weight_decay=current_wd)
+        else: # Fallback for SAM base optimizer if not AdamP or AdamW
+            print(f"{TermColors.YELLOW}WARN: SAM base optimizer type '{current_optim_type}' not explicitly AdamP/AdamW. Defaulting SAM base to AdamW for {'MLP' if is_mlp_optimizer else 'CombinedModel'}.{TermColors.ENDC}")
+            base_optimizer_fn_choice = partial(optim.AdamW, lr=current_lr, weight_decay=current_wd)
+        
+        print(f"{TermColors.BLUE}INFO: Using SAM optimizer (rho={current_sam_rho_for_instance}, adaptive={current_sam_adaptive_for_instance}) for {'MLP' if is_mlp_optimizer else 'CombinedModel'}. Base: {current_optim_type}{TermColors.ENDC}")
+        return SAM(params, base_optimizer_fn_choice, rho=current_sam_rho_for_instance, adaptive=current_sam_adaptive_for_instance)
     else:
-        if current_optim_type == 'AdamP' and ADAMP_AVAILABLE: return AdamP(params, lr=current_lr, weight_decay=current_wd, betas=(0.9, 0.999), nesterov=True)
-        if current_optim_type == 'AdamW': return optim.AdamW(params, lr=current_lr, weight_decay=current_wd)
-        if current_optim_type == 'SGD': return optim.SGD(params, lr=current_lr, weight_decay=current_wd, momentum=0.9, nesterov=True)
+        if current_optim_type == 'AdamP' and ADAMP_AVAILABLE:
+            return AdamP(params, lr=current_lr, weight_decay=current_wd, betas=(0.9, 0.999), nesterov=True)
+        if current_optim_type == 'AdamW':
+            return optim.AdamW(params, lr=current_lr, weight_decay=current_wd)
+        if current_optim_type == 'SGD':
+            return optim.SGD(params, lr=current_lr, weight_decay=current_wd, momentum=0.9, nesterov=True)
+        # Fallback
+        print(f"{TermColors.YELLOW}WARN: Optimizer type '{current_optim_type}' not AdamP/AdamW/SGD or AdamP not avail. Defaulting to AdamW for {'MLP' if is_mlp_optimizer else 'CombinedModel'}.{TermColors.ENDC}")
         return optim.AdamW(params, lr=current_lr, weight_decay=current_wd)
 
 def get_scheduler(optimizer, scheduler_type=SCHEDULER_TYPE, total_epochs=TOTAL_EPOCHS_PER_FOLD, warmup_epochs=WARMUP_EPOCHS, lr_max=LEARNING_RATE, lr_min=LR_MIN, t_0=T_0, t_mult=T_MULT, step_size=STEP_LR_STEP_SIZE, gamma=STEP_LR_GAMMA, plateau_factor=PLATEAU_FACTOR, plateau_patience=PLATEAU_PATIENCE, plateau_min_lr=PLATEAU_MIN_LR, plateau_mode=PLATEAU_MODE, plateau_monitor=PLATEAU_MONITOR, is_mlp_scheduler=False):
@@ -971,7 +1027,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
                     mixup_alpha=MIXUP_ALPHA, cutmix_alpha=CUTMIX_ALPHA, aug_probability=AUG_PROBABILITY, grad_clip_val=GRADIENT_CLIP_VAL,
                     gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS, use_sam_flag=USE_SAM, fold_num=0, is_mlp_training=False):
     model.train(); running_loss = 0.0; total_samples = 0; all_preds, all_labels = [], []
-    is_sam_active_for_optim = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE and use_sam_flag and not is_mlp_training
+    is_sam_active_for_optim = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE and use_sam_flag
 
     pbar_prefix = "MLP " if is_mlp_training else ""
     pbar_desc = f"{pbar_prefix}F{fold_num} E{global_epoch+1}/{stage_total_epochs} Tr" if not is_mlp_training or isinstance(fold_num, int) else f"HPO {pbar_prefix}Train Ep {global_epoch+1}"
@@ -2221,7 +2277,7 @@ def train_mlp_on_features_main_loop(num_classes_val, label_encoder_val, class_na
 
             current_mlp_label_smoothing = 0.0 if MLP_USE_ARCFACE else LABEL_SMOOTHING
             criterion = get_criterion(class_weights=CLASS_WEIGHTS, label_smoothing=current_mlp_label_smoothing)
-            # Use HPO-tuned LR and WD as initial values
+            # get_optimizer will use MLP_USE_SAM, MLP_SAM_RHO, MLP_SAM_ADAPTIVE internally if is_mlp_optimizer=True
             optimizer = get_optimizer(mlp_model, lr=MLP_LEARNING_RATE, weight_decay=MLP_WEIGHT_DECAY, optimizer_type=MLP_OPTIMIZER_TYPE, is_mlp_optimizer=True)
             scaler = torch.amp.GradScaler('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda'))
             
@@ -2294,7 +2350,8 @@ def train_mlp_on_features_main_loop(num_classes_val, label_encoder_val, class_na
                 mlp_model, train_loader, criterion, optimizer, scaler, scheduler, 
                 epoch, stage_idx=0, stage_epoch=epoch, stage_total_epochs=MLP_EPOCHS, 
                 device=DEVICE, writer=writer, num_classes=NUM_CLASSES, ema_model=ema_mlp_model,
-                use_sam_flag=False, fold_num=fold_idx_display, is_mlp_training=True
+                use_sam_flag=(MLP_USE_SAM and SAM_AVAILABLE), # Pass MLP_USE_SAM flag
+                fold_num=fold_idx_display, is_mlp_training=True
             )
             if train_loss is None: fold_stop_requested = True; break 
             
@@ -2318,19 +2375,31 @@ def train_mlp_on_features_main_loop(num_classes_val, label_encoder_val, class_na
             
             if adaptive_overfit_counter >= ADAPTIVE_MLP_PATIENCE:
                 print(f"{TermColors.YELLOW}MLP Fold {fold_idx_display} Adaptive: Overfitting detected for {adaptive_overfit_counter} epochs.{TermColors.ENDC}")
-                current_lr = optimizer.param_groups[0]['lr']
-                current_wd = optimizer.param_groups[0]['weight_decay']
+                current_lr_opt = optimizer.base_optimizer.param_groups[0]['lr'] if hasattr(optimizer, 'base_optimizer') else optimizer.param_groups[0]['lr']
+                current_wd_opt = optimizer.base_optimizer.param_groups[0]['weight_decay'] if hasattr(optimizer, 'base_optimizer') else optimizer.param_groups[0]['weight_decay']
                 
-                new_lr = max(current_lr * ADAPTIVE_MLP_LR_FACTOR, ADAPTIVE_MLP_MIN_LR)
-                new_wd = min(current_wd * ADAPTIVE_MLP_WD_FACTOR, ADAPTIVE_MLP_MAX_WD)
+                new_lr = max(current_lr_opt * ADAPTIVE_MLP_LR_FACTOR, ADAPTIVE_MLP_MIN_LR)
+                new_wd = min(current_wd_opt * ADAPTIVE_MLP_WD_FACTOR, ADAPTIVE_MLP_MAX_WD)
 
-                if new_lr < current_lr:
-                    optimizer.param_groups[0]['lr'] = new_lr
+                opt_to_adjust = optimizer.base_optimizer if hasattr(optimizer, 'base_optimizer') else optimizer
+                lr_changed_adaptive = False
+                if new_lr < current_lr_opt:
+                    opt_to_adjust.param_groups[0]['lr'] = new_lr
                     print(f"{TermColors.YELLOW}  Adaptive: Reduced LR to {new_lr:.2e}{TermColors.ENDC}")
-                if new_wd > current_wd:
-                    optimizer.param_groups[0]['weight_decay'] = new_wd
+                    lr_changed_adaptive = True
+                if new_wd > current_wd_opt:
+                    opt_to_adjust.param_groups[0]['weight_decay'] = new_wd
                     print(f"{TermColors.YELLOW}  Adaptive: Increased WD to {new_wd:.2e}{TermColors.ENDC}")
                 
+                if lr_changed_adaptive and scheduler: # Reset scheduler if LR changed
+                    if hasattr(scheduler, 'base_lrs'):
+                        if isinstance(scheduler.base_lrs, list): scheduler.base_lrs = [new_lr] * len(scheduler.base_lrs)
+                    # For SequentialLR, need to update base_lrs of the main scheduler
+                    if isinstance(scheduler, torch.optim.lr_scheduler.SequentialLR) and scheduler._schedulers:
+                        main_sched_for_adaptive = scheduler._schedulers[-1]
+                        if hasattr(main_sched_for_adaptive, 'base_lrs') and isinstance(main_sched_for_adaptive.base_lrs, list):
+                             main_sched_for_adaptive.base_lrs = [new_lr] * len(main_sched_for_adaptive.base_lrs)
+
                 adaptive_overfit_counter = 0 # Reset counter after adjustment
             # --- End Adaptive LR / WD ---
 

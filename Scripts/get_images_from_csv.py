@@ -25,7 +25,7 @@ if sys.platform == 'win32':
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))    # Script directory
 BASE_DIR = os.path.dirname(SCRIPT_DIR)                     # Project root directory
 OUTPUT_DIR = os.path.join(BASE_DIR, "data", "plant_images") # Where images are saved
-CSV_FILE = os.path.join(BASE_DIR, "data", "observations-568783.csv") # Input file
+CSV_FILE = os.path.join(BASE_DIR, "data", "observations-561226.csv") # Input file
 
 # Download parameters
 MAX_IMAGES_PER_OBSERVATION = 250
