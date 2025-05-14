@@ -12,6 +12,7 @@ import traceback
 import atexit
 import sys
 import queue
+import requests
 from tqdm.auto import tqdm
 
 # Set policy for Windows to use SelectEventLoopPolicy - this is a fix for Windows asyncio issues
@@ -36,9 +37,9 @@ DOWNLOAD_RETRY_ATTEMPTS = 3             # Number of download retry attempts
 DOWNLOAD_TIMEOUT = 60                   # Timeout for download requests in seconds
 
 # Pipeline configuration
-PREBATCHER_COUNT = 32                   # Number of prebatching threads
-QUEUE_SIZE_PER_PREBATCHER = 32          # Queue size for each prebatcher
-MAX_PARALLEL_DOWNLOADS = 32             # Max number of batches to download simultaneously
+PREBATCHER_COUNT = 128                 # Number of prebatching threads
+QUEUE_SIZE_PER_PREBATCHER = 128          # Queue size for each prebatcher
+MAX_PARALLEL_DOWNLOADS = 64             # Max number of batches to download simultaneously
 
 # Filtering options
 FILTER_BY_LICENSE = False               # Whether to filter by license type
@@ -185,10 +186,6 @@ class DownloadProgress:
         
         if image_id not in self.downloaded_images[observation_id]:
             self.downloaded_images[observation_id].append(image_id)
-        
-        # Save checkpoint occasionally (not for every image)
-        if len(self.downloaded_images[observation_id]) % 20 == 0:
-            self.save_checkpoint()
 
 # Multi-stage pipeline architecture for continuous processing
 class DownloadPipeline:
@@ -197,10 +194,8 @@ class DownloadPipeline:
         self.terminator = GracefulTerminator()
         self.progress = DownloadProgress()
         
-        # Register exit handlers
         register_exit_handler(self.progress)
         
-        # Create multiple prebatchers for a multi-stage pipeline
         self.prebatchers = []
         for i in range(prebatcher_count):
             prebatcher = {
@@ -213,16 +208,13 @@ class DownloadPipeline:
             }
             self.prebatchers.append(prebatcher)
         
-        # Create a queue for download-ready batches
         self.download_queue = queue.Queue(maxsize=MAX_PARALLEL_DOWNLOADS * 2)
         
-        # Status tracking
         self.current_obs_index = 0
         self.observation_ids = []
         self.obs_data = {}
         self.total_observations = 0
         
-        # Metrics
         self.prebatch_stats = {}
         self.download_stats = {
             'batches_processed': 0,
@@ -230,8 +222,10 @@ class DownloadPipeline:
             'successful_downloads': 0,
             'start_time': time.time()
         }
-        
-        # Memory monitor
+        self.stats_lock = threading.Lock() # Lock for download_stats
+        self.print_lock = threading.Lock() # Lock for print operations like progress bar
+        self._batch_start_times = {} # For progress bar rate calculation
+
         self.memory_monitor = monitor_memory()
     
     def start(self, observation_ids, obs_data, output_dir, quality):
@@ -379,7 +373,7 @@ class DownloadPipeline:
                 
                 # Brief pause to avoid hogging CPU
                 if self.current_obs_index < self.total_observations:
-                    time.sleep(0.1)
+                    time.sleep(0.01)
             
             # Wait for all prebatchers to finish
             print(f"{TermColors.BLUE}All observations processed. Waiting for downloads to complete...{TermColors.ENDC}")
@@ -404,7 +398,7 @@ class DownloadPipeline:
                     print(f"{TermColors.YELLOW}Maximum wait time reached. Some small downloads may be incomplete.{TermColors.ENDC}")
                     break
                     
-                time.sleep(1)
+                time.sleep(0.3)
                 if self.terminator.should_terminate():
                     break
                 self._print_pipeline_status()
@@ -469,7 +463,7 @@ class DownloadPipeline:
                         except queue.Full:
                             # Download queue is full - put the batch back in our queue
                             prebatcher['queue'].put(batch, timeout=5)
-                            time.sleep(1)
+                            time.sleep(0.3)
                 
                 except queue.Empty:
                     # Check if we need to queue the current batch
@@ -480,7 +474,7 @@ class DownloadPipeline:
                 
                 except Exception as e:
                     print(f"{TermColors.RED}Prebatcher {prebatcher_id} error: {e}{TermColors.ENDC}")
-                    time.sleep(1)
+                    time.sleep(0.3)
         
         except Exception as e:
             print(f"{TermColors.RED}Error in prebatcher {prebatcher_id}: {e}{TermColors.ENDC}")
@@ -488,139 +482,106 @@ class DownloadPipeline:
     
     def _process_download_batch(self, batch, batch_id):
         try:
-            # Filter already downloaded images
             filtered_list = []
             for url, path, photo_id, obs_id in batch:
                 if not os.path.exists(path) and not self.progress.image_downloaded(obs_id, photo_id):
                     filtered_list.append((url, path, photo_id, obs_id))
             
             if not filtered_list:
-                return 0  # All images already downloaded
-            
-            # Process downloads
+                self._update_progress_bar(batch_id, 0, 0, 0) # Show completion for empty effective batch
+                return 0
+
             total_success = 0
             
-            # Split into smaller batches for more efficient processing
-            sub_batch_size = min(100, len(filtered_list))  # Increased from 10 to 100 for better throughput
+            sub_batch_size = min(100, len(filtered_list))
             sub_batches = [filtered_list[i:i+sub_batch_size] for i in range(0, len(filtered_list), sub_batch_size)]
             
-            # Get terminal width for progress bar
-            terminal_width = 50  # Default width
+            terminal_width = 50
             try:
                 import shutil
-                terminal_width = shutil.get_terminal_size().columns - 40  # Leave space for text
-                terminal_width = max(20, min(terminal_width, 60))  # Keep between 20 and 60 chars
+                terminal_width = shutil.get_terminal_size().columns - 40 
+                terminal_width = max(20, min(terminal_width, 60))
             except:
                 pass
             
-            # Create a simple progress tracking system
-            total_items = len(filtered_list)
-            processed_items = 0
+            total_items_to_download = len(filtered_list)
+            processed_items_count = 0
             
-            # Initial progress bar
-            self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-            
-            # Process batch with standard requests library
-            for sub_batch in sub_batches:
-                if self.terminator.should_terminate():
-                    break
-                
-                import requests
-                from concurrent.futures import ThreadPoolExecutor
-                
-                def download_one(item):
-                    nonlocal processed_items, total_success
-                    url, path, photo_id, obs_id = item
+            self._update_progress_bar(batch_id, processed_items_count, total_items_to_download, terminal_width) # Initial bar
+
+            for sub_batch_items in sub_batches:
+                if self.terminator.should_terminate(): break
+                for item_to_download in sub_batch_items:
+                    if self.terminator.should_terminate(): break
+                    
+                    url, path, photo_id, obs_id = item_to_download
+                    item_downloaded_successfully = False
                     for attempt in range(DOWNLOAD_RETRY_ATTEMPTS):
+                        if self.terminator.should_terminate(): break
                         try:
                             response = requests.get(url, timeout=DOWNLOAD_TIMEOUT)
                             if response.status_code == 200:
-                                # Create directory if needed
                                 os.makedirs(os.path.dirname(path), exist_ok=True)
+                                with open(path, 'wb') as f: f.write(response.content)
+                                self.progress.mark_image_downloaded(obs_id, photo_id) # Just marks in memory
                                 
-                                # Write to file
-                                with open(path, 'wb') as f:
-                                    f.write(response.content)
-                                
-                                # Explicitly track this successful download immediately
-                                self.progress.mark_image_downloaded(obs_id, photo_id)
-                                
-                                # Update stats immediately for real-time tracking
-                                with threading.Lock():
+                                with self.stats_lock:
                                     self.download_stats['successful_downloads'] += 1
-                                    total_success += 1
-                                    processed_items += 1
-                                
-                                # Update progress bar
-                                self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-                                return True
+                                total_success += 1
+                                item_downloaded_successfully = True
+                                break 
                             elif response.status_code == 404:
-                                # Don't retry if the image doesn't exist
-                                with threading.Lock():
-                                    processed_items += 1
-                                self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-                                return False
+                                # print(f"{TermColors.YELLOW}Not found (404): {url}{TermColors.ENDC}")
+                                break 
                             time.sleep(1 * (attempt + 1))
                         except requests.Timeout:
-                            time.sleep(2 * (attempt + 1))
-                        except Exception as e:
-                            print(f"{TermColors.YELLOW}Download error: {str(e)}{TermColors.ENDC}")
+                            if attempt == DOWNLOAD_RETRY_ATTEMPTS - 1:
+                                print(f"{TermColors.YELLOW}Timeout for {url} after {DOWNLOAD_RETRY_ATTEMPTS} attempts.{TermColors.ENDC}")
+                            time.sleep(1 * (attempt + 1))
+                        except Exception as e_dl:
+                            if attempt == DOWNLOAD_RETRY_ATTEMPTS - 1:
+                                print(f"{TermColors.YELLOW}Failed {url} (attempt {attempt+1}): {e_dl}{TermColors.ENDC}")
                             time.sleep(0.5 * (attempt + 1))
                     
-                    # If we get here, all attempts failed
-                    with threading.Lock():
-                        processed_items += 1
-                    self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-                    return False
-                
-                # Use ThreadPoolExecutor with appropriate number of workers
-                sub_batch_success = 0
-                with ThreadPoolExecutor(max_workers=min(32, len(sub_batch))) as executor:
-                    futures = {executor.submit(download_one, item): i for i, item in enumerate(sub_batch)}
-                    
-                    # Process futures as they complete
-                    for future in futures:
-                        try:
-                            future.result()
-                        except Exception as e:
-                            with threading.Lock():
-                                processed_items += 1
-                            self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
+                    processed_items_count += 1
+                    self._update_progress_bar(batch_id, processed_items_count, total_items_to_download, terminal_width)
+
+            # Ensure the progress bar shows 100% if not terminated early
+            if not self.terminator.should_terminate():
+                self._update_progress_bar(batch_id, total_items_to_download, total_items_to_download, terminal_width)
             
-            # Final update to ensure we show 100%
-            self._update_progress_bar(batch_id, total_items, total_items, terminal_width)
-            
-            # Save progress after batch
-            self.progress.save_checkpoint()
+            self.progress.save_checkpoint() 
             
             return total_success
             
         except Exception as e:
-            print(f"{TermColors.RED}Error processing download batch: {e}{TermColors.ENDC}")
+            print(f"{TermColors.RED}Error processing download batch {batch_id}: {e}{TermColors.ENDC}")
             traceback.print_exc()
             return 0
             
     def _update_progress_bar(self, batch_id, current, total, width=50):
-        # Lock for thread-safe terminal output
-        if not hasattr(self, '_print_lock'):
-            self._print_lock = threading.Lock()
-        
-        # Only show completion when the batch is done
-        if current >= total:
-            with self._print_lock:
-                # Calculate download speed for the completion message
-                if not hasattr(self, '_batch_start_times'):
-                    self._batch_start_times = {}
-                
-                if batch_id not in self._batch_start_times:
-                    self._batch_start_times[batch_id] = time.time()
-                
-                elapsed = time.time() - self._batch_start_times[batch_id]
-                download_rate = current / max(0.1, elapsed) if current > 0 else 0
-                
-                # Print a completion message with a check mark
-                print(f"{TermColors.GREEN}✓{TermColors.ENDC} Batch {batch_id} completed: {current}/{total} images [{download_rate:.1f} img/s]")
-    
+        with self.print_lock: # Use the class-level print lock
+            if total == 0 and current == 0: # Special case for empty effective batch
+                 sys.stdout.write(f"\rBatch {batch_id}: [No new images to download] {TermColors.GREEN}✓{TermColors.ENDC}\n")
+                 sys.stdout.flush()
+                 return
+
+            if batch_id not in self._batch_start_times:
+                self._batch_start_times[batch_id] = time.time()
+
+            elapsed = time.time() - self._batch_start_times[batch_id]
+            download_rate = current / max(0.1, elapsed) if current > 0 else 0
+            
+            progress_percent = (current / total) * 100 if total > 0 else 0
+            filled_len = int(width * (progress_percent / 100))
+            bar = '█' * filled_len + '░' * (width - filled_len)
+            
+            status_line = f"\rBatch {batch_id}: [{bar}] {current}/{total} ({progress_percent:.1f}%) [{download_rate:.1f} img/s]"
+            sys.stdout.write(status_line)
+            if current >= total and total > 0: # Ensure newline only on actual completion of non-empty batch
+                sys.stdout.write(f" {TermColors.GREEN}✓{TermColors.ENDC}\n")
+            sys.stdout.flush()
+            
     def _download_worker(self, worker_id):
         try:
             print(f"{TermColors.BLUE}Starting downloader {worker_id}{TermColors.ENDC}")
@@ -640,9 +601,6 @@ class DownloadPipeline:
                         # Simple one-line status update when starting a batch
                         print(f"{TermColors.CYAN}Loading batch {batch_id}: {len(batch)} images{TermColors.ENDC}", flush=True)
                         
-                        # Delay slightly to ensure the message is displayed
-                        time.sleep(0.1)
-                        
                         # Process this batch
                         start_time = time.time()
                         success_count = self._process_download_batch(batch, batch_id)
@@ -652,9 +610,6 @@ class DownloadPipeline:
                         with threading.Lock():
                             self.download_stats['batches_processed'] += 1
                             self.download_stats['total_downloads'] += len(batch)
-                        
-                        # Brief pause to let other threads run
-                        time.sleep(0.1)
                 
                 except queue.Empty:
                     # No batch available, wait a bit
@@ -663,7 +618,7 @@ class DownloadPipeline:
                 except Exception as e:
                     print(f"{TermColors.RED}Downloader {worker_id} error: {e}{TermColors.ENDC}")
                     traceback.print_exc()
-                    time.sleep(1)
+                    time.sleep(0.3)
         
         except Exception as e:
             print(f"{TermColors.RED}Error in downloader {worker_id}: {e}{TermColors.ENDC}")

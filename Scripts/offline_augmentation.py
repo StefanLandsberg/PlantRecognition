@@ -30,7 +30,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))    # Script directory.
 BASE_DIR = os.path.dirname(SCRIPT_DIR)                     # Project root directory.
 DATA_DIR = os.path.join(BASE_DIR, "data", "plant_images") # Directory for plant images.
 IMAGE_SIZE = (512, 512) # Target image dimensions.
-MIN_IMAGES_PER_CLASS = 200  # Minimum images per class after augmentation.
+MIN_IMAGES_PER_CLASS = 175  # Minimum images per class after augmentation.
 MAX_IMAGES_PER_CLASS = 400  # Maximum images per class after augmentation.
 CHECKPOINT_FILE = "augmentation_checkpoint.json" # File to store augmentation progress.
 
