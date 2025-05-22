@@ -4,7 +4,6 @@
 data/
 data/plant_images/
 data/features/
-data/observations-561226.csv
 
 # Ignore checkpoints and models (large binary files)
 checkpoints/

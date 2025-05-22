@@ -1,65 +1,43 @@
 import os
+import pandas as pd
 import time
 import gc
 import asyncio
+import aiohttp
 import signal
 import json
 import psutil
 import threading
+import gzip
 import csv
 import random
-import traceback
-import atexit
-import sys
-import queue
 from tqdm.auto import tqdm
-
-# Set policy for Windows to use SelectEventLoopPolicy - this is a fix for Windows asyncio issues
-if sys.platform == 'win32':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 
 # ===== CONFIGURATION =====
-# These settings can be modified to change the behavior of the script
-# ----------------------------------------------------------------------------
-# Paths
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))    # Script directory
-BASE_DIR = os.path.dirname(SCRIPT_DIR)                     # Project root directory
-OUTPUT_DIR = os.path.join(BASE_DIR, "data", "plant_images") # Where images are saved
-CSV_FILE = os.path.join(BASE_DIR, "data", "observations-561226.csv") # Input file
-
-# Download parameters
-MAX_IMAGES_PER_OBSERVATION = 250
-MAX_IMAGES_PER_CLASS = 400
-MAX_OBSERVATIONS = 99000                # Maximum number of observations to download
+# Update paths to be more robust while still relative
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # Get directory where script is located
+BASE_DIR = os.path.dirname(SCRIPT_DIR)  # Parent directory of Scripts folder
+OUTPUT_DIR = os.path.join(BASE_DIR, "data", "plant_images")
+PARQUET_FILE = os.path.join(BASE_DIR, "cc0_photos.parquet")
+CSV_FILE = os.path.join(BASE_DIR, "data", "inaturalist_metadata", "photos.csv.gz")
+METADATA_DIR = os.path.join(BASE_DIR, "data", "inaturalist_metadata")
+# =========================
+MAX_IMAGES_PER_OBSERVATION = 10         # Maximum images per observation
+MAX_OBSERVATIONS = 7000                 # Maximum number of observations to download
 IMAGE_QUALITY = "medium"                # Options: "original", "large", "medium", "small"
-DOWNLOAD_RETRY_ATTEMPTS = 3             # Number of download retry attempts
-DOWNLOAD_TIMEOUT = 60                   # Timeout for download requests in seconds
-
-# Pipeline configuration
-PREBATCHER_COUNT = 32                   # Number of prebatching threads
-QUEUE_SIZE_PER_PREBATCHER = 32          # Queue size for each prebatcher
-MAX_PARALLEL_DOWNLOADS = 32             # Max number of batches to download simultaneously
-
-# Filtering options
-FILTER_BY_LICENSE = False               # Whether to filter by license type
-LICENSE_TYPE = "CC0"                    # License to filter by if FILTER_BY_LICENSE is True
-                                        # Common values: "CC0", "CC-BY", "CC-BY-NC"
-
-# Resource management
-MEMORY_LIMIT_PERCENT = 90              # Memory usage limit
-PREBATCH_SIZE = 40000                  # Number of images to prepare ahead of time
-# ----------------------------------------------------------------------------
+BATCH_SIZE = 500                        # Chunk size for processing
+DOWNLOAD_THREADS = 150                  # Number of concurrent downloads
+MEMORY_LIMIT_PERCENT = 75               # Memory usage limit, clear memory when exceeded
 # =========================
 
 # Terminal colors for better output readability
-class TermColors:
+class Colors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     RED = '\033[91m'
     BLUE = '\033[94m'
-    MAGENTA = '\033[95m'
-    CYAN = '\033[96m'
-    BOLD = '\033[1m'
     ENDC = '\033[0m'
 
 # Graceful termination handler
@@ -70,7 +48,7 @@ class GracefulTerminator:
     
     def _signal_handler(self, sig, frame):
         """Handle Ctrl+C gracefully"""
-        print(f"\n{TermColors.YELLOW}Termination requested. Will stop after current batch.{TermColors.ENDC}")
+        print(f"\n{Colors.YELLOW}Termination requested. Will stop after current batch.{Colors.ENDC}")
         self.terminate = True
     
     def should_terminate(self):
@@ -80,21 +58,26 @@ class GracefulTerminator:
 def monitor_memory(limit_percent=MEMORY_LIMIT_PERCENT):
     """Background thread to monitor and manage memory usage"""
     def memory_monitor():
-        print(f"{TermColors.BLUE}Starting memory monitor (limit: {limit_percent}%){TermColors.ENDC}")
+        print(f"{Colors.BLUE}Starting memory monitor (limit: {limit_percent}%){Colors.ENDC}")
         while True:
             try:
                 mem = psutil.virtual_memory()
                 if mem.percent > limit_percent:
-                    print(f"{TermColors.YELLOW}High memory usage: {mem.percent}% - Cleaning...{TermColors.ENDC}")
+                    print(f"{Colors.YELLOW}High memory usage: {mem.percent}% - Cleaning...{Colors.ENDC}")
                     gc.collect()
                 time.sleep(10 if mem.percent > limit_percent-10 else 30)
             except Exception as e:
-                print(f"{TermColors.RED}Memory monitor error: {e}{TermColors.ENDC}")
+                print(f"{Colors.RED}Memory monitor error: {e}{Colors.ENDC}")
                 time.sleep(60)
     
     thread = threading.Thread(target=memory_monitor, daemon=True)
     thread.start()
     return thread
+
+# Clean memory function
+def clean_memory():
+    """Force garbage collection"""
+    gc.collect()
 
 # Checkpoint management for resumable downloads
 class DownloadProgress:
@@ -114,49 +97,23 @@ class DownloadProgress:
                     self.completed_observations = data.get('completed_observations', [])
                     self.downloaded_images = data.get('downloaded_images', {})
                     self.current_observation = data.get('current_observation')
-                print(f"{TermColors.GREEN}Resuming from previous download: {len(self.completed_observations)} observations completed{TermColors.ENDC}")
+                print(f"{Colors.GREEN}Resuming from previous download: {len(self.completed_observations)} observations completed{Colors.ENDC}")
             except Exception as e:
-                print(f"{TermColors.YELLOW}Error loading checkpoint: {e}{TermColors.ENDC}")
+                print(f"{Colors.YELLOW}Error loading checkpoint: {e}{Colors.ENDC}")
     
     def save_checkpoint(self):
-        """Save current download progress with proper locking"""
+        """Save current download progress"""
+        data = {
+            'completed_observations': self.completed_observations,
+            'downloaded_images': self.downloaded_images,
+            'current_observation': self.current_observation,
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
         try:
-            # Use file locking to prevent corruption when multiple processes write
-            import portalocker
-            
-            # Create a deep copy of the dictionaries to avoid modification during iteration
-            import copy
-            completed_observations_copy = copy.deepcopy(self.completed_observations)
-            downloaded_images_copy = copy.deepcopy(self.downloaded_images)
-            
-            data = {
-                'completed_observations': completed_observations_copy,
-                'downloaded_images': downloaded_images_copy,
-                'current_observation': self.current_observation,
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            # Use exclusive lock when writing
-            with open(self.checkpoint_file + '.tmp', 'w') as f:
-                portalocker.lock(f, portalocker.LOCK_EX)
+            with open(self.checkpoint_file, 'w') as f:
                 json.dump(data, f)
-                f.flush()
-                os.fsync(f.fileno())
-                
-            # Atomic rename for safer file replacement
-            if sys.platform == 'win32':
-                # Windows needs special handling for atomic rename
-                import os
-                if os.path.exists(self.checkpoint_file):
-                    os.replace(self.checkpoint_file + '.tmp', self.checkpoint_file)
-                else:
-                    os.rename(self.checkpoint_file + '.tmp', self.checkpoint_file)
-            else:
-                # Unix supports atomic rename
-                os.rename(self.checkpoint_file + '.tmp', self.checkpoint_file)
         except Exception as e:
-            # Log but continue - checkpoint saving shouldn't halt the process
-            pass
+            print(f"{Colors.YELLOW}Error saving checkpoint: {e}{Colors.ENDC}")
     
     def observation_completed(self, observation_id):
         """Check if observation is already completed"""
@@ -190,904 +147,831 @@ class DownloadProgress:
         if len(self.downloaded_images[observation_id]) % 20 == 0:
             self.save_checkpoint()
 
-# Multi-stage pipeline architecture for continuous processing
-class DownloadPipeline:
-
-    def __init__(self, prebatcher_count=PREBATCHER_COUNT, queue_size=QUEUE_SIZE_PER_PREBATCHER):
-        self.terminator = GracefulTerminator()
-        self.progress = DownloadProgress()
-        
-        # Register exit handlers
-        register_exit_handler(self.progress)
-        
-        # Create multiple prebatchers for a multi-stage pipeline
-        self.prebatchers = []
-        for i in range(prebatcher_count):
-            prebatcher = {
-                'id': i,
-                'queue': queue.Queue(maxsize=queue_size),
-                'current_batch': [],
-                'thread': None,
-                'is_running': True,
-                'lock': threading.Lock()
-            }
-            self.prebatchers.append(prebatcher)
-        
-        # Create a queue for download-ready batches
-        self.download_queue = queue.Queue(maxsize=MAX_PARALLEL_DOWNLOADS * 2)
-        
-        # Status tracking
-        self.current_obs_index = 0
-        self.observation_ids = []
-        self.obs_data = {}
-        self.total_observations = 0
-        
-        # Metrics
-        self.prebatch_stats = {}
-        self.download_stats = {
-            'batches_processed': 0,
-            'total_downloads': 0,
-            'successful_downloads': 0,
-            'start_time': time.time()
-        }
-        
-        # Memory monitor
-        self.memory_monitor = monitor_memory()
+# Function to extract CC0 photos from the original CSV 
+def create_cc0_parquet(csv_file, parquet_file, chunk_size=100000):
+    """Process the CSV file to extract CC0 licensed photos and save to parquet"""
+    print(f"{Colors.BLUE}Creating CC0 photos parquet file from CSV...{Colors.ENDC}")
     
-    def start(self, observation_ids, obs_data, output_dir, quality):
-        self.observation_ids = observation_ids
-        self.obs_data = obs_data
-        self.total_observations = len(observation_ids)
-        self.output_dir = output_dir
-        self.quality = quality
-        
-        # Start prebatcher threads
-        for prebatcher in self.prebatchers:
-            thread = threading.Thread(
-                target=self._prebatch_worker, 
-                args=(prebatcher,)
-            )
-            thread.daemon = True
-            thread.start()
-            prebatcher['thread'] = thread
-        
-        # Start downloader threads
-        for i in range(MAX_PARALLEL_DOWNLOADS):
-            thread = threading.Thread(
-                target=self._download_worker,
-                args=(i,)
-            )
-            thread.daemon = True
-            thread.start()
-        
-        # Start supervisor thread that manages observation flow
-        supervisor = threading.Thread(target=self._supervisor_worker)
-        supervisor.daemon = True
-        supervisor.start()
-        
-        return supervisor
-    
-    def _supervisor_worker(self):
-        try:
-            print(f"{TermColors.BLUE}Starting pipeline supervisor{TermColors.ENDC}")
-            
-            # Add a counter to track consecutive small batches
-            small_batch_count = 0
-            small_batch_threshold = 10  # Number of consecutive small batches before terminating
-            
-            # Track images per class to enforce MAX_IMAGES_PER_CLASS
-            class_image_counts = {}
-            
-            while self.current_obs_index < self.total_observations and not self.terminator.should_terminate():
-                # Process a batch of observations
-                batch_end = min(self.current_obs_index + 50, self.total_observations)
-                
-                # Track how many images were added in this batch
-                batch_images_added = 0
-                
-                for idx in range(self.current_obs_index, batch_end):
-                    if self.terminator.should_terminate():
-                        break
-                    
-                    obs_id = self.observation_ids[idx]
-                    
-                    # Skip if already completed
-                    if self.progress.observation_completed(obs_id):
-                        continue
-                    
-                    # Get class name and image URLs for this observation
-                    obs_info = self.obs_data.get(obs_id, {})
-                    class_name = obs_info.get('class_name', f"unknown_{obs_id}")
-                    image_urls = obs_info.get('image_urls', [])
-                    
-                    # Skip if no URLs available
-                    if not image_urls:
-                        self.progress.mark_observation_complete(obs_id)
-                        continue
-                    
-                    # Check if we've already hit MAX_IMAGES_PER_CLASS for this class
-                    if class_name in class_image_counts and class_image_counts[class_name] >= MAX_IMAGES_PER_CLASS:
-                        # Skip this observation as we already have enough images for this class
-                        self.progress.mark_observation_complete(obs_id)
-                        continue
-                    
-                    # Create class directory
-                    class_dir = os.path.join(self.output_dir, class_name)
-                    if not os.path.exists(class_dir):
-                        try:
-                            os.makedirs(class_dir)
-                        except FileExistsError:
-                            pass  # Race condition handling
-                    
-                    # Mark this observation as current
-                    self.progress.mark_observation_current(obs_id)
-                    
-                    # Calculate how many more images we can add for this class
-                    if class_name not in class_image_counts:
-                        class_image_counts[class_name] = 0
-                    
-                    remaining_class_capacity = MAX_IMAGES_PER_CLASS - class_image_counts[class_name]
-                    
-                    # Process each image URL (limit to MAX_IMAGES_PER_OBSERVATION and remaining class capacity)
-                    images_added_for_obs = 0
-                    max_images_for_obs = min(MAX_IMAGES_PER_OBSERVATION, remaining_class_capacity)
-                    
-                    for i, photo_url in enumerate(image_urls[:max_images_for_obs]):
-                        # Generate a unique ID for this image
-                        photo_id = f"{obs_id}_{i}"
-                        
-                        # Skip if already downloaded
-                        if self.progress.image_downloaded(obs_id, photo_id):
-                            continue
-                        
-                        # Path for saving this image
-                        image_path = os.path.join(class_dir, f"{class_name}_{obs_id}_{i}.jpg")
-                        
-                        # Add to a prebatcher (round-robin distribution)
-                        item = (photo_url, image_path, photo_id, obs_id)
-                        prebatcher_idx = idx % len(self.prebatchers)
-                        self._add_to_prebatcher(prebatcher_idx, item)
-                        batch_images_added += 1
-                        images_added_for_obs += 1
-                        
-                        # Update the class image count
-                        class_image_counts[class_name] += 1
-                        
-                        # Stop if we've reached the class limit
-                        if class_image_counts[class_name] >= MAX_IMAGES_PER_CLASS:
-                            break
-                    
-                    # Mark observation complete
-                    self.progress.mark_observation_complete(obs_id)
-                
-                # Check if we're getting small batches consistently
-                if batch_images_added <= 10:  # If we only added a few images
-                    small_batch_count += 1
-                    
-                    if small_batch_count >= small_batch_threshold:
-                        print(f"{TermColors.GREEN}Detected end of significant data - processing only small batches. Gracefully finishing...{TermColors.ENDC}")
-                        break  # Exit the main loop to finish processing
-                else:
-                    # Reset the counter if we had a substantial batch
-                    small_batch_count = 0
-                
-                # Update index
-                self.current_obs_index = batch_end
-                
-                # Show progress
-                self._print_pipeline_status()
-                
-                # Brief pause to avoid hogging CPU
-                if self.current_obs_index < self.total_observations:
-                    time.sleep(0.1)
-            
-            # Wait for all prebatchers to finish
-            print(f"{TermColors.BLUE}All observations processed. Waiting for downloads to complete...{TermColors.ENDC}")
-            self._print_pipeline_status()
-            
-            # Signal all prebatchers to finish
-            for prebatcher in self.prebatchers:
-                with prebatcher['lock']:
-                    if prebatcher['current_batch']:
-                        try:
-                            prebatcher['queue'].put(prebatcher['current_batch'], block=False)
-                            prebatcher['current_batch'] = []
-                        except queue.Full:
-                            pass
-            
-            # Wait until download queue is empty and all prebatchers are done
-            max_wait_time = 60  # Maximum time to wait in seconds
-            start_wait_time = time.time()
-            
-            while not self.download_queue.empty():
-                if time.time() - start_wait_time > max_wait_time:
-                    print(f"{TermColors.YELLOW}Maximum wait time reached. Some small downloads may be incomplete.{TermColors.ENDC}")
-                    break
-                    
-                time.sleep(1)
-                if self.terminator.should_terminate():
-                    break
-                self._print_pipeline_status()
-            
-            # One final status update
-            self._print_pipeline_status(final=True)
-            
-        except Exception as e:
-            print(f"{TermColors.RED}Error in supervisor: {e}{TermColors.ENDC}")
-            traceback.print_exc()
-            # Save progress even on error
-            self.progress.save_checkpoint()
-    
-    def _add_to_prebatcher(self, prebatcher_idx, item):
-        prebatcher = self.prebatchers[prebatcher_idx]
-        
-        with prebatcher['lock']:
-            prebatcher['current_batch'].append(item)
-            
-            # If the batch is full enough, try to queue it
-            if len(prebatcher['current_batch']) >= PREBATCH_SIZE // len(self.prebatchers):
-                self._try_queue_prebatcher_batch(prebatcher)
-    
-    def _try_queue_prebatcher_batch(self, prebatcher):
-        """Try to queue a prebatcher's current batch"""
-        with prebatcher['lock']:
-            if not prebatcher['current_batch']:
-                return
-            
-            try:
-                # Try to queue the batch without blocking
-                prebatcher['queue'].put(prebatcher['current_batch'], block=False)
-                prebatcher['current_batch'] = []
-            except queue.Full:
-                # Queue is full, we'll try again later
-                pass
-    
-    def _prebatch_worker(self, prebatcher):
-        prebatcher_id = prebatcher['id']
-        self.prebatch_stats[prebatcher_id] = {
-            'batches_processed': 0,
-            'items_processed': 0
-        }
-        
-        try:
-            print(f"{TermColors.BLUE}Starting prebatcher {prebatcher_id}{TermColors.ENDC}")
-            
-            while prebatcher['is_running'] and not self.terminator.should_terminate():
-                try:
-                    # Get a batch from this prebatcher's queue
-                    batch = prebatcher['queue'].get(timeout=1)
-                    
-                    if batch:
-                        # Queue this batch for download
-                        try:
-                            self.download_queue.put(batch, timeout=30)
-                            
-                            # Update stats
-                            self.prebatch_stats[prebatcher_id]['batches_processed'] += 1
-                            self.prebatch_stats[prebatcher_id]['items_processed'] += len(batch)
-                            
-                        except queue.Full:
-                            # Download queue is full - put the batch back in our queue
-                            prebatcher['queue'].put(batch, timeout=5)
-                            time.sleep(1)
-                
-                except queue.Empty:
-                    # Check if we need to queue the current batch
-                    self._try_queue_prebatcher_batch(prebatcher)
-                    
-                    # No batch available, wait a bit
-                    time.sleep(0.1)
-                
-                except Exception as e:
-                    print(f"{TermColors.RED}Prebatcher {prebatcher_id} error: {e}{TermColors.ENDC}")
-                    time.sleep(1)
-        
-        except Exception as e:
-            print(f"{TermColors.RED}Error in prebatcher {prebatcher_id}: {e}{TermColors.ENDC}")
-            traceback.print_exc()
-    
-    def _process_download_batch(self, batch, batch_id):
-        try:
-            # Filter already downloaded images
-            filtered_list = []
-            for url, path, photo_id, obs_id in batch:
-                if not os.path.exists(path) and not self.progress.image_downloaded(obs_id, photo_id):
-                    filtered_list.append((url, path, photo_id, obs_id))
-            
-            if not filtered_list:
-                return 0  # All images already downloaded
-            
-            # Process downloads
-            total_success = 0
-            
-            # Split into smaller batches for more efficient processing
-            sub_batch_size = min(100, len(filtered_list))  # Increased from 10 to 100 for better throughput
-            sub_batches = [filtered_list[i:i+sub_batch_size] for i in range(0, len(filtered_list), sub_batch_size)]
-            
-            # Get terminal width for progress bar
-            terminal_width = 50  # Default width
-            try:
-                import shutil
-                terminal_width = shutil.get_terminal_size().columns - 40  # Leave space for text
-                terminal_width = max(20, min(terminal_width, 60))  # Keep between 20 and 60 chars
-            except:
-                pass
-            
-            # Create a simple progress tracking system
-            total_items = len(filtered_list)
-            processed_items = 0
-            
-            # Initial progress bar
-            self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-            
-            # Process batch with standard requests library
-            for sub_batch in sub_batches:
-                if self.terminator.should_terminate():
-                    break
-                
-                import requests
-                from concurrent.futures import ThreadPoolExecutor
-                
-                def download_one(item):
-                    nonlocal processed_items, total_success
-                    url, path, photo_id, obs_id = item
-                    for attempt in range(DOWNLOAD_RETRY_ATTEMPTS):
-                        try:
-                            response = requests.get(url, timeout=DOWNLOAD_TIMEOUT)
-                            if response.status_code == 200:
-                                # Create directory if needed
-                                os.makedirs(os.path.dirname(path), exist_ok=True)
-                                
-                                # Write to file
-                                with open(path, 'wb') as f:
-                                    f.write(response.content)
-                                
-                                # Explicitly track this successful download immediately
-                                self.progress.mark_image_downloaded(obs_id, photo_id)
-                                
-                                # Update stats immediately for real-time tracking
-                                with threading.Lock():
-                                    self.download_stats['successful_downloads'] += 1
-                                    total_success += 1
-                                    processed_items += 1
-                                
-                                # Update progress bar
-                                self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-                                return True
-                            elif response.status_code == 404:
-                                # Don't retry if the image doesn't exist
-                                with threading.Lock():
-                                    processed_items += 1
-                                self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-                                return False
-                            time.sleep(1 * (attempt + 1))
-                        except requests.Timeout:
-                            time.sleep(2 * (attempt + 1))
-                        except Exception as e:
-                            print(f"{TermColors.YELLOW}Download error: {str(e)}{TermColors.ENDC}")
-                            time.sleep(0.5 * (attempt + 1))
-                    
-                    # If we get here, all attempts failed
-                    with threading.Lock():
-                        processed_items += 1
-                    self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-                    return False
-                
-                # Use ThreadPoolExecutor with appropriate number of workers
-                sub_batch_success = 0
-                with ThreadPoolExecutor(max_workers=min(32, len(sub_batch))) as executor:
-                    futures = {executor.submit(download_one, item): i for i, item in enumerate(sub_batch)}
-                    
-                    # Process futures as they complete
-                    for future in futures:
-                        try:
-                            future.result()
-                        except Exception as e:
-                            with threading.Lock():
-                                processed_items += 1
-                            self._update_progress_bar(batch_id, processed_items, total_items, terminal_width)
-            
-            # Final update to ensure we show 100%
-            self._update_progress_bar(batch_id, total_items, total_items, terminal_width)
-            
-            # Save progress after batch
-            self.progress.save_checkpoint()
-            
-            return total_success
-            
-        except Exception as e:
-            print(f"{TermColors.RED}Error processing download batch: {e}{TermColors.ENDC}")
-            traceback.print_exc()
-            return 0
-            
-    def _update_progress_bar(self, batch_id, current, total, width=50):
-        # Lock for thread-safe terminal output
-        if not hasattr(self, '_print_lock'):
-            self._print_lock = threading.Lock()
-        
-        # Only show completion when the batch is done
-        if current >= total:
-            with self._print_lock:
-                # Calculate download speed for the completion message
-                if not hasattr(self, '_batch_start_times'):
-                    self._batch_start_times = {}
-                
-                if batch_id not in self._batch_start_times:
-                    self._batch_start_times[batch_id] = time.time()
-                
-                elapsed = time.time() - self._batch_start_times[batch_id]
-                download_rate = current / max(0.1, elapsed) if current > 0 else 0
-                
-                # Print a completion message with a check mark
-                print(f"{TermColors.GREEN}✓{TermColors.ENDC} Batch {batch_id} completed: {current}/{total} images [{download_rate:.1f} img/s]")
-    
-    def _download_worker(self, worker_id):
-        try:
-            print(f"{TermColors.BLUE}Starting downloader {worker_id}{TermColors.ENDC}")
-            # Track batch counter per worker to ensure unique batch IDs
-            batch_counter = 0
-            
-            while not self.terminator.should_terminate():
-                try:
-                    # Get a batch from the download queue
-                    batch = self.download_queue.get(timeout=5)
-                    
-                    if batch:
-                        # Generate a unique batch ID using worker ID and counter
-                        batch_id = f"{worker_id}_{batch_counter}"
-                        batch_counter += 1
-                        
-                        # Simple one-line status update when starting a batch
-                        print(f"{TermColors.CYAN}Loading batch {batch_id}: {len(batch)} images{TermColors.ENDC}", flush=True)
-                        
-                        # Delay slightly to ensure the message is displayed
-                        time.sleep(0.1)
-                        
-                        # Process this batch
-                        start_time = time.time()
-                        success_count = self._process_download_batch(batch, batch_id)
-                        end_time = time.time()
-                        
-                        # Update stats
-                        with threading.Lock():
-                            self.download_stats['batches_processed'] += 1
-                            self.download_stats['total_downloads'] += len(batch)
-                        
-                        # Brief pause to let other threads run
-                        time.sleep(0.1)
-                
-                except queue.Empty:
-                    # No batch available, wait a bit
-                    time.sleep(0.1)
-                
-                except Exception as e:
-                    print(f"{TermColors.RED}Downloader {worker_id} error: {e}{TermColors.ENDC}")
-                    traceback.print_exc()
-                    time.sleep(1)
-        
-        except Exception as e:
-            print(f"{TermColors.RED}Error in downloader {worker_id}: {e}{TermColors.ENDC}")
-            traceback.print_exc()
-    
-    def _print_pipeline_status(self, final=False):
-        # Only print status every 2 minutes, unless it's the final status
-        current_time = time.time()
-        if not hasattr(self, '_last_status_time'):
-            self._last_status_time = 0
-        
-        # Skip status update if it hasn't been 2 minutes yet, unless it's the final status
-        if not final and (current_time - self._last_status_time < 120):  # 120 seconds = 2 minutes
-            return
-            
-        # Update the last status time
-        self._last_status_time = current_time
-        
-        completed_obs = len(self.progress.completed_observations)
-        percentage = completed_obs / self.total_observations * 100
-        
-        # Calculate download rate
-        elapsed = time.time() - self.download_stats['start_time']
-        download_rate = self.download_stats['successful_downloads'] / max(1, elapsed)
-        
-        # Queue sizes
-        prebatcher_queue_sizes = [len(p['current_batch']) + p['queue'].qsize() for p in self.prebatchers]
-        total_queued = sum(prebatcher_queue_sizes) + self.download_queue.qsize()
-        
-        # Calculate ETA
-        remaining_obs = self.total_observations - completed_obs
-        avg_imgs_per_obs = max(1, self.download_stats['successful_downloads']) / max(1, completed_obs)
-        remaining_imgs = remaining_obs * avg_imgs_per_obs
-        eta_seconds = remaining_imgs / max(1, download_rate)
-        eta_str = f"{int(eta_seconds // 3600)}h {int((eta_seconds % 3600) // 60)}m {int(eta_seconds % 60)}s"
-        
-        # Format the progress bar
-        bar_width = 50
-        bar_fill = int(percentage / 100 * bar_width)
-        progress_bar = "█" * bar_fill + "░" * (bar_width - bar_fill)
-        
-        # Only show pipeline status (no final status box, even when finished)
-        status = f"""
-        {TermColors.CYAN}╔══════════════════════ Pipeline Status ══════════════════════╗{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Progress: {percentage:6.2f}% {progress_bar} {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Observations: {completed_obs}/{self.total_observations} processed               {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Images: {self.download_stats['successful_downloads']}/{self.download_stats['total_downloads']} downloaded                    {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Download rate: {download_rate:.1f} images/second                {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Pipeline queue: {total_queued} images waiting                  {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Estimated time to completion: {eta_str}                {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}║{TermColors.ENDC} Memory usage: {psutil.virtual_memory().percent}%                                 {TermColors.CYAN}║{TermColors.ENDC}
-        {TermColors.CYAN}╚═════════════════════════════════════════════════════════════╝{TermColors.ENDC}
-        """
-        print(status)
-
-# Register global exit handler to save progress on unexpected exit
-def register_exit_handler(progress):
-    def on_exit():
-        print(f"\n{TermColors.YELLOW}Process ending: Saving download progress...{TermColors.ENDC}")
-        progress.save_checkpoint()
-    
-    # Register for normal exit
-    atexit.register(on_exit)
-    
-    # For Windows Ctrl+Break and other signals
-    signal.signal(signal.SIGTERM, lambda sig, frame: on_exit())
-    
-    # For system shutdown (Windows only)
-    if sys.platform == 'win32':
-        try:
-            # Special Windows exit handler 
-            import win32api
-            win32api.SetConsoleCtrlHandler(lambda sig: on_exit() or 1, True)
-        except ImportError:
-            pass
-
-def extract_observation_ids_from_csv(csv_file, target_count=MAX_OBSERVATIONS):
-    print(f"{TermColors.BLUE}Loading observations from {csv_file}...{TermColors.ENDC}")
-    
-    # Data structures to store results
-    observation_data = {}
-    species_counts = {}  # Track counts per species
+    cc0_photos = []
     
     try:
-        # Try different encodings if the default fails
-        encodings_to_try = ['utf-8', 'latin-1', 'ISO-8859-1', 'cp1252']
-        
-        for encoding in encodings_to_try:
-            try:
-                print(f"{TermColors.BLUE}Trying to open CSV with {encoding} encoding...{TermColors.ENDC}")
-                
-                with open(csv_file, 'r', encoding=encoding) as f:
-                    # Read a small portion to test if encoding works
-                    sample = f.read(1024)
-                    f.seek(0)  # Reset file pointer
+        # Open the gzipped CSV file
+        with gzip.open(csv_file, 'rt') as f:
+            # Get header
+            header = f.readline().strip().split('\t')
+            
+            # Find license column
+            license_col_idx = None
+            for i, col in enumerate(header):
+                if 'license' in col.lower():
+                    license_col_idx = i
+                    break
+            
+            if license_col_idx is None:
+                print(f"{Colors.RED}Error: Cannot find license column in CSV{Colors.ENDC}")
+                return False
+            
+            # Find photo ID column
+            id_col_idx = None
+            for i, col in enumerate(header):
+                if col.lower() == 'id' or col.lower() == 'photo_id':
+                    id_col_idx = i
+                    break
+            
+            if id_col_idx is None:
+                print(f"{Colors.RED}Error: Cannot find photo ID column in CSV{Colors.ENDC}")
+                return False
+            
+            # Find observation ID column
+            obs_col_idx = None
+            for i, col in enumerate(header):
+                if 'observation' in col.lower() and 'id' in col.lower():
+                    obs_col_idx = i
+                    break
+            
+            if obs_col_idx is None:
+                print(f"{Colors.RED}Error: Cannot find observation ID column in CSV{Colors.ENDC}")
+                return False
+            
+            # Process file in chunks
+            processed = 0
+            cc0_count = 0
+            
+            with tqdm(desc="Processing CSV", unit="lines") as pbar:
+                while True:
+                    chunk_data = []
                     
-                    # Check if file has header
-                    reader = csv.DictReader(f)
-                    
-                    # Check required columns exist
-                    headers = reader.fieldnames
-                    if not headers:
-                        continue
+                    # Read chunk of lines
+                    for _ in range(chunk_size):
+                        line = f.readline()
+                        if not line:
+                            break
                         
-                    required_columns = ['id', 'scientific_name', 'image_url', 'iconic_taxon_name']
-                    missing_columns = [col for col in required_columns if col not in headers]
-                    
-                    if missing_columns:
-                        print(f"{TermColors.YELLOW}Missing required columns: {missing_columns}{TermColors.ENDC}")
-                        print(f"{TermColors.YELLOW}Available columns: {headers}{TermColors.ENDC}")
-                        # Print first few rows for debugging
-                        print(f"{TermColors.YELLOW}First row sample: {next(reader, None)}{TermColors.ENDC}")
-                        continue
-                    
-                    # Process all rows
-                    print(f"{TermColors.GREEN}Processing observations with {encoding} encoding...{TermColors.ENDC}")
-                    row_count = 0
-                    plant_count = 0
-                    non_plant_count = 0
-                    empty_url_count = 0
-                    empty_taxon_count = 0
-                    
-                    with tqdm(desc="Processing observations", unit="obs") as pbar:
-                        for row in reader:
-                            try:
-                                row_count += 1
-                                obs_id = row.get('id', '').strip()
-                                if not obs_id:
-                                    continue
-                                
-                                # Check license if filtering is enabled
-                                if FILTER_BY_LICENSE and row.get('license') != LICENSE_TYPE:
-                                    continue
-                                
-                                # Verify this is a plant observation
-                                iconic_taxon = row.get('iconic_taxon_name', '').strip()
-                                if not iconic_taxon:
-                                    empty_taxon_count += 1
-                                    continue
-                                    
-                                # Standardize taxon case to avoid issues
-                                iconic_taxon_lower = iconic_taxon.lower()
-                                if iconic_taxon_lower != 'plantae':
-                                    non_plant_count += 1
-                                    continue
-                                else:
-                                    plant_count += 1
-                                
-                                # Get scientific name - crucial for organizing by species
-                                taxa_name = row.get('scientific_name', '').strip()
-                                if not taxa_name:
-                                    # If scientific name is missing, try species_guess or common_name as fallback
-                                    taxa_name = row.get('species_guess', '').strip()
-                                    if not taxa_name:
-                                        taxa_name = row.get('common_name', '').strip()
-                                        if not taxa_name:
-                                            taxa_name = f"Unknown_Plant_{obs_id}"
-                                
-                                # Get the image URL
-                                image_url = row.get('image_url', '').strip()
-                                if not image_url:
-                                    empty_url_count += 1
-                                    continue
-                                
-                                # Validate and fix URL if needed
-                                if not image_url.startswith(('http://', 'https://')):
-                                    if image_url.startswith('//'):
-                                        image_url = 'https:' + image_url
-                                    else:
-                                        # Skip invalid URLs
-                                        print(f"{TermColors.YELLOW}Invalid URL format: {image_url} for {obs_id}{TermColors.ENDC}")
-                                        continue
-                                
-                                # Clean up name for folder name - consistent naming for species folders
-                                class_name = ''.join(c for c in taxa_name.replace(' ', '_') 
-                                                    if c.isalnum() or c in ['_', '-'])
-                                
-                                # Store the image URL with the observation data
-                                if obs_id not in observation_data:
-                                    observation_data[obs_id] = {
-                                        'class_name': class_name,
-                                        'scientific_name': taxa_name,
-                                        'image_urls': [image_url]
-                                    }
-                                else:
-                                    # Just in case there are multiple images for one observation in the CSV
-                                    observation_data[obs_id]['image_urls'].append(image_url)
-                                
-                                # Track how many observations we have for each species
-                                if class_name not in species_counts:
-                                    species_counts[class_name] = 0
-                                species_counts[class_name] += 1
-                                
-                                pbar.update(1)
-                                
-                                # Check if we've reached the limit
-                                if len(observation_data) >= target_count:
-                                    break
-                                    
-                            except Exception as e:
-                                print(f"{TermColors.YELLOW}Error processing observation row {row_count}: {e}{TermColors.ENDC}")
-                                continue
+                        parts = line.strip().split('\t')
+                        if len(parts) <= max(id_col_idx, license_col_idx, obs_col_idx):
+                            continue
                         
-                    # Print summary stats 
-                    print(f"{TermColors.GREEN}CSV Processing Summary:{TermColors.ENDC}")
-                    print(f"- Total rows processed: {row_count}")
-                    print(f"- Plant observations found: {plant_count}")
-                    print(f"- Non-plant observations skipped: {non_plant_count}")
-                    print(f"- Observations with missing URLs skipped: {empty_url_count}")
-                    print(f"- Observations with missing taxonomy skipped: {empty_taxon_count}")
-                        
-                    # If we get here with data, we've successfully processed the file
-                    if observation_data:
+                        # Check if license contains CC0
+                        if 'CC0' in parts[license_col_idx].upper():
+                            chunk_data.append({
+                                'photo_id': parts[id_col_idx],
+                                'observation_id': parts[obs_col_idx]
+                            })
+                    
+                    if not chunk_data:
                         break
-                        
-            except Exception as e:
-                print(f"{TermColors.YELLOW}Failed with {encoding} encoding: {str(e)}{TermColors.ENDC}")
-                continue
+                    
+                    # Add to CC0 photos
+                    cc0_photos.extend(chunk_data)
+                    cc0_count += len(chunk_data)
+                    processed += chunk_size
+                    pbar.update(chunk_size)
+                    pbar.set_description(f"Processing CSV ({cc0_count} CC0 photos found)")
+                    
+                    # Clean memory regularly
+                    if len(cc0_photos) > 500000:  # Save in smaller chunks to avoid memory issues
+                        temp_df = pd.DataFrame(cc0_photos)
+                        temp_df.to_parquet(f"temp_{processed}.parquet")
+                        cc0_photos = []
+                        clean_memory()
         
-        # Add debug log to help identify if we're getting any data
-        print(f"{TermColors.BLUE}After CSV processing: found {len(observation_data)} observations{TermColors.ENDC}")
+        # Combine all chunks if needed
+        if os.path.exists(f"temp_{processed}.parquet"):
+            print(f"{Colors.BLUE}Combining temporary parquet files...{Colors.ENDC}")
+            all_cc0 = []
+            for temp_file in sorted([f for f in os.listdir('.') if f.startswith('temp_') and f.endswith('.parquet')]):
+                chunk = pd.read_parquet(temp_file)
+                all_cc0.append(chunk)
+                os.remove(temp_file)
+            
+            cc0_df = pd.concat(all_cc0) if all_cc0 else pd.DataFrame(cc0_photos)
+        else:
+            cc0_df = pd.DataFrame(cc0_photos)
         
-        if not observation_data:
-            # Try one more approach with pandas if all above fail
-            try:
-                print(f"{TermColors.BLUE}Trying to open CSV with pandas...{TermColors.ENDC}")
-                import pandas as pd
-                df = pd.read_csv(csv_file)
-                print(f"{TermColors.GREEN}Successfully read CSV with pandas. Columns: {df.columns.tolist()}{TermColors.ENDC}")
-                
-                # Process with pandas
-                plant_df = df[df['iconic_taxon_name'].str.lower() == 'plantae'] if 'iconic_taxon_name' in df.columns else df
-                
-                for _, row in tqdm(plant_df.iterrows(), total=len(plant_df), desc="Processing with pandas"):
-                    try:
-                        obs_id = str(row.get('id', '')).strip()
-                        if not obs_id:
-                            continue
-                            
-                        taxa_name = str(row.get('scientific_name', '')).strip()
-                        if not taxa_name:
-                            taxa_name = str(row.get('species_guess', '')).strip() 
-                            if not taxa_name:
-                                taxa_name = str(row.get('common_name', '')).strip()
-                                if not taxa_name:
-                                    taxa_name = f"Unknown_Plant_{obs_id}"
-                                    
-                        image_url = str(row.get('image_url', '')).strip()
-                        
-                        if not image_url:
-                            continue
-                            
-                        # Validate URL
-                        if not image_url.startswith(('http://', 'https://')):
-                            if image_url.startswith('//'):
-                                image_url = 'https:' + image_url
-                            else:
-                                continue
-                            
-                        class_name = ''.join(c for c in taxa_name.replace(' ', '_') 
-                                            if c.isalnum() or c in ['_', '-'])
-                        
-                        if obs_id not in observation_data:
-                            observation_data[obs_id] = {
-                                'class_name': class_name,
-                                'scientific_name': taxa_name,
-                                'image_urls': [image_url]
-                            }
-                            
-                            # Track how many observations we have for each species
-                            if class_name not in species_counts:
-                                species_counts[class_name] = 0
-                            species_counts[class_name] += 1
-                            
-                            # Check if we've reached the limit
-                            if len(observation_data) >= target_count:
-                                break
-                                
-                    except Exception as e:
-                        print(f"{TermColors.YELLOW}Error processing pandas row: {e}{TermColors.ENDC}")
-                        continue
-            except Exception as e:
-                print(f"{TermColors.RED}Failed with pandas approach: {str(e)}{TermColors.ENDC}")
-        
-        # Add fallback to create dummy data if no data was extracted
-        if not observation_data:
-            print(f"{TermColors.YELLOW}No data found in CSV - Creating dummy test data{TermColors.ENDC}")
-            # Create some dummy data for testing
-            observation_data["test_1"] = {
-                "class_name": "test_plant",
-                "scientific_name": "Testus plantus",
-                "image_urls": ["https://inaturalist-open-data.s3.amazonaws.com/photos/1/medium.jpg"]
-            }
-            observation_ids = ["test_1"]
-            return observation_ids, observation_data
-        
-        # Report on species distribution
-        print(f"{TermColors.GREEN}Found {len(species_counts)} unique plant species{TermColors.ENDC}")
-        
-        # Show distribution of species
-        top_species = sorted(species_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-        print(f"{TermColors.GREEN}Top 10 species by observation count:{TermColors.ENDC}")
-        for species, count in top_species:
-            print(f"- {species}: {count} observations")
-        
-        # If we have too many, randomly sample
-        observation_ids = list(observation_data.keys())
-        if len(observation_ids) > target_count:
-            print(f"{TermColors.YELLOW}Randomly sampling {target_count} observations from {len(observation_ids)}{TermColors.ENDC}")
-            sampled_ids = random.sample(observation_ids, target_count)
-            observation_data = {k: observation_data[k] for k in sampled_ids}
-            observation_ids = sampled_ids
-        
-        print(f"{TermColors.GREEN}Extracted {len(observation_ids)} observations{TermColors.ENDC}")
-        return observation_ids, observation_data
+        # Save final parquet file
+        cc0_df.to_parquet(parquet_file)
+        print(f"{Colors.GREEN}Created {parquet_file} with {len(cc0_df)} CC0 photos{Colors.ENDC}")
+        return True
     
     except Exception as e:
-        print(f"{TermColors.RED}Error loading CSV: {str(e)}{TermColors.ENDC}")
-        traceback.print_exc()
-        # Return dummy data as fallback
-        print(f"{TermColors.YELLOW}Error occurred - Creating dummy test data{TermColors.ENDC}")
-        observation_data = {"test_1": {
-            "class_name": "test_plant",
-            "scientific_name": "Testus plantus",
-            "image_urls": ["https://inaturalist-open-data.s3.amazonaws.com/photos/1/medium.jpg"]
-        }}
-        return ["test_1"], observation_data
+        print(f"{Colors.RED}Error creating CC0 parquet: {str(e)}{Colors.ENDC}")
+        return False
 
-def init_worker():
-        # Set policy for Windows to use SelectEventLoopPolicy in each worker process
-        if sys.platform == 'win32':
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
-        # Create a new event loop for this process
+# Optimized async download functions
+async def download_image(url, path, session):
+    """Download an image using async I/O"""
+    try:
+        async with session.get(url, timeout=15) as response:
+            if response.status == 200:
+                data = await response.read()
+                with open(path, 'wb') as f:
+                    f.write(data)
+                return True
+            return False
+    except Exception:
+        return False
+
+async def download_batch(urls_paths, max_concurrent=DOWNLOAD_THREADS):
+    """Download a batch of images concurrently"""
+    connector = aiohttp.TCPConnector(limit=max_concurrent, ttl_dns_cache=300)
+    timeout = aiohttp.ClientTimeout(total=30)
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        tasks = []
+        for url, path in urls_paths:
+            tasks.append(asyncio.ensure_future(
+                download_image(url, path, session)
+            ))
+        return await asyncio.gather(*tasks)
+
+def download_images_async(urls_paths):
+    """Run the async download with proper event loop handling"""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
-        # Set up process-specific signal handlers
-        signal.signal(signal.SIGINT, signal.SIG_IGN)  # Parent process will handle this
+    
+    return loop.run_until_complete(download_batch(urls_paths))
 
-def process_observation_chunk(chunk_id, observation_ids, obs_data, output_dir, quality):
-    try:
-        print(f"{TermColors.BLUE}Process {chunk_id}: Starting with {len(observation_ids)} observations{TermColors.ENDC}")
+def create_direct_download_list(cc0_photos_df):
+    """Create a direct download list without species information"""
+    print(f"{Colors.BLUE}Creating direct download list without species mapping...{Colors.ENDC}")
+    
+    # We'll organize photos by observation_id instead of species
+    observation_groups = {}
+    
+    with tqdm(total=len(cc0_photos_df), desc="Grouping photos by observation") as pbar:
+        # Process in chunks to avoid memory issues
+        for start_idx in range(0, len(cc0_photos_df), BATCH_SIZE):
+            end_idx = min(start_idx + BATCH_SIZE, len(cc0_photos_df))
+            batch = cc0_photos_df.iloc[start_idx:end_idx]
+            
+            for _, row in batch.iterrows():
+                observation_id = str(row['observation_id'])
+                photo_id = str(row['photo_id'])
+                
+                # Group by observation
+                if observation_id not in observation_groups:
+                    observation_groups[observation_id] = []
+                
+                observation_groups[observation_id].append(photo_id)
+            
+            pbar.update(len(batch))
+    
+    # Select a maximum number of observations
+    if len(observation_groups) > MAX_OBSERVATIONS:
+        selected_observations = random.sample(list(observation_groups.keys()), MAX_OBSERVATIONS)
+        filtered_groups = {obs_id: observation_groups[obs_id] for obs_id in selected_observations}
+        observation_groups = filtered_groups
+    
+    print(f"{Colors.GREEN}Grouped photos by {len(observation_groups)} observations{Colors.ENDC}")
+    
+    # Create download list
+    download_list = []
+    
+    for obs_id, photo_ids in observation_groups.items():
+        # Create observation directory
+        obs_dir = os.path.join(OUTPUT_DIR, f"observation_{obs_id}")
+        os.makedirs(obs_dir, exist_ok=True)
         
-        # Create a pipeline specific to this process
-        pipeline = DownloadPipeline(
-            prebatcher_count=max(2, PREBATCHER_COUNT // 2),
-            queue_size=QUEUE_SIZE_PER_PREBATCHER
-        )
+        # Limit photos per observation
+        if len(photo_ids) > MAX_IMAGES_PER_OBSERVATION:
+            photo_ids = photo_ids[:MAX_IMAGES_PER_OBSERVATION]
         
-        # Start the pipeline for this chunk
-        supervisor = pipeline.start(observation_ids, obs_data, output_dir, quality)
+        # Add to download list
+        for photo_id in photo_ids:
+            url = f"https://inaturalist-open-data.s3.amazonaws.com/photos/{photo_id}/{IMAGE_QUALITY}.jpg"
+            output_path = os.path.join(obs_dir, f"{photo_id}.jpg")
+            
+            if not os.path.exists(output_path):
+                download_list.append((url, output_path, photo_id, obs_id))
+    
+    print(f"{Colors.GREEN}Created download list with {len(download_list)} images{Colors.ENDC}")
+    return download_list
+
+def download_direct(download_list, progress, terminator):
+    """Download images without species information"""
+    print(f"{Colors.BLUE}Starting direct downloads for {len(download_list)} images{Colors.ENDC}")
+    
+    # Create progress bar
+    with tqdm(total=len(download_list), desc="Downloading images") as pbar:
+        # Download in batches to manage memory
+        batch_size = 200  # Larger batch size for direct downloads
+        download_batches = [download_list[i:i+batch_size] for i in range(0, len(download_list), batch_size)]
         
-        # Wait for completion
-        while supervisor.is_alive():
-            try:
-                supervisor.join(1.0)
-            except KeyboardInterrupt:
-                # This shouldn't happen in child processes, but just in case
-                print(f"{TermColors.YELLOW}Process {chunk_id}: Interrupt received. Stopping...{TermColors.ENDC}")
-                pipeline.terminator.terminate = True
-                supervisor.join(10.0)
+        for batch in download_batches:
+            # Check for termination
+            if terminator.should_terminate():
                 break
+            
+            # Prepare URLs and paths for async download
+            urls_paths = [(item[0], item[1]) for item in batch]
+            
+            # Download batch using async I/O
+            results = download_images_async(urls_paths)
+            
+            # Process results and track successful downloads
+            for i, success in enumerate(results):
+                if success and i < len(batch):
+                    photo_id = batch[i][2]
+                    obs_id = batch[i][3]
+                    progress.mark_image_downloaded(obs_id, photo_id)
+            
+            # Update progress
+            pbar.update(len(batch))
+            
+            # Clean memory after each batch
+            clean_memory()
+
+def download_by_species(download_list, species_groups, progress, terminator):
+    """Download images organized by species"""
+    print(f"{Colors.BLUE}Starting species-organized downloads for {len(download_list)} images{Colors.ENDC}")
+    
+    # Group download tasks by species for better organization
+    downloads_by_species = {}
+    for url, path, photo_id, species in download_list:
+        if species not in downloads_by_species:
+            downloads_by_species[species] = []
+        downloads_by_species[species].append((url, path, photo_id))
+    
+    # Process one species at a time
+    species_bar = tqdm(total=len(downloads_by_species), desc="Processing species")
+    
+    for species, species_downloads in downloads_by_species.items():
+        # Check for termination
+        if terminator.should_terminate():
+            break
         
-        print(f"{TermColors.GREEN}Process {chunk_id}: Completed processing {len(observation_ids)} observations{TermColors.ENDC}")
-        return True
+        # Create a nested progress bar for this species
+        with tqdm(total=len(species_downloads), desc=f"Downloading {species[:25]}", leave=False) as download_bar:
+            # Download in batches to manage memory
+            batch_size = 200
+            download_batches = [species_downloads[i:i+batch_size] for i in range(0, len(species_downloads), batch_size)]
+            
+            for batch in download_batches:
+                # Check for termination
+                if terminator.should_terminate():
+                    break
+                
+                # Prepare URLs and paths for async download
+                urls_paths = [(item[0], item[1]) for item in batch]
+                
+                # Download batch using async I/O
+                results = download_images_async(urls_paths)
+                
+                # Process results
+                for i, success in enumerate(results):
+                    if success and i < len(batch):
+                        photo_id = batch[i][2]
+                        progress.mark_image_downloaded(species, photo_id)
+                
+                download_bar.update(len(batch))
+                
+                # Clean memory after each batch
+                clean_memory()
+        
+        # Mark species as complete
+        progress.mark_observation_complete(species)
+        species_bar.update(1)
+    
+    species_bar.close()
+
+def download_cc0_plant_images():
+    """Main function to download CC0 plant images - Plants only, organized by species"""
+    # Create output directory
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    # Start memory monitoring
+    monitor_thread = monitor_memory()
+    
+    # Setup terminator
+    terminator = GracefulTerminator()
+    
+    # Initialize download progress tracker
+    progress = DownloadProgress()
+    
+    # Check for parquet file
+    if not os.path.exists(PARQUET_FILE):
+        if os.path.exists(CSV_FILE):
+            # Create parquet file from CSV
+            success = create_cc0_parquet(CSV_FILE, PARQUET_FILE)
+            if not success:
+                print(f"{Colors.RED}Failed to create CC0 parquet file. Exiting.{Colors.ENDC}")
+                return
+        else:
+            print(f"{Colors.RED}Error: Neither {PARQUET_FILE} nor {CSV_FILE} found{Colors.ENDC}")
+            return
+    
+    # Load CC0 photos
+    print(f"{Colors.BLUE}Loading CC0 photos from parquet...{Colors.ENDC}")
+    cc0_photos_df = pd.read_parquet(PARQUET_FILE)
+    print(f"{Colors.GREEN}Loaded {len(cc0_photos_df)} CC0 photos{Colors.ENDC}")
+    
+    observations_file = os.path.join(METADATA_DIR, "observations.csv.gz")
+    taxa_file = os.path.join(METADATA_DIR, "taxa.csv.gz")
+    
+    if not os.path.exists(observations_file) or not os.path.exists(taxa_file):
+        print(f"{Colors.RED}Error: Missing necessary CSV files for taxonomy data{Colors.ENDC}")
+        print(f"{Colors.YELLOW}Falling back to downloading all CC0 photos without filtering for plants.{Colors.ENDC}")
+        download_list = create_direct_download_list(cc0_photos_df)
+        download_direct(download_list, progress, terminator)
+        return
+    
+    # Extract taxa data - build a mapping from taxon_id to name
+    print(f"{Colors.BLUE}Extracting taxa names from taxa.csv.gz...{Colors.ENDC}")
+    taxon_name_map = {}
+    
+    try:
+        with gzip.open(taxa_file, 'rt') as f:
+            reader = csv.reader(f, delimiter='\t')
+            header = next(reader)
+            
+            # Find required columns
+            taxon_id_idx = header.index('taxon_id') if 'taxon_id' in header else None
+            name_idx = header.index('name') if 'name' in header else None
+            rank_idx = header.index('rank') if 'rank' in header else None
+            ancestry_idx = header.index('ancestry') if 'ancestry' in header else None
+            
+            if None in (taxon_id_idx, name_idx):
+                print(f"{Colors.RED}Missing required columns in taxa file{Colors.ENDC}")
+                print(f"{Colors.YELLOW}Falling back to downloading all CC0 photos.{Colors.ENDC}")
+                download_list = create_direct_download_list(cc0_photos_df)
+                download_direct(download_list, progress, terminator)
+                return
+            
+            # Read all taxa data
+            for row in tqdm(reader, desc="Reading taxa data"):
+                try:
+                    if len(row) > max(taxon_id_idx, name_idx):
+                        taxon_id = row[taxon_id_idx].strip()
+                        name = row[name_idx].strip()
+                        
+                        # Get rank if available
+                        rank = None
+                        if rank_idx is not None and rank_idx < len(row):
+                            rank = row[rank_idx].strip()
+                        
+                        # Store taxon name
+                        taxon_name_map[taxon_id] = name
+                except (IndexError, ValueError):
+                    continue
+        
+        print(f"{Colors.GREEN}Found {len(taxon_name_map)} taxa entries{Colors.ENDC}")
+        
+        # Now map observations to taxa
+        print(f"{Colors.BLUE}Mapping observations to taxa...{Colors.ENDC}")
+        observation_to_species = {}
+        
+        with gzip.open(observations_file, 'rt') as f:
+            reader = csv.reader(f, delimiter='\t')
+            header = next(reader)
+            
+            # Find required columns
+            obs_id_idx = header.index('observation_uuid') if 'observation_uuid' in header else None
+            taxon_id_idx = header.index('taxon_id') if 'taxon_id' in header else None
+            
+            if None in (obs_id_idx, taxon_id_idx):
+                print(f"{Colors.RED}Missing required columns in observations file{Colors.ENDC}")
+                print(f"{Colors.YELLOW}Falling back to downloading all CC0 photos.{Colors.ENDC}")
+                download_list = create_direct_download_list(cc0_photos_df)
+                download_direct(download_list, progress, terminator)
+                return
+            
+            # Map observations to taxa
+            for row in tqdm(reader, desc="Mapping observations to taxa"):
+                try:
+                    # Ensure we have safe indices
+                    safe_obs_id_idx = 0 if obs_id_idx is None else obs_id_idx
+                    safe_taxon_id_idx = 0 if taxon_id_idx is None else taxon_id_idx
+                    
+                    if len(row) > max(safe_obs_id_idx, safe_taxon_id_idx):
+                        obs_id = row[safe_obs_id_idx].strip()
+                        taxon_id = row[safe_taxon_id_idx].strip()
+                        
+                        # Only include taxa we have names for
+                        if taxon_id in taxon_name_map:
+                            # Get species name from taxon
+                            species_name = taxon_name_map[taxon_id]
+                            
+                            # Clean species name for filesystem
+                            clean_species_name = species_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+                            clean_species_name = ''.join(c for c in clean_species_name if c.isalnum() or c == '_')
+                            
+                            # Ensure we have a valid name
+                            if not clean_species_name:
+                                clean_species_name = f"Taxon_{taxon_id}"
+                            
+                            observation_to_species[obs_id] = clean_species_name
+                except (IndexError, ValueError):
+                    continue
+        
+        print(f"{Colors.GREEN}Mapped {len(observation_to_species)} observations to taxa{Colors.ENDC}")
+        
+        # Now group CC0 photos by species
+        print(f"{Colors.BLUE}Grouping CC0 photos by species...{Colors.ENDC}")
+        species_groups = {}
+        photos_count = 0
+        
+        with tqdm(total=len(cc0_photos_df), desc="Grouping photos by species") as pbar:
+            # Process in chunks to avoid memory issues
+            for start_idx in range(0, len(cc0_photos_df), BATCH_SIZE):
+                end_idx = min(start_idx + BATCH_SIZE, len(cc0_photos_df))
+                batch = cc0_photos_df.iloc[start_idx:end_idx]
+                
+                for _, row in batch.iterrows():
+                    observation_id = str(row['observation_id'])
+                    photo_id = str(row['photo_id'])
+                    
+                    # Check if we have species info for this observation
+                    if observation_id in observation_to_species:
+                        species_name = observation_to_species[observation_id]
+                        
+                        # Group by species
+                        if species_name not in species_groups:
+                            species_groups[species_name] = []
+                        
+                        species_groups[species_name].append((photo_id, observation_id))
+                        photos_count += 1
+                
+                pbar.update(len(batch))
+        
+        print(f"{Colors.GREEN}Grouped {photos_count} photos across {len(species_groups)} species{Colors.ENDC}")
+        
+        # Filter species with too few images and limit max images per species
+        filtered_species_groups = {}
+        MIN_IMAGES_PER_SPECIES = 10  # Minimum images per species
+        MAX_IMAGES_PER_SPECIES = 250  # Maximum images per species
+        
+        for species, photos in species_groups.items():
+            if len(photos) >= MIN_IMAGES_PER_SPECIES:
+                if len(photos) > MAX_IMAGES_PER_SPECIES:
+                    # Randomly select MAX_IMAGES_PER_SPECIES photos
+                    random.seed(42)  # For reproducibility
+                    photos = random.sample(photos, MAX_IMAGES_PER_SPECIES)
+                
+                filtered_species_groups[species] = photos
+        
+        print(f"{Colors.GREEN}Filtered to {len(filtered_species_groups)} species with at least {MIN_IMAGES_PER_SPECIES} images{Colors.ENDC}")
+        
+        # Create download list organized by species
+        download_list = []
+        
+        for species_name, photos in filtered_species_groups.items():
+            # Create species directory
+            species_dir = os.path.join(OUTPUT_DIR, species_name)
+            os.makedirs(species_dir, exist_ok=True)
+            
+            # Add to download list
+            for photo_id, observation_id in photos:
+                url = f"https://inaturalist-open-data.s3.amazonaws.com/photos/{photo_id}/{IMAGE_QUALITY}.jpg"
+                output_path = os.path.join(species_dir, f"{photo_id}.jpg")
+                
+                if not os.path.exists(output_path):
+                    download_list.append((url, output_path, photo_id, species_name))
+        
+        print(f"{Colors.GREEN}Created download list with {len(download_list)} images{Colors.ENDC}")
+        
+        # Download images by species
+        print(f"{Colors.BLUE}Starting downloads for {len(filtered_species_groups)} species{Colors.ENDC}")
+        download_by_species(download_list, filtered_species_groups, progress, terminator)
+        
+        # Create summary
+        print(f"{Colors.BLUE}Creating dataset summary...{Colors.ENDC}")
+        total_images = 0
+        species_count = 0
+        
+        for species_dir in os.listdir(OUTPUT_DIR):
+            full_path = os.path.join(OUTPUT_DIR, species_dir)
+            if os.path.isdir(full_path) and not species_dir.startswith('observation_'):
+                image_count = len([f for f in os.listdir(full_path) if f.endswith('.jpg')])
+                if image_count > 0:
+                    total_images += image_count
+                    species_count += 1
+        
+        print(f"{Colors.GREEN}Download complete! Downloaded {total_images} images across {species_count} species{Colors.ENDC}")
         
     except Exception as e:
-        print(f"{TermColors.RED}Process {chunk_id} error: {e}{TermColors.ENDC}")
+        print(f"{Colors.RED}Error processing taxonomy data: {e}{Colors.ENDC}")
+        import traceback
         traceback.print_exc()
-        return False
+        print(f"{Colors.YELLOW}Falling back to downloading all CC0 photos without filtering.{Colors.ENDC}")
+        download_list = create_direct_download_list(cc0_photos_df)
+        download_direct(download_list, progress, terminator)
 
-def process_observations_from_csv(csv_file, output_dir=OUTPUT_DIR, quality=IMAGE_QUALITY):
-    print(f"{TermColors.BLUE}Processing observations from {csv_file}{TermColors.ENDC}")
-    print(f"{TermColors.BLUE}Target directory: {output_dir}{TermColors.ENDC}")
+def download_from_csv(csv_file_path):
+    """Download images from a CSV file with species information already included"""
+    print(f"{Colors.BLUE}Loading observations from CSV file...{Colors.ENDC}")
     
-    # Create output directory if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Create output directory
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    # Extract observation IDs and data
-    observation_ids, obs_data = extract_observation_ids_from_csv(csv_file)
+    # Start memory monitoring
+    monitor_thread = monitor_memory()
     
-    if not observation_ids:
-        print(f"{TermColors.RED}No observations found to process{TermColors.ENDC}")
-        return False
+    # Setup terminator
+    terminator = GracefulTerminator()
     
-    pipeline = DownloadPipeline(
-        prebatcher_count=PREBATCHER_COUNT,
-        queue_size=QUEUE_SIZE_PER_PREBATCHER
-    )
+    # Initialize download progress tracker
+    progress = DownloadProgress()
     
-    # Start the pipeline
-    supervisor = pipeline.start(observation_ids, obs_data, output_dir, quality)
-    
-    # Wait for completion
+    # Parse the CSV file
     try:
-        while supervisor.is_alive():
-            try:
-                supervisor.join(1.0)
-            except KeyboardInterrupt:
-                print(f"{TermColors.YELLOW}Keyboard interrupt received. Gracefully stopping...{TermColors.ENDC}")
-                pipeline.terminator.terminate = True
-                supervisor.join(30.0)
-                break
+        # First, check if the file is gzipped
+        is_gzipped = csv_file_path.endswith('.gz')
+        if is_gzipped:
+            open_func = gzip.open
+            mode = 'rt'
+        else:
+            open_func = lambda file, mode: open(file, mode, encoding='utf-8', errors='replace')
+            mode = 'r'
+        
+        # Read all data from CSV
+        species_groups = {}
+        photos_by_species = {}
+        
+        with open_func(csv_file_path, mode) as f:
+            reader = csv.DictReader(f)
+            
+            # Process each row
+            for row in tqdm(reader, desc="Processing observations"):
+                try:
+                    # Extract required fields
+                    observation_id = row.get('id', '')
+                    image_url = row.get('image_url', '')
+                    scientific_name = row.get('scientific_name', '')
+                    common_name = row.get('common_name', '')
+                    iconic_taxon = row.get('iconic_taxon_name', '')
+                    
+                    # Skip if missing required data
+                    if not observation_id or not image_url:
+                        continue
+                    
+                    # Skip if not a plant (if you only want plants)
+                    if iconic_taxon and iconic_taxon != 'Plantae':
+                        continue
+                    
+                    # Create species name (prefer scientific, fall back to common)
+                    species_name = scientific_name if scientific_name else common_name
+                    if not species_name:
+                        species_name = f"Unknown_Species_{observation_id}"
+                    
+                    # Clean species name for filesystem
+                    clean_species_name = species_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+                    clean_species_name = ''.join(c for c in clean_species_name if c.isalnum() or c == '_')
+                    
+                    # Extract photo ID from URL
+                    # Format: https://inaturalist-open-data.s3.amazonaws.com/photos/169241/medium.JPG
+                    # or: https://static.inaturalist.org/photos/60085/medium.jpg
+                    photo_id = None
+                    if 'inaturalist-open-data' in image_url:
+                        parts = image_url.split('/')
+                        if len(parts) >= 5:
+                            photo_id = parts[-2]
+                    elif 'static.inaturalist.org' in image_url:
+                        parts = image_url.split('/')
+                        if len(parts) >= 5:
+                            photo_id = parts[-2]
+                    
+                    if not photo_id:
+                        continue
+                    
+                    # Group by species
+                    if clean_species_name not in photos_by_species:
+                        photos_by_species[clean_species_name] = []
+                    
+                    # Store photo info
+                    photos_by_species[clean_species_name].append((photo_id, observation_id))
+                    
+                except Exception as e:
+                    print(f"{Colors.YELLOW}Error processing row: {e}{Colors.ENDC}")
+                    continue
+        
+        print(f"{Colors.GREEN}Found {sum(len(photos) for photos in photos_by_species.values())} photos across {len(photos_by_species)} species{Colors.ENDC}")
+        
+        # Filter species with too few images and limit max images per species
+        filtered_species_groups = {}
+        MIN_IMAGES_PER_SPECIES = 5  # Lower threshold to include more species
+        MAX_IMAGES_PER_SPECIES = 250  # Maximum images per species
+        
+        for species, photos in photos_by_species.items():
+            if len(photos) >= MIN_IMAGES_PER_SPECIES:
+                if len(photos) > MAX_IMAGES_PER_SPECIES:
+                    # Randomly select MAX_IMAGES_PER_SPECIES photos
+                    random.seed(42)  # For reproducibility
+                    photos = random.sample(photos, MAX_IMAGES_PER_SPECIES)
+                
+                filtered_species_groups[species] = photos
+        
+        print(f"{Colors.GREEN}Filtered to {len(filtered_species_groups)} species with at least {MIN_IMAGES_PER_SPECIES} images{Colors.ENDC}")
+        
+        # Create download list organized by species
+        download_list = []
+        
+        for species_name, photos in filtered_species_groups.items():
+            # Create species directory
+            species_dir = os.path.join(OUTPUT_DIR, species_name)
+            os.makedirs(species_dir, exist_ok=True)
+            
+            # Add to download list
+            for photo_id, observation_id in photos:
+                url = f"https://inaturalist-open-data.s3.amazonaws.com/photos/{photo_id}/{IMAGE_QUALITY}.jpg"
+                output_path = os.path.join(species_dir, f"{photo_id}.jpg")
+                
+                if not os.path.exists(output_path):
+                    download_list.append((url, output_path, photo_id, species_name))
+        
+        print(f"{Colors.GREEN}Created download list with {len(download_list)} images{Colors.ENDC}")
+        
+        # Download images by species
+        print(f"{Colors.BLUE}Starting downloads for {len(filtered_species_groups)} species{Colors.ENDC}")
+        download_by_species(download_list, filtered_species_groups, progress, terminator)
+        
+        # Create summary
+        print(f"{Colors.BLUE}Creating dataset summary...{Colors.ENDC}")
+        total_images = 0
+        species_count = 0
+        
+        for species_dir in os.listdir(OUTPUT_DIR):
+            full_path = os.path.join(OUTPUT_DIR, species_dir)
+            if os.path.isdir(full_path) and not species_dir.startswith('observation_'):
+                image_count = len([f for f in os.listdir(full_path) if f.endswith('.jpg')])
+                if image_count > 0:
+                    total_images += image_count
+                    species_count += 1
+        
+        print(f"{Colors.GREEN}Download complete! Downloaded {total_images} images across {species_count} species{Colors.ENDC}")
+        
     except Exception as e:
-        print(f"{TermColors.RED}Error: {e}{TermColors.ENDC}")
-        return False
-    
-    return True
+        print(f"{Colors.RED}Error processing observations CSV: {e}{Colors.ENDC}")
+        import traceback
+        traceback.print_exc()
 
-def main():
-    print(f"{TermColors.GREEN}===== iNaturalist Image Downloader ====={TermColors.ENDC}")
-    print(f"{TermColors.GREEN}Pipeline configuration:{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Max memory usage: {MEMORY_LIMIT_PERCENT}%{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Parallel downloads: {MAX_PARALLEL_DOWNLOADS}{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Prebatchers: {PREBATCHER_COUNT}{TermColors.ENDC}")
-    print(f"  {TermColors.CYAN}Max observations: {MAX_OBSERVATIONS}{TermColors.ENDC}")
+def debug_csv_columns(file_path):
+    """Debug CSV file columns"""
+    try:
+        print(f"{Colors.BLUE}Debugging CSV file: {file_path}{Colors.ENDC}")
+        import gzip
+        with gzip.open(file_path, 'rt') as f:
+            # Read the first line to get headers
+            header_line = f.readline().strip()
+            headers = header_line.split('\t')
+            
+            print(f"{Colors.BLUE}Found {len(headers)} columns:{Colors.ENDC}")
+            for i, col in enumerate(headers):
+                print(f"  {i}: '{col}'")
+                
+            # Check for known important columns
+            kingdom_cols = [i for i, col in enumerate(headers) if 'kingdom' in col.lower()]
+            if kingdom_cols:
+                print(f"{Colors.GREEN}Potential kingdom columns: {kingdom_cols} - {[headers[i] for i in kingdom_cols]}{Colors.ENDC}")
+            else:
+                print(f"{Colors.RED}No kingdom column found!{Colors.ENDC}")
+                
+            # Check alternatives
+            print(f"{Colors.BLUE}Looking for taxonomy columns:{Colors.ENDC}")
+            for keyword in ['phylum', 'class', 'order', 'family', 'genus', 'taxon', 'taxonomy']:
+                matching = [i for i, col in enumerate(headers) if keyword in col.lower()]
+                if matching:
+                    print(f"  '{keyword}' columns: {[headers[i] for i in matching]}")
+    except Exception as e:
+        print(f"{Colors.RED}Error debugging CSV: {e}{Colors.ENDC}")
+
+def check_taxa_columns():
+    """Simple function to check taxa file columns"""
+    taxa_file = os.path.join(METADATA_DIR, "taxa.csv.gz")
+    observations_file = os.path.join(METADATA_DIR, "observations.csv.gz")
     
-    if os.path.exists(CSV_FILE):
-        print(f"{TermColors.GREEN}Found target CSV: {CSV_FILE}{TermColors.ENDC}")
-        process_observations_from_csv(CSV_FILE)
+    print(f"{Colors.BLUE}=================== TAXA FILE COLUMNS ==================={Colors.ENDC}")
+    debug_csv_columns(taxa_file)
+    
+    print(f"\n{Colors.BLUE}=================== OBSERVATIONS FILE COLUMNS ==================={Colors.ENDC}")
+    debug_csv_columns(observations_file)
+    
+    return
+
+def analyze_and_recommend():
+    """Analyze the downloaded dataset and provide recommendations for improvement"""
+    print(f"{Colors.BLUE}=================== DATASET ANALYSIS AND RECOMMENDATIONS ==================={Colors.ENDC}")
+    
+    # Check if output directory exists
+    if not os.path.exists(OUTPUT_DIR):
+        print(f"{Colors.RED}No dataset found at {OUTPUT_DIR}. Please run the download first.{Colors.ENDC}")
+        return
+    
+    # Collect statistics
+    total_folders = 0
+    total_images = 0
+    observation_folders = 0
+    species_folders = 0
+    folder_sizes = {}
+    small_folders = []
+    large_folders = []
+    
+    print(f"{Colors.BLUE}Analyzing downloaded dataset structure...{Colors.ENDC}")
+    
+    # Analyze folder structure
+    for folder_name in os.listdir(OUTPUT_DIR):
+        folder_path = os.path.join(OUTPUT_DIR, folder_name)
+        if os.path.isdir(folder_path):
+            total_folders += 1
+            
+            # Count images in folder
+            image_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+            image_count = len(image_files)
+            total_images += image_count
+            folder_sizes[folder_name] = image_count
+            
+            # Classify folder type
+            if folder_name.startswith('observation_'):
+                observation_folders += 1
+            else:
+                species_folders += 1
+            
+            # Track small and large folders
+            if 0 < image_count < 10:
+                small_folders.append((folder_name, image_count))
+            elif image_count > 200:
+                large_folders.append((folder_name, image_count))
+    
+    # Sort folders by size
+    sorted_folders = sorted(folder_sizes.items(), key=lambda x: x[1], reverse=True)
+    
+    # Calculate balanced dataset metrics
+    if total_folders > 0:
+        avg_images_per_folder = total_images / total_folders
+        if len(folder_sizes) > 0:
+            median_size = list(sorted(folder_sizes.values()))[len(folder_sizes)//2]
+            min_size = min(folder_sizes.values()) if folder_sizes else 0
+            max_size = max(folder_sizes.values()) if folder_sizes else 0
+        else:
+            median_size = min_size = max_size = 0
     else:
-        print(f"{TermColors.RED}Target CSV file not found: {CSV_FILE}{TermColors.ENDC}")
+        avg_images_per_folder = median_size = min_size = max_size = 0
+    
+    # Print analysis results
+    print(f"{Colors.GREEN}Dataset Analysis Results:{Colors.ENDC}")
+    print(f"  Total images: {total_images}")
+    print(f"  Total folders: {total_folders}")
+    print(f"  Observation-based folders: {observation_folders}")
+    print(f"  Species-based folders: {species_folders}")
+    print(f"  Average images per folder: {avg_images_per_folder:.1f}")
+    print(f"  Median folder size: {median_size}")
+    print(f"  Size range: {min_size} - {max_size} images per folder")
+    print(f"  Small folders (<10 images): {len(small_folders)}")
+    print(f"  Large folders (>200 images): {len(large_folders)}")
+    
+    # Generate recommendations
+    print(f"\n{Colors.BLUE}Recommendations for Dataset Improvement:{Colors.ENDC}")
+    
+    if observation_folders > 0 and species_folders == 0:
+        print(f"{Colors.YELLOW}1. Your dataset is organized by observation ID rather than species.{Colors.ENDC}")
+        print("   This structure is suboptimal for plant recognition training.")
+        print("   Recommendations:")
+        print("   - Download a proper taxonomy dataset with species information")
+        print("   - Use a pre-trained model to categorize images into species")
+        print("   - Manually sort a subset of images into species folders")
+        print("   - Try: https://www.inaturalist.org/pages/developers for full taxonomy data")
+    
+    if species_folders > 0:
+        # If we have species data but dataset is imbalanced
+        if len(small_folders) > 0.3 * total_folders:
+            print(f"{Colors.YELLOW}2. Your dataset has many species with too few images.{Colors.ENDC}")
+            print(f"   {len(small_folders)} species have fewer than 10 images.")
+            print("   Recommendations:")
+            print("   - Increase MIN_IMAGES_PER_SPECIES (currently 10)")
+            print("   - Focus on species with adequate samples (delete or merge small classes)")
+            print("   - Use data augmentation for underrepresented species")
+        
+        if len(large_folders) > 0.1 * total_folders:
+            print(f"{Colors.YELLOW}3. Your dataset has some species with very many images.{Colors.ENDC}")
+            print(f"   {len(large_folders)} species have more than 200 images.")
+            print("   Recommendations:")
+            print("   - Decrease MAX_IMAGES_PER_SPECIES (currently 250) for more balance")
+            print("   - Use weighted sampling during training to account for class imbalance")
+    
+    # Check overall dataset size for training
+    if total_images < 5000:
+        print(f"{Colors.YELLOW}4. Your dataset may be too small for robust training.{Colors.ENDC}")
+        print(f"   Current size: {total_images} images across {total_folders} folders")
+        print("   Recommendations:")
+        print("   - Increase MAX_OBSERVATIONS (currently 7000)")
+        print("   - Download images from additional sources")
+        print("   - Use transfer learning with pretrained weights")
+        print("   - Apply extensive data augmentation")
 
 if __name__ == "__main__":
-    main()
+    # Select which function to run
+    # 1. Check CSV columns
+    # check_taxa_columns()
+    
+    # 2. Download using taxonomy approach from CC0 iNaturalist dataset
+    multiprocessing.set_start_method('spawn', force=True)
+    download_cc0_plant_images()
+    
+    # 3. Download directly from observations CSV with species info
+    multiprocessing.set_start_method('spawn', force=True)
+    csv_file_path = os.path.join(BASE_DIR, "data", "observations-561226.csv")
+    download_from_csv(csv_file_path)
+    
+    # 4. Analyze downloaded dataset and get recommendations
+    # analyze_and_recommend()
