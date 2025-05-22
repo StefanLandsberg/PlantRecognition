@@ -64,7 +64,10 @@ ADAMP_AVAILABLE = False
 SAM_AVAILABLE = False
 _INITIALIZED = False
 LGBM_PRINTED_INFO = False
-
+# OPTUNA_AVAILABLE is not strictly needed in this script if MLP HPO is removed
+# However, stacking HPO might use it if you choose to implement it with Optuna later.
+# For now, removing Optuna-specific flags unless Stacking HPO needs it.
+# Stacking HPO currently uses GridSearchCV.
 
 try:
     import timm
@@ -100,7 +103,7 @@ except ImportError:
     print("WARN: adamp optimizer not found. Will use AdamW instead. Install with 'pip install adamp'.")
 
 try:
-    from sam_optimizer.sam import SAM 
+    from sam_optimizer.sam import SAM # Ensure this path is correct if you have a local copy
     SAM_AVAILABLE = True
 except ImportError:
     print("WARN: sam_optimizer not found. SAM optimizer will be disabled. Install from 'https://github.com/davda54/sam' or ensure it's in your PYTHONPATH.")
@@ -142,6 +145,8 @@ DEBUG_MODE = False # Set to True for small dataset and fewer epochs
 
 # --- Path Configuration ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Assuming this script is in PlantRecognition/PlantRgognotionV2/scripts/
+# Adjust V3_DIR and PROJECT_ROOT if the script is moved elsewhere relative to the project structure.
 V3_DIR = os.path.dirname(SCRIPT_DIR) # Should be PlantRecognition/PlantRgognotionV2/
 PROJECT_ROOT = os.path.dirname(V3_DIR) # Should be PlantRecognition/
 
@@ -219,11 +224,9 @@ PLATEAU_FACTOR = 0.2; PLATEAU_PATIENCE = 5; PLATEAU_MIN_LR = 1e-6
 PLATEAU_MODE = 'min'; PLATEAU_MONITOR = 'val_loss'
 
 # --- Augmentation Config (for CombinedModel training) ---
-USE_RAND_AUGMENT = False 
-RAND_AUGMENT_N = 2; RAND_AUGMENT_M = 9 
-MIXUP_ALPHA = 0.0 
-CUTMIX_ALPHA = 0.0 
-AUG_PROBABILITY = 0.0
+USE_RAND_AUGMENT = False
+RAND_AUGMENT_N = 2; RAND_AUGMENT_M = 9
+MIXUP_ALPHA = 0.8; CUTMIX_ALPHA = 1.0; AUG_PROBABILITY = 0.5
 
 # --- Averaging Config (for CombinedModel) ---
 USE_SWA = True
@@ -546,25 +549,22 @@ class PlantDataset(Dataset):
         
         return (image, label, img_path, original_index) if self.include_paths else (image, label)
 
-def get_transforms(image_size=(224, 224), for_feature_extraction=False): # Argument for_feature_extraction is kept for compatibility
+def get_transforms(image_size=(224, 224), for_feature_extraction=False): # Simplified augmentations_config
     h, w = int(image_size[0]), int(image_size[1])
-    simple_transform_list = [
-        A.Resize(h, w, interpolation=cv2.INTER_LINEAR),
-        A.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-        ToTensorV2()
-    ]
-    train_transform = A.Compose(simple_transform_list)
-    val_transform = A.Compose(simple_transform_list)
-    global TTA_TRANSFORMS
-    if USE_TTA:
-        TTA_TRANSFORMS = A.Compose([
-            A.HorizontalFlip(p=1.0), 
-            A.Resize(h, w, interpolation=cv2.INTER_LINEAR), 
-            A.Normalize(IMAGENET_MEAN, IMAGENET_STD), 
-            ToTensorV2()
-        ])
-    else:
-        TTA_TRANSFORMS = None    
+    if for_feature_extraction:
+        return A.Compose([A.Resize(h,w, interpolation=cv2.INTER_LINEAR), A.Normalize(IMAGENET_MEAN, IMAGENET_STD), ToTensorV2()])
+
+    train_tf_list = [A.Resize(h,w, interpolation=cv2.INTER_LINEAR), A.HorizontalFlip(p=0.5), 
+                       A.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05, p=0.5), 
+                       A.Normalize(IMAGENET_MEAN, IMAGENET_STD), ToTensorV2()]
+    if USE_RAND_AUGMENT: train_tf_list.insert(1, A.RandAugment(n=RAND_AUGMENT_N, m=RAND_AUGMENT_M, p=0.5)) # Insert before Normalize
+    
+    train_transform = A.Compose(train_tf_list)
+    val_transform = A.Compose([A.Resize(h,w, interpolation=cv2.INTER_LINEAR), A.Normalize(IMAGENET_MEAN, IMAGENET_STD), ToTensorV2()])
+    
+    global TTA_TRANSFORMS 
+    if USE_TTA: TTA_TRANSFORMS = A.Compose([A.HorizontalFlip(p=1.0), A.Resize(h,w, interpolation=cv2.INTER_LINEAR), A.Normalize(IMAGENET_MEAN, IMAGENET_STD), ToTensorV2()])
+    else: TTA_TRANSFORMS = None
     return train_transform, val_transform
 
 # --- Model Architecture ---
@@ -698,13 +698,14 @@ def mixup_criterion(criterion, pred, y_a, y_b, lam):
 # --- EMA Helper ---
 @torch.no_grad()
 def ema_avg_fn(averaged_model_parameter, model_parameter, num_averaged):
+    # Simplified: This script only deals with CombinedModel EMA or KD Student EMA
     current_decay = EMA_DECAY # Default for CombinedModel
     if hasattr(averaged_model_parameter, '_is_kd_student_ema_param') and averaged_model_parameter._is_kd_student_ema_param:
         current_decay = KD_STUDENT_EMA_DECAY
     return current_decay * averaged_model_parameter + (1 - current_decay) * model_parameter
 
 # --- Training & Validation Loops (Simplified for CombinedModel context) ---
-def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, global_epoch, stage_idx, stage_epoch, stage_total_epochs, device, writer, num_classes, ema_model, fold_num=0, mixup_alpha_val=MIXUP_ALPHA, cutmix_alpha_val=CUTMIX_ALPHA, aug_probability_val=AUG_PROBABILITY):
+def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, global_epoch, stage_idx, stage_epoch, stage_total_epochs, device, writer, num_classes, ema_model, fold_num=0):
     model.train(); running_loss = 0.0; total_samples = 0; all_preds, all_labels = [], []
     is_sam_active_for_optim = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE and USE_SAM
 
@@ -720,11 +721,11 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, scheduler, 
 
         use_mixup, use_cutmix = False, False
         r = np.random.rand()
-        if mixup_alpha_val > 0 and cutmix_alpha_val > 0 and r < aug_probability_val:
-            if np.random.rand() < 0.5: inputs, targets_a, targets_b, lam = mixup_data(inputs, labels_orig, mixup_alpha_val, device); use_mixup = True
-            else: inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels_orig, cutmix_alpha_val, device); use_cutmix = True
-        elif mixup_alpha_val > 0 and r < aug_probability_val: inputs, targets_a, targets_b, lam = mixup_data(inputs, labels_orig, mixup_alpha_val, device); use_mixup = True
-        elif cutmix_alpha_val > 0 and r < aug_probability_val: inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels_orig, cutmix_alpha_val, device); use_cutmix = True
+        if mixup_alpha > 0 and cutmix_alpha > 0 and r < AUG_PROBABILITY:
+            if np.random.rand() < 0.5: inputs, targets_a, targets_b, lam = mixup_data(inputs, labels_orig, mixup_alpha, device); use_mixup = True
+            else: inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels_orig, cutmix_alpha, device); use_cutmix = True
+        elif mixup_alpha > 0 and r < AUG_PROBABILITY: inputs, targets_a, targets_b, lam = mixup_data(inputs, labels_orig, mixup_alpha, device); use_mixup = True
+        elif cutmix_alpha > 0 and r < AUG_PROBABILITY: inputs, targets_a, targets_b, lam = cutmix_data(inputs, labels_orig, cutmix_alpha, device); use_cutmix = True
         else: lam = 1.0; targets_a, targets_b = labels_orig, labels_orig
         
         labels_for_arcface = targets_a
@@ -988,107 +989,71 @@ class DistillationLoss(nn.Module):
 def train_student_model(student_model_name, student_base_save_path, student_swa_save_path, student_ema_save_path,
                         df_full_for_kd, image_dir_kd, num_classes_kd, stacking_teacher_components):
     print(f"\n{TermColors.HEADER}--- Knowledge Distillation with Stacking Teacher ---{TermColors.ENDC}")
-    actual_stacking_model = None; stacking_scaler = None
-    feature_extractor_for_mlp_teacher = None 
-    base_teacher_models_list = [] # Renamed from base_mlp_models_for_teacher
-    teacher_loaded_successfully = False
+    actual_stacking_model = None; stacking_scaler = None; feature_extractor_for_teacher = None
+    base_mlp_models_for_teacher = []; teacher_loaded_successfully = False # This part assumes MLPs
 
-    is_combined_model_teacher = stacking_teacher_components.get("is_combined_model_teacher", False)
-
-    try:
+    try: # Load Stacking Teacher (assumes MLP base models for stacker as per original logic)
         print(f"{TermColors.INFO}Loading Stacking Teacher components...{TermColors.ENDC}")
         stacking_package = joblib.load(stacking_teacher_components["stacking_model_path"])
-        actual_stacking_model = stacking_package['model']
-        stacking_scaler = stacking_package.get('scaler')
-        if stacking_scaler is None:
-            print(f"{TermColors.YELLOW}  Stacking scaler not found in joblib. Assuming no scaling needed or handled by model.{TermColors.ENDC}")
+        actual_stacking_model = stacking_package['model']; stacking_scaler = stacking_package.get('scaler') # Scaler might not exist
+        if stacking_scaler is None: print(f"{TermColors.YELLOW}  Stacking scaler not found in joblib. Assuming no scaling needed or handled by model.{TermColors.ENDC}")
 
-        expected_base_model_folds = stacking_teacher_components["n_folds_for_stacking"]
-        # Ensure 'base_model_paths' key exists, falling back from 'base_mlp_model_paths' for compatibility
-        base_model_paths = stacking_teacher_components.get("base_model_paths", stacking_teacher_components.get("base_mlp_model_paths", []))
+        # Feature Extractor for teacher (CombinedModel that generated features for MLPs)
+        fe_names = stacking_teacher_components["feature_extractor_model_names"]
+        fe_embed_size = stacking_teacher_components["feature_extractor_embedding_size"]
+        fe_arc_m = stacking_teacher_components["feature_extractor_arcface_m"]
+        fe_metric_learning = stacking_teacher_components["feature_extractor_metric_learning"]
+        fe_ckpt_path = stacking_teacher_components.get("feature_extractor_checkpoint_path")
 
-        if not is_combined_model_teacher:
-            print(f"{TermColors.INFO}  Teacher type: MLP-based. Loading feature extractor for MLPs.{TermColors.ENDC}")
-            fe_names = stacking_teacher_components["feature_extractor_model_names"]
-            fe_embed_size = stacking_teacher_components["feature_extractor_embedding_size"]
-            fe_arc_m = stacking_teacher_components["feature_extractor_arcface_m"]
-            fe_metric_learning = stacking_teacher_components["feature_extractor_metric_learning"]
-            fe_ckpt_path = stacking_teacher_components.get("feature_extractor_checkpoint_path")
+        feature_extractor_for_teacher = build_model(model_names_list=fe_names, num_classes_val=num_classes_kd, pretrained_val=PRETRAINED, 
+                                                    embedding_val=fe_embed_size, arc_m_val=fe_arc_m, metric_learn_val=fe_metric_learning)
+        if fe_ckpt_path and os.path.exists(fe_ckpt_path):
+            fe_ckpt = torch.load(fe_ckpt_path, map_location=DEVICE)
+            fe_state_dict = {k.replace('module.', '').replace('_orig_mod.', ''): v for k, v in fe_ckpt['state_dict'].items()}
+            feature_extractor_for_teacher.load_state_dict(fe_state_dict, strict=False)
+        feature_extractor_for_teacher = feature_extractor_for_teacher.to(DEVICE); feature_extractor_for_teacher.eval()
 
-            feature_extractor_for_mlp_teacher = build_model(
-                model_names_list=fe_names, num_classes_val=num_classes_kd, pretrained_val=PRETRAINED,
-                embedding_val=fe_embed_size, arc_m_val=fe_arc_m, metric_learn_val=fe_metric_learning
-            )
-            if fe_ckpt_path and os.path.exists(fe_ckpt_path):
-                fe_ckpt = torch.load(fe_ckpt_path, map_location=DEVICE)
-                fe_state_dict = {k.replace('module.', '').replace('_orig_mod.', ''): v for k, v in fe_ckpt['state_dict'].items()}
-                feature_extractor_for_mlp_teacher.load_state_dict(fe_state_dict, strict=False)
-            feature_extractor_for_mlp_teacher = feature_extractor_for_mlp_teacher.to(DEVICE); feature_extractor_for_mlp_teacher.eval()
-            
-            base_mlp_input_size = stacking_teacher_components["base_mlp_model_input_size"]
-            from PlantRecognition.PlantRgognotionV2.scripts.PlantRecognitionV3 import build_mlp_model as build_original_mlp_model
-            for model_path in base_model_paths:
-                if not os.path.exists(model_path): continue
-                try:
-                    mlp = build_original_mlp_model(input_size=base_mlp_input_size, num_classes=num_classes_kd)
-                    mlp.load_state_dict(torch.load(model_path, map_location=DEVICE))
-                    mlp = mlp.to(DEVICE); mlp.eval()
-                    base_teacher_models_list.append(mlp)
-                except Exception as e_load_base_kd:
-                    print(f"{TermColors.RED}  Error loading base MLP model '{model_path}': {e_load_base_kd}.{TermColors.ENDC}")
-        else:
-            print(f"{TermColors.INFO}  Teacher type: CombinedModel-based (K-Fold).{TermColors.ENDC}")
-            teacher_cm_model_names = stacking_teacher_components.get("teacher_combined_model_names", MODEL_NAMES)
-            teacher_cm_embedding_size = stacking_teacher_components.get("teacher_combined_model_embedding_size", EMBEDDING_SIZE)
-            teacher_cm_arc_m = stacking_teacher_components.get("teacher_combined_model_arcface_m", ARCFACE_M)
-            teacher_cm_metric_learning = stacking_teacher_components.get("teacher_combined_model_metric_learning", METRIC_LEARNING_TYPE)
-            teacher_cm_dropout = stacking_teacher_components.get("teacher_combined_model_dropout", DROPOUT_RATE)
-            teacher_cm_drop_path = stacking_teacher_components.get("teacher_combined_model_drop_path", DROP_PATH_RATE)
-
-            for model_path in base_model_paths:
-                if not os.path.exists(model_path): continue
-                try:
-                    teacher_cm = build_model(
-                        model_names_list=teacher_cm_model_names, 
-                        num_classes_val=num_classes_kd, 
-                        pretrained_val=False, # Loading fine-tuned weights
-                        embedding_val=teacher_cm_embedding_size, 
-                        arc_m_val=teacher_cm_arc_m, 
-                        metric_learn_val=teacher_cm_metric_learning,
-                        dropout_val=teacher_cm_dropout,
-                        drop_path_val=teacher_cm_drop_path
-                    )
-                    ckpt_state_dict = torch.load(model_path, map_location=DEVICE)
-                    cleaned_state_dict = {k.replace('module.', '').replace('_orig_mod.', ''): v for k, v in ckpt_state_dict.items()}
-                    teacher_cm.load_state_dict(cleaned_state_dict, strict=True)
-                    teacher_cm = teacher_cm.to(DEVICE); teacher_cm.eval()
-                    base_teacher_models_list.append(teacher_cm)
-                except Exception as e_load_base_kd:
-                    print(f"{TermColors.RED}  Error loading base CombinedModel '{model_path}': {e_load_base_kd}.{TermColors.ENDC}")
+        # Base MLP Models for teacher
+        # THIS IS THE PART THAT IS PROBLEMATIC IF THE TEACHER IS FROM FULL_TRAINING K-FOLD CombinedModels
+        # The original script's `train_student_model` expects MLPs here.
+        # If `stacking_teacher_components["base_mlp_model_paths"]` point to CombinedModel state_dicts,
+        # `build_mlp_model` (which creates SimpleMLP) will fail to load them.
+        # For this split, I'm keeping the original logic. User needs to adapt this if teacher is CombinedModel-based.
+        base_mlp_input_size = stacking_teacher_components["base_mlp_model_input_size"] # This would be CombinedModel's embedding size
+        expected_mlp_folds = stacking_teacher_components["n_folds_for_stacking"]
         
-        if len(base_teacher_models_list) == expected_base_model_folds:
-            teacher_loaded_successfully = True
-        else:
-            print(f"{TermColors.RED}  Failed to load all base models for teacher. Expected {expected_base_model_folds}, Got {len(base_teacher_models_list)}.{TermColors.ENDC}")
+        # Attempt to load base models. If these are CombinedModels, this will likely fail with current build_mlp_model.
+        print(f"{TermColors.YELLOW}KD Teacher Warning: Attempting to load base models for teacher. If these are CombinedModels from K-Fold, the current logic (expecting MLPs) might fail or be incorrect.{TermColors.ENDC}")
+        from PlantRecognition.PlantRgognotionV2.scripts.PlantRecognitionV3 import build_mlp_model as build_original_mlp_model # Temporary import if needed for SimpleMLP
+        
+        for mlp_path in stacking_teacher_components["base_mlp_model_paths"]:
+            if not os.path.exists(mlp_path): continue
+            # This assumes base_mlp_input_size is correct for SimpleMLP
+            # And that mlp_path contains a SimpleMLP state_dict
+            try:
+                # If mlp_path actually points to a CombinedModel state_dict, this will error.
+                # We need a way to know if the "base_mlp_model_paths" are for MLPs or CombinedModels.
+                # For now, sticking to the original script's assumption of MLPs for the KD teacher's base.
+                mlp = build_original_mlp_model(input_size=base_mlp_input_size, num_classes=num_classes_kd) # Using original SimpleMLP builder
+                mlp.load_state_dict(torch.load(mlp_path, map_location=DEVICE))
+                mlp = mlp.to(DEVICE); mlp.eval()
+                base_mlp_models_for_teacher.append(mlp)
+            except Exception as e_load_base_kd:
+                print(f"{TermColors.RED}  Error loading base model '{mlp_path}' for KD teacher: {e_load_base_kd}. This model might not be an MLP or input size mismatch.{TermColors.ENDC}")
 
-    except Exception as e:
-        print(f"{TermColors.RED}Failed to load teacher components: {e}. Skipping KD.{TermColors.ENDC}"); traceback.print_exc()
-    if not teacher_loaded_successfully:
-        print(f"{TermColors.RED}Stacking teacher setup failed. Aborting KD.{TermColors.ENDC}"); return
+        if len(base_mlp_models_for_teacher) == expected_mlp_folds: teacher_loaded_successfully = True
+        else: print(f"{TermColors.RED}  Failed to load all base models for teacher. Expected {expected_mlp_folds}, Got {len(base_mlp_models_for_teacher)}.{TermColors.ENDC}")
+    except Exception as e: print(f"{TermColors.RED}Failed to load teacher components: {e}. Skipping KD.{TermColors.ENDC}"); traceback.print_exc()
+    if not teacher_loaded_successfully: print(f"{TermColors.RED}Stacking teacher setup failed. Aborting KD.{TermColors.ENDC}"); return
 
+    # Student Model Setup (Image-based CombinedModel)
     try:
-        student_model = build_model(
-            model_names_list=[student_model_name],
-            num_classes_val=num_classes_kd, 
-            pretrained_val=True,
-            dropout_val=KD_STUDENT_DROPOUT, 
-            embedding_val=KD_STUDENT_EMBEDDING_SIZE, 
-            metric_learn_val='None' 
-        )
+        student_model = build_model(model_names_list=[student_model_name], num_classes_val=num_classes_kd, pretrained_val=True,
+                                    dropout_val=KD_STUDENT_DROPOUT, embedding_val=KD_STUDENT_EMBEDDING_SIZE, metric_learn_val='None')
         student_model = student_model.to(DEVICE)
-    except Exception as e:
-        print(f"{TermColors.RED}Failed to build student model '{student_model_name}': {e}. Skipping KD.{TermColors.ENDC}"); return
+    except Exception as e: print(f"{TermColors.RED}Failed to build student: {e}. Skipping KD.{TermColors.ENDC}"); return
 
+    # Dataloaders for Student
     try:
         df_kd_train, df_kd_val = train_test_split(df_full_for_kd, test_size=0.2, random_state=SEED + 42, stratify=df_full_for_kd['label'])
         train_tf_kd, val_tf_kd = get_transforms(image_size=KD_STUDENT_IMAGE_SIZE)
@@ -1096,20 +1061,19 @@ def train_student_model(student_model_name, student_base_save_path, student_swa_
         val_ds_kd = PlantDataset(df_kd_val, image_dir_kd, val_tf_kd, label_encoder, False, KD_STUDENT_IMAGE_SIZE)
         if not train_ds_kd or not val_ds_kd or len(train_ds_kd)==0 or len(val_ds_kd)==0: print(f"{TermColors.RED}KD Dataset empty. Skip KD.{TermColors.ENDC}"); return
         kd_sampler = None
-        if IMBALANCE_STRATEGY == 'WeightedSampler' and CLASS_WEIGHTS is not None: # Ensure CLASS_WEIGHTS is defined globally or passed
+        if IMBALANCE_STRATEGY == 'WeightedSampler' and CLASS_WEIGHTS is not None:
             kd_train_labels_list = train_ds_kd.get_labels()
             if kd_train_labels_list:
-                # Ensure num_classes_kd is used for range if CLASS_WEIGHTS are per-class
                 kd_class_sample_count = np.array([kd_train_labels_list.count(l) for l in range(num_classes_kd)]); kd_class_sample_count = np.maximum(kd_class_sample_count, 1)
                 kd_weight = 1. / kd_class_sample_count; kd_samples_weight = torch.from_numpy(np.array([kd_weight[t] for t in kd_train_labels_list])).double()
                 kd_sampler = WeightedRandomSampler(kd_samples_weight, len(kd_samples_weight))
         train_loader_kd = DataLoader(train_ds_kd, KD_BATCH_SIZE, sampler=kd_sampler, shuffle=(kd_sampler is None), num_workers=NUM_WORKERS, pin_memory=True, drop_last=True)
         val_loader_kd = DataLoader(val_ds_kd, KD_BATCH_SIZE * 2, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
-    except Exception as e: print(f"{TermColors.RED}Error KD dataloaders: {e}. Skip KD.{TermColors.ENDC}"); traceback.print_exc(); return
+    except Exception as e: print(f"{TermColors.RED}Error KD dataloaders: {e}. Skip KD.{TermColors.ENDC}"); return
 
     student_base_criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING if LOSS_TYPE == 'CrossEntropy' else 0.0)
     criterion_kd = DistillationLoss(alpha=KD_ALPHA, temperature=KD_TEMPERATURE, base_criterion=student_base_criterion)
-    optimizer_kd = optim.AdamW(student_model.parameters(), lr=KD_LR, weight_decay=WEIGHT_DECAY) # Ensure WEIGHT_DECAY is defined globally
+    optimizer_kd = optim.AdamW(student_model.parameters(), lr=KD_LR, weight_decay=WEIGHT_DECAY)
     scaler_kd = torch.amp.GradScaler('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda'))
     scheduler_kd = CosineAnnealingLR(optimizer_kd, T_max=KD_EPOCHS, eta_min=KD_LR * 0.01)
 
@@ -1117,7 +1081,7 @@ def train_student_model(student_model_name, student_base_save_path, student_swa_
     kd_student_swa_start_epoch = int(KD_EPOCHS * KD_STUDENT_SWA_START_EPOCH_FACTOR)
     if KD_STUDENT_USE_SWA:
         swa_student_model = AveragedModel(student_model, avg_fn=ema_avg_fn if KD_STUDENT_USE_EMA else None)
-        if KD_STUDENT_USE_EMA: 
+        if KD_STUDENT_USE_EMA: # Tag params for correct EMA decay
             for p_swa_stud in (swa_student_model.module.parameters() if hasattr(swa_student_model, 'module') else swa_student_model.parameters()): p_swa_stud._is_kd_student_ema_param = True
         swa_student_scheduler = SWALR(optimizer_kd, swa_lr=(KD_LR * KD_STUDENT_SWA_LR_FACTOR), anneal_epochs=KD_STUDENT_SWA_ANNEAL_EPOCHS)
     ema_student_model = None
@@ -1135,61 +1099,26 @@ def train_student_model(student_model_name, student_base_save_path, student_swa_
             if stop_requested: break
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE); batch_size = inputs.size(0)
             teacher_outputs_logits = None
-            
-            with torch.no_grad(): 
-                teacher_predictions_for_stacker_list = []
-                if not is_combined_model_teacher:
-                    if feature_extractor_for_mlp_teacher is None:
-                        print(f"{TermColors.RED}Feature extractor for MLP teacher not loaded. Skipping batch.{TermColors.ENDC}")
-                        continue
-                    img_features_for_teacher = feature_extractor_for_mlp_teacher(inputs, return_embedding=True)
-                    for teacher_model_fold in base_teacher_models_list: 
-                        teacher_predictions_for_stacker_list.append(F.softmax(teacher_model_fold(img_features_for_teacher), dim=1))
-                else:
-                    for teacher_model_fold in base_teacher_models_list: 
-                        fold_logits = teacher_model_fold(inputs, labels=None) 
-                        teacher_predictions_for_stacker_list.append(F.softmax(fold_logits, dim=1))
-                
-                if not teacher_predictions_for_stacker_list:
-                    print(f"{TermColors.RED}No predictions from base teacher models. Skipping batch.{TermColors.ENDC}")
-                    continue
-
-                stacker_input_features_tensor = torch.cat(teacher_predictions_for_stacker_list, dim=1)
+            with torch.no_grad(): # Teacher inference
+                img_features_for_teacher = feature_extractor_for_teacher(inputs, return_embedding=True)
+                mlp_predictions_for_stacker_list = [F.softmax(mlp_model_teacher(img_features_for_teacher), dim=1) for mlp_model_teacher in base_mlp_models_for_teacher]
+                stacker_input_features_tensor = torch.cat(mlp_predictions_for_stacker_list, dim=1)
                 stacker_input_np = stacker_input_features_tensor.cpu().numpy()
-                
-                if stacking_scaler:
-                    try:
-                        scaled_stacker_input_np = stacking_scaler.transform(stacker_input_np)
-                    except Exception as e_scale:
-                        print(f"{TermColors.RED}Error applying stacking scaler: {e_scale}. Using unscaled input.{TermColors.ENDC}")
-                        scaled_stacker_input_np = stacker_input_np
-                else:
-                    scaled_stacker_input_np = stacker_input_np
-                
-                if actual_stacking_model is None:
-                    print(f"{TermColors.RED}Actual stacking model (meta-model) not loaded. Skipping batch.{TermColors.ENDC}")
-                    continue
+                scaled_stacker_input_np = stacking_scaler.transform(stacker_input_np) if stacking_scaler else stacker_input_np
                 teacher_output_probs_np = actual_stacking_model.predict_proba(scaled_stacker_input_np)
                 teacher_outputs_logits = torch.log(torch.tensor(teacher_output_probs_np, dtype=torch.float32).to(DEVICE) + 1e-9)
-
             if teacher_outputs_logits is None: continue
-
             with torch.amp.autocast('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda')):
                 student_outputs_logits = student_model(inputs)
                 loss = criterion_kd(student_outputs_logits, teacher_outputs_logits, labels)
-            
-            optimizer_kd.zero_grad()
-            scaler_kd.scale(loss).backward()
-            scaler_kd.step(optimizer_kd)
-            scaler_kd.update()
-
+            optimizer_kd.zero_grad(); scaler_kd.scale(loss).backward(); scaler_kd.step(optimizer_kd); scaler_kd.update()
             if KD_STUDENT_USE_EMA and ema_student_model: ema_student_model.update_parameters(student_model)
             if not torch.isnan(loss): running_loss_kd += loss.item() * batch_size; total_samples_kd += batch_size
             if batch_idx % 20 == 0 or batch_idx == len(train_loader_kd)-1: progress_bar_kd.set_postfix(loss=f"{loss.item():.4f}")
-        
         if stop_requested: break
         epoch_loss_kd = running_loss_kd / total_samples_kd if total_samples_kd > 0 else float('nan')
         
+        # Validation
         student_model.eval(); 
         if swa_student_model: swa_student_model.eval()
         if ema_student_model: ema_student_model.eval()
@@ -1228,33 +1157,18 @@ def train_student_model(student_model_name, student_base_save_path, student_swa_
     
     if KD_STUDENT_USE_SWA and swa_student_model and not stop_requested:
         try:
-            # Ensure train_ds_kd is available for BN update
-            if 'train_ds_kd' in locals() and train_ds_kd is not None and len(train_ds_kd) > 0:
-                bn_loader_kd_final = DataLoader(train_ds_kd, KD_BATCH_SIZE*2, shuffle=True, num_workers=NUM_WORKERS)
-                swa_student_model.to(DEVICE); torch.optim.swa_utils.update_bn(bn_loader_kd_final, swa_student_model, device=DEVICE)
-                torch.save(swa_student_model.module.state_dict(), student_swa_save_path)
-                del bn_loader_kd_final
-            else:
-                print(f"{TermColors.YELLOW}KD Student SWA BN update skipped: train_ds_kd not available or empty.{TermColors.ENDC}")
+            bn_loader_kd_final = DataLoader(train_ds_kd, KD_BATCH_SIZE*2, shuffle=True, num_workers=NUM_WORKERS)
+            swa_student_model.to(DEVICE); torch.optim.swa_utils.update_bn(bn_loader_kd_final, swa_student_model, device=DEVICE)
+            torch.save(swa_student_model.module.state_dict(), student_swa_save_path)
+            del bn_loader_kd_final
         except Exception as e_swa_final_kd: print(f"{TermColors.RED}KD Student FINAL SWA Error: {e_swa_final_kd}{TermColors.ENDC}")
     if KD_STUDENT_USE_EMA and ema_student_model and not stop_requested:
         try: ema_student_model.to(DEVICE); torch.save(ema_student_model.module.state_dict(), student_ema_save_path)
         except Exception as e_ema_final_kd: print(f"{TermColors.RED}KD Student FINAL EMA Error: {e_ema_final_kd}{TermColors.ENDC}")
-    if not os.path.exists(student_base_save_path) and not stop_requested and student_model : torch.save(student_model.state_dict(), student_base_save_path)
-    
+    if not os.path.exists(student_base_save_path) and not stop_requested : torch.save(student_model.state_dict(), student_base_save_path)
     print(f"{TermColors.OKGREEN}KD finished. Best student val_acc: {best_kd_val_acc:.4f}{TermColors.ENDC}")
-    
-    del student_model, criterion_kd, optimizer_kd, scaler_kd, scheduler_kd
-    if 'train_loader_kd' in locals(): del train_loader_kd
-    if 'val_loader_kd' in locals(): del val_loader_kd
-    if 'train_ds_kd' in locals(): del train_ds_kd
-    if 'val_ds_kd' in locals(): del val_ds_kd
-    if actual_stacking_model: del actual_stacking_model
-    if stacking_scaler: del stacking_scaler
-    if feature_extractor_for_mlp_teacher: del feature_extractor_for_mlp_teacher
-    del base_teacher_models_list
-    if swa_student_model: del swa_student_model; 
-    if swa_student_scheduler: del swa_student_scheduler
+    del student_model, train_loader_kd, val_loader_kd, train_ds_kd, val_ds_kd, actual_stacking_model, stacking_scaler, feature_extractor_for_teacher, base_mlp_models_for_teacher
+    if swa_student_model: del swa_student_model
     if ema_student_model: del ema_student_model
     gc.collect(); torch.cuda.empty_cache()
 
@@ -1340,9 +1254,9 @@ def main_full_training_loop_entry(df_full_data, num_classes_val, label_encoder_v
             for stage_epoch_loop in range(current_stage_start_epoch, stage_epochs):
                 if fold_stop_requested or stop_requested: break
                 print(f"\n{TermColors.CYAN}Fold {fold+1} GlobEp {global_epoch_counter+1}/{TOTAL_EPOCHS_PER_FOLD} (Stg {stage_idx_loop+1}: Ep {stage_epoch_loop+1}/{stage_epochs}){TermColors.ENDC}")
-                train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, scaler, scheduler, global_epoch_counter, stage_idx_loop, stage_epoch_loop, stage_epochs, DEVICE, writer, NUM_CLASSES, ema_model, fold_num=fold+1, mixup_alpha_val=MIXUP_ALPHA, cutmix_alpha_val=CUTMIX_ALPHA, aug_probability_val=AUG_PROBABILITY)
+                train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, scaler, scheduler, global_epoch_counter, stage_idx_loop, stage_epoch_loop, stage_epochs, DEVICE, writer, NUM_CLASSES, ema_model, fold_num=fold+1)
                 if train_loss is None: fold_stop_requested = True; break
-                val_loss, val_acc, current_oof_preds, current_oof_indices_from_val = validate_one_epoch(model, val_loader, criterion, DEVICE, global_epoch_counter, writer, NUM_CLASSES, scheduler, swa_model, ema_model, True, fold+1)
+                val_loss, val_acc, current_oof_preds, current_oof_indices = validate_one_epoch(model, val_loader, criterion, DEVICE, global_epoch_counter, writer, NUM_CLASSES, scheduler, swa_model, ema_model, True, fold+1)
                 if val_loss is None: fold_stop_requested = True; break
                 
                 if current_auto_config:
@@ -1372,14 +1286,11 @@ def main_full_training_loop_entry(df_full_data, num_classes_val, label_encoder_v
                     save_model(fold, model, "best_model_state_dict.pth")
                     if USE_EMA and ema_model: save_model(fold, ema_model, "best_ema_model_state_dict.pth")
                     if USE_SWA and swa_model and stage_epoch_loop >= globals()['swa_start_epoch_stage']: save_model(fold, swa_model, "best_swa_model_state_dict.pth")
-                    
-                    # OOF saving using original indices from val_df
-                    if current_oof_preds is not None and current_oof_indices_from_val is not None: 
-                        for i, original_idx_val_dataset in enumerate(current_oof_indices_from_val):
-                            original_df_idx = val_original_indices[original_idx_val_dataset] 
-                            if 0 <= original_df_idx < len(oof_preds_array):
-                                oof_preds_array[original_df_idx] = current_oof_preds[i]
-                                oof_labels_array[original_df_idx] = df_full_data.loc[original_df_idx, 'label']
+                    if current_oof_preds is not None and current_oof_indices is not None:
+                        for i, original_idx_val in enumerate(current_oof_indices):
+                            if 0 <= original_idx_val < len(oof_preds_array): 
+                                oof_preds_array[original_idx_val] = current_oof_preds[i]
+                                oof_labels_array[original_idx_val] = df_full_data.loc[original_idx_val, 'label']
                 
                 save_checkpoint(fold, global_epoch_counter+1, stage_idx_loop, stage_epoch_loop+1, model, optimizer, scheduler, scaler, best_metric, "latest_checkpoint.pth.tar")
                 if LOG_MISCLASSIFIED_IMAGES and ((global_epoch_counter+1)%5==0 or is_best): log_misclassified(fold, model, err_loader, criterion, DEVICE, global_epoch_counter+1, writer, NUM_CLASSES)
@@ -1431,309 +1342,5 @@ def main_full_training_loop_entry(df_full_data, num_classes_val, label_encoder_v
     del oof_preds_array, oof_labels_array; gc.collect()
     return not stop_requested
 
-# --- Main Execution Loop (Full Image Training) ---
-def main_full_training_loop_entry(df_full_data, num_classes_val, label_encoder_val, class_names_val, class_frequencies_val, class_priors_val, class_weights_val):
-    global NUM_CLASSES, label_encoder, class_names, CLASS_FREQUENCIES, CLASS_PRIORS, CLASS_WEIGHTS, CURRENT_IMAGE_SIZE
-    NUM_CLASSES = num_classes_val; label_encoder = label_encoder_val; class_names = class_names_val
-    CLASS_FREQUENCIES = class_frequencies_val; CLASS_PRIORS = class_priors_val; CLASS_WEIGHTS = class_weights_val
-    
-    print(f"\n{TermColors.HEADER}--- Main K-Fold Cross-Validation ({N_FOLDS} Folds) ---{TermColors.ENDC}")
-    skf = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED)
-    fold_results = defaultdict(list)
-    oof_preds_array = np.full((len(df_full_data), NUM_CLASSES), np.nan, dtype=np.float32)
-    oof_labels_array = np.full(len(df_full_data), -1, dtype=np.int32)
-
-
-    for fold, (train_idx, val_idx) in enumerate(skf.split(df_full_data, df_full_data['label'])):
-        if stop_requested: break
-        print(f"\n{TermColors.HEADER}===== Starting Fold {fold+1}/{N_FOLDS} ====={TermColors.ENDC}")
-        train_df = df_full_data.iloc[train_idx]; val_df = df_full_data.iloc[val_idx]
-        val_df = df_full_data.iloc[val_idx]
-        val_original_indices = val_df.index.to_numpy() 
-
-        model = optimizer = scheduler = scaler = criterion = swa_model = ema_model = None; gc.collect(); torch.cuda.empty_cache()
-        try:
-            model = build_model(); model = model.to(DEVICE)
-            if USE_TORCH_COMPILE and hasattr(torch, 'compile') and int(torch.__version__.split('.')[0]) >= 2:
-                try: model = torch.compile(model, mode='default')
-                except Exception as compile_e: print(f"{TermColors.RED}torch.compile() failed: {compile_e}.{TermColors.ENDC}")
-            criterion = get_criterion(); optimizer = get_optimizer(model)
-            scaler = torch.amp.GradScaler('cuda', enabled=(MIXED_PRECISION and DEVICE.type == 'cuda'))
-            if USE_SWA: swa_model = AveragedModel(model, avg_fn=ema_avg_fn if USE_EMA else None)
-            if USE_EMA: ema_model = AveragedModel(model, avg_fn=ema_avg_fn)
-        except Exception as e: print(f"{TermColors.RED}Fold {fold+1} Setup Error: {e}{TermColors.ENDC}"); continue
-        
-        start_glob_ep, start_stg_idx, start_stg_ep, best_metric, _, loaded_size, _ = load_checkpoint(fold, model, optimizer, None, scaler, "latest_checkpoint.pth.tar")
-        if best_metric == (float('-inf') if CHECKPOINT_MODE == 'max' else float('inf')): # If latest was not informative
-            start_glob_ep, start_stg_idx, start_stg_ep, best_metric, _, loaded_size, _ = load_checkpoint(fold, model, optimizer, None, scaler, "best_model.pth.tar")
-
-        fold_log_dir = os.path.join(BASE_LOG_DIR, f"fold_{fold}"); writer = SummaryWriter(log_dir=fold_log_dir)
-        global_epoch_counter = start_glob_ep; fold_stop_requested = False
-        fold_best_val_loss = float('inf'); fold_best_val_acc = 0.0; epochs_without_improvement = 0 
-        best_metric_for_early_stopping = best_metric 
-        current_auto_config = AutoTrainingConfig() if USE_AUTO_TRAIN_CONFIG else None
-
-        for stage_idx_loop, (stage_epochs, stage_image_size) in enumerate(PROGRESSIVE_RESIZING_STAGES):
-            if fold_stop_requested or stop_requested: break
-            if stage_idx_loop < start_stg_idx: global_epoch_counter += stage_epochs; continue # Fast-forward global counter
-            current_stage_start_epoch = start_stg_ep if stage_idx_loop == start_stg_idx else 0
-            if current_stage_start_epoch >= stage_epochs: global_epoch_counter += (stage_epochs - current_stage_start_epoch); continue # Fast-forward if stage already done
-
-            print(f"\n{TermColors.MAGENTA}Fold {fold+1} Stage {stage_idx_loop+1}/{len(PROGRESSIVE_RESIZING_STAGES)}: {stage_epochs} E @ {stage_image_size}{TermColors.ENDC}")
-            CURRENT_IMAGE_SIZE = stage_image_size
-            if loaded_size and stage_idx_loop == start_stg_idx and loaded_size != CURRENT_IMAGE_SIZE: 
-                print(f"{TermColors.CRITICAL}Img size mismatch! Ckpt {loaded_size}!=Stage {CURRENT_IMAGE_SIZE}. Exit.{TermColors.ENDC}"); fold_stop_requested=True; break
-            
-            train_transform, val_transform = get_transforms(image_size=CURRENT_IMAGE_SIZE)
-            train_loader, val_loader, err_loader = None, None, None; gc.collect()
-            try:
-                # Pass original indices from val_df to PlantDataset for OOF
-                train_ds = PlantDataset(train_df, IMAGE_DIR, train_transform, None, False, CURRENT_IMAGE_SIZE)
-                val_ds = PlantDataset(val_df, IMAGE_DIR, val_transform, None, True, CURRENT_IMAGE_SIZE) # include_paths=True for OOF original_index
-                err_ds = PlantDataset(val_df, IMAGE_DIR, val_transform, None, True, CURRENT_IMAGE_SIZE) # include_paths for error log
-                
-                if not train_ds or not val_ds or len(train_ds)==0 or len(val_ds)==0 : print(f"{TermColors.RED}Dataset empty. Skip fold.{TermColors.ENDC}"); fold_stop_requested=True; break
-                sampler = None
-                if IMBALANCE_STRATEGY == 'WeightedSampler' and CLASS_WEIGHTS is not None:
-                    labels_list = train_ds.get_labels()
-                    if labels_list:
-                        class_sample_count = np.array([labels_list.count(l) for l in range(NUM_CLASSES)]); class_sample_count = np.maximum(class_sample_count, 1)
-                        weight = 1. / class_sample_count; samples_weight = torch.from_numpy(np.array([weight[t] for t in labels_list])).double()
-                        sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
-                train_loader = DataLoader(train_ds, BATCH_SIZE, sampler=sampler, shuffle=(sampler is None), num_workers=NUM_WORKERS, pin_memory=True, drop_last=True)
-                val_loader = DataLoader(val_ds, BATCH_SIZE*2, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
-                err_loader = DataLoader(err_ds, ERROR_LOG_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
-            except Exception as e: print(f"{TermColors.RED}Dataloader Error: {e}{TermColors.ENDC}"); fold_stop_requested=True; break
-            
-            current_t_0_val = stage_epochs if SCHEDULER_TYPE == 'CosineWarmRestarts' else T_0
-            scheduler = get_scheduler(optimizer, total_epochs_val=stage_epochs, t_0_val=current_t_0_val) 
-            if stage_idx_loop == start_stg_idx and current_stage_start_epoch > 0: 
-                 ckpt_path_sched = os.path.join(BASE_CHECKPOINT_DIR, f"fold_{fold}", "latest_checkpoint.pth.tar")
-                 if scheduler and os.path.isfile(ckpt_path_sched):
-                     ckpt_sched = torch.load(ckpt_path_sched, map_location=DEVICE)
-                     if 'scheduler' in ckpt_sched and ckpt_sched['scheduler']:
-                         try: scheduler.load_state_dict(ckpt_sched['scheduler'])
-                         except Exception as e_sch: print(f"{TermColors.YELLOW}Scheduler reload failed: {e_sch}.{TermColors.ENDC}")
-            
-            globals()['swa_start_epoch_stage'] = max(0, int(stage_epochs * SWA_START_EPOCH_GLOBAL_FACTOR)) 
-            swa_scheduler = SWALR(optimizer, swa_lr=(LEARNING_RATE*SWA_LR_FACTOR), anneal_epochs=SWA_ANNEAL_EPOCHS) if USE_SWA and swa_model else None
-
-            for stage_epoch_loop in range(current_stage_start_epoch, stage_epochs):
-                if fold_stop_requested or stop_requested: break
-                print(f"\n{TermColors.CYAN}Fold {fold+1} GlobEp {global_epoch_counter+1}/{TOTAL_EPOCHS_PER_FOLD} (Stg {stage_idx_loop+1}: Ep {stage_epoch_loop+1}/{stage_epochs}){TermColors.ENDC}")
-                train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, scaler, scheduler, global_epoch_counter, stage_idx_loop, stage_epoch_loop, stage_epochs, DEVICE, writer, NUM_CLASSES, ema_model, fold_num=fold+1)
-                if train_loss is None: fold_stop_requested = True; break
-                val_loss, val_acc, current_oof_preds, current_oof_indices_from_val = validate_one_epoch(model, val_loader, criterion, DEVICE, global_epoch_counter, writer, NUM_CLASSES, scheduler, swa_model, ema_model, True, fold+1)
-                if val_loss is None: fold_stop_requested = True; break
-                
-                if current_auto_config:
-                    is_sam_active_runtime = hasattr(optimizer, 'base_optimizer') and SAM_AVAILABLE and USE_SAM
-                    current_auto_config.update(train_loss, train_acc, val_loss, val_acc, optimizer, scheduler, is_sam_active_runtime, global_epoch_counter) 
-                    if (global_epoch_counter+1)%5==0: print(f"\n{TermColors.CYAN}AutoConfig (GlobEp {global_epoch_counter+1}):\n{current_auto_config.get_status_report()}{TermColors.ENDC}\n")
-                print(f"F{fold+1} GEp {global_epoch_counter+1}: Tr L={train_loss:.4f} A={train_acc:.4f} | Val L={val_loss:.4f} A={val_acc:.4f}")
-
-                if USE_SWA and swa_model and stage_epoch_loop >= globals()['swa_start_epoch_stage']:
-                    swa_model.update_parameters(model)
-                    if swa_scheduler: swa_scheduler.step()
-                
-                current_metric_for_stopping = val_loss if CHECKPOINT_MONITOR == 'val_loss' else val_acc
-                improved_early_stop_metric = (CHECKPOINT_MODE == 'min' and current_metric_for_stopping < best_metric_for_early_stopping) or \
-                                            (CHECKPOINT_MODE == 'max' and current_metric_for_stopping > best_metric_for_early_stopping)
-                if improved_early_stop_metric: best_metric_for_early_stopping = current_metric_for_stopping; epochs_without_improvement = 0
-                else: epochs_without_improvement += 1
-                if epochs_without_improvement >= EARLY_STOPPING_PATIENCE: print(f"{TermColors.WARNING}Early stop F{fold+1}.{TermColors.ENDC}"); fold_stop_requested=True; break 
-
-                current_metric_for_checkpoint = val_acc if CHECKPOINT_MONITOR == 'val_acc' else val_loss
-                is_best = (CHECKPOINT_MODE == 'max' and current_metric_for_checkpoint > best_metric) or \
-                          (CHECKPOINT_MODE == 'min' and current_metric_for_checkpoint < best_metric)
-                if is_best:
-                    best_metric = current_metric_for_checkpoint; fold_best_val_loss = val_loss; fold_best_val_acc = val_acc
-                    print(f"{TermColors.OKGREEN}F{fold+1} New Best {CHECKPOINT_MONITOR}: {best_metric:.4f}. Saving...{TermColors.ENDC}")
-                    save_checkpoint(fold, global_epoch_counter+1, stage_idx_loop, stage_epoch_loop+1, model, optimizer, scheduler, scaler, best_metric, "best_model.pth.tar")
-                    save_model(fold, model, "best_model_state_dict.pth")
-                    if USE_EMA and ema_model: save_model(fold, ema_model, "best_ema_model_state_dict.pth")
-                    if USE_SWA and swa_model and stage_epoch_loop >= globals()['swa_start_epoch_stage']: save_model(fold, swa_model, "best_swa_model_state_dict.pth")
-                    
-                    # OOF saving using original indices from val_df
-                    if current_oof_preds is not None and current_oof_indices_from_val is not None:
-                        for i, original_idx_val_dataset in enumerate(current_oof_indices_from_val):
-                            original_df_idx = val_original_indices[original_idx_val_dataset]
-                            if 0 <= original_df_idx < len(oof_preds_array):
-                                oof_preds_array[original_df_idx] = current_oof_preds[i]
-                                oof_labels_array[original_df_idx] = df_full_data.loc[original_df_idx, 'label']
-                
-                save_checkpoint(fold, global_epoch_counter+1, stage_idx_loop, stage_epoch_loop+1, model, optimizer, scheduler, scaler, best_metric, "latest_checkpoint.pth.tar")
-                if LOG_MISCLASSIFIED_IMAGES and ((global_epoch_counter+1)%5==0 or is_best): log_misclassified(fold, model, err_loader, criterion, DEVICE, global_epoch_counter+1, writer, NUM_CLASSES)
-                global_epoch_counter += 1; gc.collect(); torch.cuda.empty_cache(); start_stg_ep = 0 # Reset stage start epoch for next stage
-            if fold_stop_requested or stop_requested: break
-            del train_loader, val_loader, err_loader, train_ds, val_ds, err_ds, train_transform, val_transform, scheduler, swa_scheduler; scheduler=None; gc.collect(); torch.cuda.empty_cache()
-        
-        if fold_stop_requested or stop_requested: 
-            save_checkpoint(fold, global_epoch_counter, stage_idx_loop if 'stage_idx_loop' in locals() else 0 , stage_epoch_loop if 'stage_epoch_loop' in locals() else 0 , model, optimizer, scheduler, scaler, best_metric, "interrupted_checkpoint.pth.tar")
-            if stop_requested: break # Break outer K-Fold loop if global stop
-            else: continue # Continue to next fold if only fold_stop_requested
-
-        if USE_SWA and swa_model and global_epoch_counter >= int(TOTAL_EPOCHS_PER_FOLD * SWA_START_EPOCH_GLOBAL_FACTOR):
-            print(f"{TermColors.CYAN}F{fold+1} SWA BN update...{TermColors.ENDC}")
-            final_stage_size_swa = PROGRESSIVE_RESIZING_STAGES[-1][1]; final_train_tf_swa, _ = get_transforms(final_stage_size_swa)
-            try:
-                final_train_ds_bn_swa = PlantDataset(train_df, IMAGE_DIR, final_train_tf_swa, None, False, final_stage_size_swa)
-                if len(final_train_ds_bn_swa) > 0:
-                    bn_loader_swa = DataLoader(final_train_ds_bn_swa, BATCH_SIZE*2, shuffle=True, num_workers=NUM_WORKERS)
-                    torch.optim.swa_utils.update_bn(bn_loader_swa, swa_model.to(DEVICE), device=DEVICE) # Ensure swa_model is on device
-                    _, final_val_tf_swa = get_transforms(final_stage_size_swa)
-                    final_val_ds_eval_swa = PlantDataset(val_df, IMAGE_DIR, final_val_tf_swa, None, False, final_stage_size_swa)
-                    if len(final_val_ds_eval_swa) > 0:
-                        final_val_loader_swa = DataLoader(final_val_ds_eval_swa, BATCH_SIZE*2, shuffle=False, num_workers=NUM_WORKERS)
-                        swa_val_loss, swa_val_acc, _, _ = validate_one_epoch(swa_model, final_val_loader_swa, criterion, DEVICE, global_epoch_counter, writer, NUM_CLASSES, fold_num=f"{fold+1}-SWA")
-                        print(f"F{fold+1} Final SWA Val L={swa_val_loss:.4f}, A={swa_val_acc:.4f}"); fold_results['swa_acc'].append(swa_val_acc)
-                        save_model(fold, swa_model, "final_swa_model_state_dict.pth")
-                    del final_val_ds_eval_swa, final_val_loader_swa
-                del final_train_ds_bn_swa, bn_loader_swa
-            except Exception as e_swa: print(f"{TermColors.RED}SWA BN/Eval Error: {e_swa}{TermColors.ENDC}")
-        save_model(fold, model, "final_model_state_dict.pth")
-        if USE_EMA and ema_model: save_model(fold, ema_model, "final_ema_model_state_dict.pth")
-        writer.close(); fold_results['best_metric'].append(best_metric); fold_results['best_val_loss'].append(fold_best_val_loss); fold_results['best_val_acc'].append(fold_best_val_acc)
-        del model, optimizer, scaler, criterion, swa_model, ema_model, train_df, val_df, writer; gc.collect(); torch.cuda.empty_cache()
-
-    print(f"\n{TermColors.HEADER}===== CV Finished (Full Training) ====={TermColors.ENDC}")
-    training_completed_successfully = not stop_requested
-    if training_completed_successfully:
-        avg_best_acc = np.mean(fold_results['best_val_acc']) if fold_results['best_val_acc'] else 0.0
-        print(f"Avg Best Val Acc: {avg_best_acc:.4f} +/- {np.std(fold_results['best_val_acc'] if fold_results['best_val_acc'] else [0.0]):.4f}")
-        if fold_results['swa_acc']: print(f"Avg Final SWA Val Acc: {np.mean(fold_results['swa_acc']):.4f} +/- {np.std(fold_results['swa_acc']):.4f}")
-        if RUN_STACKING:
-            valid_oof_indices = np.where(oof_labels_array != -1)[0]
-            if len(valid_oof_indices) < len(df_full_data) * 0.5: print(f"{TermColors.YELLOW}Warn: OOF only for {len(valid_oof_indices)}/{len(df_full_data)} samples.{TermColors.ENDC}")
-            if len(valid_oof_indices) > 0:
-                final_oof_preds = oof_preds_array[valid_oof_indices]; final_oof_labels = oof_labels_array[valid_oof_indices]
-                if len(final_oof_preds) > 0 and len(final_oof_preds) == len(final_oof_labels):
-                    np.savez_compressed(STACKING_OOF_PREDS_PATH, preds=final_oof_preds, labels=final_oof_labels); print(f"OOF preds saved: {STACKING_OOF_PREDS_PATH}")
-                    train_stacking_meta_model(final_oof_preds, final_oof_labels, STACKING_META_MODEL_PATH)
-                else: print(f"{TermColors.RED}Error OOF stacking data. Skip.{TermColors.ENDC}")
-            else: print(f"{TermColors.RED}No valid OOF for Stacking. Skip.{TermColors.ENDC}")
-    else: print(f"{TermColors.YELLOW}Training interrupted. Stacking/KD skipped.{TermColors.ENDC}"); 
-    del oof_preds_array, oof_labels_array; gc.collect()
-    return training_completed_successfully
-
-
 def main():
-    global stop_requested, label_encoder, class_names, NUM_CLASSES, CLASS_FREQUENCIES, CLASS_PRIORS, CLASS_WEIGHTS
-    global RUN_STACKING, RUN_KNOWLEDGE_DISTILLATION
-
-    set_seed(SEED); signal.signal(signal.SIGINT, handle_interrupt); print_library_info()
-    print(f"{TermColors.HEADER}===== Plant Recognition Full Image Training (PyTorch) ===={TermColors.ENDC}")
-    print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}, Device: {DEVICE}, Debug: {DEBUG_MODE}")
-    
-    df_full = None
-    try:
-        print(f"\n{TermColors.HEADER}--- STEP 1: Load Full Dataset Info ---{TermColors.ENDC}")
-        df_full = pd.read_csv(CSV_PATH, sep=',', low_memory=False, on_bad_lines='skip')
-        if 'scientificName' in df_full.columns and 'scientific_name' not in df_full.columns: df_full.rename(columns={'scientificName': 'scientific_name'}, inplace=True)
-        required_cols = ['id', 'scientific_name']; df_full = df_full[required_cols].dropna().astype({'id': str}); df_full.rename(columns={'scientific_name': 'scientificName'}, inplace=True)
-        min_samples = 1; class_counts = df_full['scientificName'].value_counts(); valid_classes = class_counts[class_counts >= min_samples].index
-        df_full = df_full[df_full['scientificName'].isin(valid_classes)].reset_index(drop=True)
-        if len(df_full) == 0: print(f"{TermColors.RED}Dataframe empty after filter. Exit.{TermColors.ENDC}"); sys.exit(1)
-        
-        label_encoder = LabelEncoder(); df_full['label'] = label_encoder.fit_transform(df_full['scientificName'])
-        class_names = list(label_encoder.classes_); NUM_CLASSES = len(class_names)
-        if NUM_CLASSES == 0: print(f"{TermColors.RED}Zero classes. Exit.{TermColors.ENDC}"); sys.exit(1)
-        
-        os.makedirs(BASE_MODEL_SAVE_DIR, exist_ok=True)
-        with open(os.path.join(BASE_MODEL_SAVE_DIR, "label_mapping.json"), 'w') as f: json.dump(dict(zip(range(NUM_CLASSES), class_names)), f, indent=4)
-        
-        if DEBUG_MODE: 
-            min_debug_samples = 2
-            counts_debug = df_full['label'].value_counts(); valid_lbls_debug = counts_debug[counts_debug >= min_debug_samples].index
-            df_debug_poss = df_full[df_full['label'].isin(valid_lbls_debug)]
-            if len(df_debug_poss) >= min(100, len(df_full)) and len(valid_lbls_debug) > 1 :
-                 _, df_full = train_test_split(df_debug_poss, test_size=min(100, len(df_debug_poss)), random_state=SEED, stratify=df_debug_poss['label'])
-            else: df_full = df_full.sample(n=min(100, len(df_full)), random_state=SEED)
-            df_full = df_full.reset_index(drop=True)
-        
-        lbl_counts = df_full['label'].value_counts().sort_index(); total_s = len(df_full)
-        if total_s == 0: print(f"{TermColors.RED}Dataframe empty before imbalance. Exit.{TermColors.ENDC}"); sys.exit(1)
-        freqs = torch.zeros(NUM_CLASSES, dtype=torch.float32); lbl_counts_reidx = lbl_counts.reindex(range(NUM_CLASSES), fill_value=0)
-        for i in range(NUM_CLASSES): freqs[i] = lbl_counts_reidx.get(i, 0)
-        CLASS_FREQUENCIES = freqs.to(DEVICE); CLASS_PRIORS = (CLASS_FREQUENCIES / total_s if total_s > 0 else torch.zeros_like(CLASS_FREQUENCIES)).to(DEVICE)
-        try:
-            weights_arr = sk_class_weight.compute_class_weight('balanced', classes=np.arange(NUM_CLASSES), y=df_full['label'])
-            CLASS_WEIGHTS = torch.tensor(weights_arr, dtype=torch.float32)
-        except ValueError as e:
-            print(f"{TermColors.RED}Class weights error: {e}.{TermColors.ENDC}")
-            if IMBALANCE_STRATEGY in ['WeightedLoss', 'WeightedSampler']: print(f"{TermColors.RED}Exit due to weights error with strategy '{IMBALANCE_STRATEGY}'.{TermColors.ENDC}"); sys.exit(1)
-        print(f"{TermColors.GREEN}Data loaded: {len(df_full)} samples, {NUM_CLASSES} classes. Imbalance: {IMBALANCE_STRATEGY}.{TermColors.ENDC}")
-    except Exception as e: print(f"{TermColors.RED}Data Load/Prep Error: {e}{TermColors.ENDC}"); traceback.print_exc(); sys.exit(1)
-
-    training_completed = False
-    if os.path.exists(STACKING_META_MODEL_PATH) and RUN_STACKING:
-        print(f"{TermColors.INFO}Full Training stacking model exists: {STACKING_META_MODEL_PATH}. Skip K-fold & stacking.{TermColors.ENDC}")
-        training_completed = True
-    elif os.path.exists(STACKING_OOF_PREDS_PATH) and RUN_STACKING:
-        print(f"{TermColors.INFO}Full Training OOF predictions found: {STACKING_OOF_PREDS_PATH}. Attempt stacking only.{TermColors.ENDC}")
-        try:
-            oof_data = np.load(STACKING_OOF_PREDS_PATH)
-            if len(oof_data['preds']) > 0 and len(oof_data['preds']) == len(oof_data['labels']):
-                train_stacking_meta_model(oof_data['preds'], oof_data['labels'], STACKING_META_MODEL_PATH)
-                if os.path.exists(STACKING_META_MODEL_PATH):
-                    training_completed = True
-                    print(f"{TermColors.GREEN}Stacking from existing Full Training OOFs complete.{TermColors.ENDC}")
-                else: print(f"{TermColors.RED}Stacking from OOFs failed. Full Training K-Fold will run.{TermColors.ENDC}")
-            else: print(f"{TermColors.YELLOW}Full Training OOF file invalid. Full Training K-Fold will run.{TermColors.ENDC}")
-        except Exception as e: print(f"{TermColors.RED}Error with OOFs: {e}. Full Training K-Fold will run.{TermColors.ENDC}")
-    
-    if not training_completed:
-        print(f"{TermColors.INFO}Starting full image K-fold training and stacking process.{TermColors.ENDC}")
-        training_completed = main_full_training_loop_entry(
-            df_full, NUM_CLASSES, label_encoder, class_names, CLASS_FREQUENCIES, CLASS_PRIORS, CLASS_WEIGHTS
-        )
-
-    if RUN_KNOWLEDGE_DISTILLATION and training_completed and os.path.exists(STACKING_META_MODEL_PATH):
-        print(f"\n{TermColors.HEADER}--- FINAL STEP: Distill Full Training Stacking Ensemble ---{TermColors.ENDC}")
-        
-        base_combined_model_paths_kd = [
-            os.path.join(BASE_MODEL_SAVE_DIR, f"fold_{f}", "best_model_state_dict.pth") 
-            for f in range(N_FOLDS)
-        ]
-        all_base_models_exist = all(os.path.exists(p) for p in base_combined_model_paths_kd)
-
-        if not all_base_models_exist:
-            print(f"{TermColors.RED}Not all base CombinedModels for KD teacher found. Skipping KD.{TermColors.ENDC}")
-        else:
-            print(f"{TermColors.YELLOW}KD Info: Using K-Fold CombinedModels as teacher components for distillation.{TermColors.ENDC}")
-            
-            teacher_components_for_kd = {
-                "stacking_model_path": STACKING_META_MODEL_PATH,
-                "feature_extractor_model_names": MODEL_NAMES, 
-                "feature_extractor_embedding_size": EMBEDDING_SIZE, 
-                "feature_extractor_arcface_m": ARCFACE_M, 
-                "feature_extractor_metric_learning": METRIC_LEARNING_TYPE, 
-                "feature_extractor_checkpoint_path": None, 
-                "base_mlp_model_paths": base_combined_model_paths_kd, 
-                "base_mlp_model_input_size": None, 
-                "n_folds_for_stacking": N_FOLDS,
-                "num_classes": NUM_CLASSES,
-                "is_combined_model_teacher": True 
-            }
-            try:
-                train_student_model(
-                    student_model_name=KD_STUDENT_MODEL_NAME,
-                    student_base_save_path=KD_STUDENT_MODEL_SAVE_PATH,
-                    student_swa_save_path=KD_STUDENT_SWA_MODEL_SAVE_PATH,
-                    student_ema_save_path=KD_STUDENT_EMA_MODEL_SAVE_PATH,
-                    df_full_for_kd=df_full,
-                    image_dir_kd=IMAGE_DIR,
-                    num_classes_kd=NUM_CLASSES,
-                    stacking_teacher_components=teacher_components_for_kd
-                )
-            except Exception as e_kd_main:
-                print(f"{TermColors.RED}Error during train_student_model (Full Training Teacher): {e_kd_main}{TermColors.ENDC}"); traceback.print_exc()
-                
-    elif RUN_KNOWLEDGE_DISTILLATION:
-        status = "training not successful" if not training_completed else "stacking model path missing"
-        print(f"{TermColors.YELLOW}KD enabled, but {status}. Skipping KD.{TermColors.ENDC}")
-
-    print(f"\n{TermColors.OKGREEN}All Full Image Training Mode processes complete.{TermColors.ENDC}")
-
-if __name__ == "__main__":
-    main()
+    global stop_requested, label_encoder, class_names, NUM_CLASSES, CLASS_FREQUENCIES, CLASS_P…

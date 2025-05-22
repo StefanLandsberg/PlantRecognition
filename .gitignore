@@ -1,7 +1,6 @@
 # PlantRecognition .gitignore file
 
 # Ignore data folder to avoid storing large datasets in git
-data/
 data/plant_images/
 data/features/
 
