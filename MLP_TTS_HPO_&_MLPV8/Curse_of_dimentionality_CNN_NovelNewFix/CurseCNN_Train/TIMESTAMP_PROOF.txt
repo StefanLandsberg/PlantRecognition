@@ -1,3 +1,0 @@
-Foundation Model Fusion Framework - Development Record
-Fri, Jun  6, 2025  5:42:21 PM
-Original Implementation by Stefan
