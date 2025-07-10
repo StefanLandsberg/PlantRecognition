@@ -1,12 +1,7 @@
 # PlantRecognition .gitignore file
-
-# Ignore data folder to avoid storing large datasets in git
-data/plant_images/
-data/features/
-
 # Ignore checkpoints and models (large binary files)
 checkpoints/
-
+.descriptor_cache/
 # Ignore logs and stats
 logs/
 stats/
