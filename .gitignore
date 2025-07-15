@@ -6,6 +6,7 @@ checkpoints/
 logs/
 stats/
 data/plant_images/
+descriptormodel/data/plant_images/
 
 # Ignore checkpoint files
 download_checkpoint.json
