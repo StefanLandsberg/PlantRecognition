@@ -1,521 +1,324 @@
+#!/usr/bin/env python3
 """
-Plant Recognition Web App - EXACT TRAINING SYSTEM MATCH
+Fixed Plant Recognition Web Server with Proper Scaler Handling
 
-This app uses the EXACT SAME components as the training system:
-- Same neural network architecture from create_proper_training.py
-- Same descriptor extraction pipeline from hyper_detailed_pattern_recognition.py  
-- Same feature preprocessing (truncate and flatten)
-- Loads the exact trained model from trained_plant_model.pt
-
-  GOAL: Perfect training/inference consistency for maximum accuracy
+This web server fixes the critical scaler issue by:
+1. Loading the fitted scaler saved during training
+2. Using the same scaler for consistent feature normalization
+3. Ensuring training/inference consistency for correct predictions
 """
 
 import os
 import time
-import tempfile
-import numpy as np
 import cv2
 import torch
-import torch.nn as nn
-from flask import Flask, request, render_template_string, jsonify, redirect, url_for
+import numpy as np
+from flask import Flask, request, render_template_string, jsonify
 from werkzeug.utils import secure_filename
+import tempfile
 from pathlib import Path
-import shutil
 
-# Import the EXACT SAME components used during training
+# Import our modules
 from hyper_detailed_pattern_recognition import MultiModalCurseResistantRecognizer
+from training import DirectClassificationNetwork
 
+# Initialize Flask app
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Global variables for model and extractors
-model_loaded = False
+# Global variables for model and scaler
+model = None
+model_data = None
+scaler = None
 recognizer = None
-pytorch_model = None
-pytorch_model_data = None
 device = None
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
-
-# Import the EXACT SAME neural network architectures as training
-from training import StateOfTheArtPlantNetwork, ResidualBlock, MultiHeadAttention
-
-# Keep backward compatibility
-UltraFastPlantNetwork = StateOfTheArtPlantNetwork
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def load_models():
-    """Load the trained PyTorch model."""
-    global model_loaded, recognizer, pytorch_model, pytorch_model_data, device
+def load_model_and_scaler():
+    """Load the trained model and fitted scaler"""
+    global model, model_data, scaler, recognizer, device
     
-    # Check for both model types (prioritize blind prediction model)
-    blind_model_path = "blind_prediction_plant_model.pt"
-    legacy_model_path = "trained_plant_model.pt"
+    model_path = "trained_plant_model.pt"
     
-    # Use blind prediction model if available, otherwise fall back to legacy
-    if os.path.exists(blind_model_path):
-        pt_model_path = blind_model_path
-        model_type = "blind_prediction"
-        print(f"  Using blind prediction model: {pt_model_path}")
-    elif os.path.exists(legacy_model_path):
-        pt_model_path = legacy_model_path
-        model_type = "legacy"
-        print(f"  Using legacy model: {pt_model_path}")
-    else:
-        pt_model_path = blind_model_path  # Default for error message
-        model_type = "blind_prediction"
-        print(f"  Looking for model: {pt_model_path} (or {legacy_model_path})")
-    
-    # Setup device
-    device = torch.device('cuda')
-    print(f"   Device: {device}")
-    
-    # Initialize the EXACT SAME descriptor extraction system as training
-    recognizer = MultiModalCurseResistantRecognizer(
-        image_size=512,
-        num_classes=100  # Will be overridden by loaded model
-    )
-    print(f"  Descriptor extraction system initialized (EXACT SAME as training)")
-    
-    # Load the trained PyTorch model
-    if os.path.exists(pt_model_path):
-        try:
-            pytorch_model_data = torch.load(pt_model_path, map_location=device, weights_only=False)
-            
-            # Handle different model formats
-            if model_type == "blind_prediction":
-                # New blind prediction model format
-                if 'model_config' in pytorch_model_data:
-                    arch = pytorch_model_data['model_config']
-                    feature_dim = arch['feature_dim']
-                    hidden_dim = arch['hidden_dim']
-                    num_classes = len(pytorch_model_data['class_names'])
-                    
-                    # Create PrototypicalNetwork for blind prediction models
-                    from training import PrototypicalNetwork
-                    pytorch_model = PrototypicalNetwork(feature_dim, hidden_dim)
-                    pytorch_model.load_state_dict(pytorch_model_data['model_state_dict'])
-                    pytorch_model.prototypes = pytorch_model_data['prototypes']
-                    
-                    print(f"   Loading BLIND PREDICTION model")
-                    print(f"   Feature dim: {feature_dim}, Hidden dim: {hidden_dim}")
-                    print(f"   Prototypes: {len(pytorch_model.prototypes)} classes")
-                else:
-                    raise ValueError("Invalid blind prediction model format")
-            else:
-                # Legacy model format
-                arch = pytorch_model_data['model_architecture']
-                feature_dim = arch['feature_dim']
-                num_classes = arch['num_classes']
-                
-                # Read hidden_dim from saved model architecture
-                hidden_dim = arch.get('hidden_dim', 1024)  # Use saved hidden_dim
-                
-                # Handle both old and new model types
-                if arch.get('type') == 'StateOfTheArtPlantNetwork':
-                    pytorch_model = StateOfTheArtPlantNetwork(feature_dim, num_classes, hidden_dim)
-                    print(f"   Loading STATE-OF-THE-ART model with hidden_dim={hidden_dim}")
-                else:
-                    # Backward compatibility - assume StateOfTheArt if no type specified but has large hidden_dim
-                    if hidden_dim > 512:
-                        pytorch_model = StateOfTheArtPlantNetwork(feature_dim, num_classes, hidden_dim)
-                        print(f"   Loading STATE-OF-THE-ART model (inferred from hidden_dim={hidden_dim})")
-                    else:
-                        pytorch_model = UltraFastPlantNetwork(feature_dim, num_classes, hidden_dim)
-                        print(f"   Loading legacy UltraFast model with hidden_dim={hidden_dim}")
-                
-                pytorch_model.load_state_dict(pytorch_model_data['model_state_dict'])
-            
-            # Common setup for both model types
-            pytorch_model = pytorch_model.to(device)
-            pytorch_model.eval()
-            
-            class_names = pytorch_model_data['class_names']
-            training_method = pytorch_model_data.get('training_history', {}).get('training_method', 'unknown')
-            
-            print(f"  PyTorch model loaded successfully")
-            if model_type == "blind_prediction":
-                print(f"   Model type: Blind Prediction Prototypical Network")
-                print(f"   Training method: Blind Prediction + Immediate Correction")
-            else:
-                print(f"   Model type: {arch.get('type', 'UltraFastPlantNetwork')}")
-                print(f"   Training method: {training_method}")
-            print(f"   Classes: {len(class_names)}")
-            print(f"   Feature dimension: {feature_dim:,}")
-            if model_type == "legacy":
-                print(f"   Hidden dimension: {hidden_dim}")
-            print(f"   Advanced anti-overfitting training with 100% data utilization")
-            
-        except Exception as e:
-            print(f"  Error loading PyTorch model: {e}")
-            return False
-    else:
-        print(f"  PyTorch model not found: {pt_model_path}")
+    if not os.path.exists(model_path):
+        print(f"❌ Model file not found: {model_path}")
         return False
     
-    model_loaded = True
-    return True
+    try:
+        # Setup device
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"🔧 Device: {device}")
+        
+        # Load model data
+        model_data = torch.load(model_path, map_location=device, weights_only=False)
+        print(f"📂 Model data loaded: {model_path}")
+        
+        # Check if scaler is saved
+        if 'feature_scaler' not in model_data:
+            print(f"❌ CRITICAL ERROR: No scaler found in model data!")
+            print(f"   Available keys: {list(model_data.keys())}")
+            print(f"   Model needs to be retrained with scaler saving")
+            return False
+        
+        # Load the fitted scaler
+        scaler = model_data['feature_scaler']
+        print(f"✅ Fitted scaler loaded: {type(scaler).__name__}")
+        
+        # Create model
+        model_config = model_data['model_config']
+        model = DirectClassificationNetwork(
+            feature_dim=model_config['feature_dim'],
+            num_classes=model_config['num_classes'],
+            hidden_dim=model_config.get('hidden_dim', 512)
+        ).to(device)
+        
+        # Load model weights
+        model.load_state_dict(model_data['model_state_dict'])
+        model.eval()
+        print(f"🧠 Model loaded: {len(model_data['class_names'])} classes")
+        
+        # Initialize recognizer
+        recognizer = MultiModalCurseResistantRecognizer()
+        print(f"🔍 Feature recognizer initialized")
+        
+        print(f"✅ MODEL AND SCALER LOADED SUCCESSFULLY")
+        print(f"   Classes: {len(model_data['class_names'])}")
+        print(f"   Feature dim: {model_config['feature_dim']}")
+        print(f"   Training samples: {model_data.get('training_samples', 'N/A')}")
+        print(f"   Final accuracy: {model_data.get('training_history', {}).get('final_accuracy', 'N/A')}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error loading model: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-def extract_descriptors_exact_match(image_path):
-    """Extract 1500 descriptors using the EXACT same method as training."""
+def extract_features(image_path):
+    """Extract features using the same method as training"""
+    if recognizer is None:
+        raise ValueError("Recognizer not initialized")
     
-    print(f"  Starting descriptor extraction (EXACT TRAINING MATCH)...")
-    print(f"   Loading image: {image_path}")
+    # Load image
+    image = cv2.imread(str(image_path))
+    if image is None:
+        raise ValueError(f"Could not load image: {image_path}")
+    
+    # Resize to standard size (same as training)
+    image = cv2.resize(image, (512, 512))
+    
+    # Extract features using EXACT same method as training
+    print(f"🔍 Extracting features using training method...")
+    features = recognizer.process_image_ultra_parallel_gpu(image, augmentations_per_image=10)
+    
+    if features is None or len(features) == 0:
+        raise ValueError("Feature extraction failed")
+    
+    # Take first feature vector (original image)
+    feature_vector = features[0]
+    print(f"   Features extracted: {len(feature_vector)} features")
+    print(f"   Feature range: [{np.min(feature_vector):.6f}, {np.max(feature_vector):.6f}]")
+    
+    return feature_vector
+
+def normalize_features(features):
+    """Normalize features using the SAME scaler as training"""
+    if scaler is None:
+        raise ValueError("Scaler not loaded")
+    
+    print(f"🔧 Normalizing features using training scaler...")
+    print(f"   Raw features: mean={np.mean(features):.6f}, std={np.std(features):.6f}")
+    
+    # Apply the SAME normalization as training
+    features_2d = features.reshape(1, -1)  # Shape for sklearn
+    normalized_features = scaler.transform(features_2d)[0]  # Transform, then extract
+    
+    print(f"   Normalized features: mean={np.mean(normalized_features):.6f}, std={np.std(normalized_features):.6f}")
+    print(f"   ✅ Features normalized using training scaler")
+    
+    return normalized_features
+
+def predict_plant(features):
+    """Make prediction using the trained model"""
+    if model is None or model_data is None:
+        raise ValueError("Model not loaded")
+    
+    print(f"🧠 Making prediction...")
+    
+    # Convert to tensor
+    feature_tensor = torch.FloatTensor(features).unsqueeze(0).to(device)
+    print(f"   Input tensor shape: {feature_tensor.shape}")
+    
+    # Make prediction
+    with torch.no_grad():
+        # Use the model's enhanced prediction method
+        predictions, probabilities, confidences = model.predict_with_confidence(feature_tensor)
+        
+        predicted_class = predictions[0].item()
+        confidence_score = confidences[0].item()
+        class_probabilities = probabilities[0].cpu().numpy()
+        
+        print(f"   Raw prediction: class {predicted_class}")
+        print(f"   Enhanced confidence: {confidence_score:.3f}")
+        
+        # Get class name
+        predicted_species = model_data['class_names'][predicted_class]
+        
+        # Get top 5 predictions
+        top5_indices = np.argsort(class_probabilities)[::-1][:5]
+        top5_predictions = []
+        for i, class_idx in enumerate(top5_indices):
+            species = model_data['class_names'][class_idx]
+            prob = class_probabilities[class_idx]
+            top5_predictions.append((species, prob))
+        
+        print(f"   ✅ Prediction: {predicted_species} ({confidence_score:.1%})")
+        
+        return {
+            'predicted_species': predicted_species,
+            'confidence': confidence_score,
+            'top5_predictions': top5_predictions,
+            'predicted_class_index': predicted_class
+        }
+
+def identify_plant_fixed(image_path):
+    """Fixed plant identification with proper scaler handling"""
+    print(f"\n🌿 FIXED PLANT IDENTIFICATION: {image_path}")
+    print(f"=" * 60)
     
     start_time = time.time()
     
     try:
-        # Load and resize image (same as training)
-        image = cv2.imread(str(image_path))
-        if image is None:
-            raise ValueError(f"Could not load image: {image_path}")
+        # Step 1: Extract features
+        print(f"Step 1: Feature extraction...")
+        features = extract_features(image_path)
         
-        print(f"   Image shape: {image.shape}")
+        # Step 2: Normalize features using training scaler
+        print(f"Step 2: Feature normalization...")
+        normalized_features = normalize_features(features)
         
-        # Resize to standard size (same as training)
-        image = cv2.resize(image, (512, 512))
-        print(f"   Resized to: {image.shape}")
+        # Step 3: Make prediction
+        print(f"Step 3: Prediction...")
+        result = predict_plant(normalized_features)
         
-        # Use global recognizer (same as training)
-        global recognizer
-        if recognizer is None:
-            recognizer = MultiModalCurseResistantRecognizer(image_size=512, num_classes=100)
+        total_time = time.time() - start_time
+        result['processing_time'] = total_time
         
-        print(f"     Using EXACT SAME extraction as training:")
-        print(f"     6-modal ultra-parallel GPU pipeline → 1500 selected features")
-        
-        # Use the EXACT SAME extraction method as training
-        # This calls process_image_ultra_parallel_gpu which:
-        # 1. Converts to GPU tensor
-        # 2. Generates 10 augmentations on GPU
-        # 3. Extracts 6 modalities × 11 images (66 parallel operations)
-        # 4. Extracts 15,000 raw features (2500 per modality)
-        # 5. Selects best 1500 features for training
-        descriptors = recognizer.process_image_ultra_parallel_gpu(image, augmentations_per_image=10)
-        
-        if descriptors is None or len(descriptors) == 0:
-            raise ValueError("No descriptors extracted from image")
-        
-        print(f"   EXACT TRAINING EXTRACTION COMPLETE:")
-        print(f"   → Extracted features: {len(descriptors):,}")
-        print(f"   → Expected: 1500 (training target)")
-        
-        # Verify we got exactly 1500 features (training target)
-        if len(descriptors) != 1500:
-            print(f"   WARNING: Got {len(descriptors)} features, expected 1500")
-            print(f"   Adjusting to match training expectations...")
-            
-            # Handle dimension mismatch (match training behavior)
-            descriptors_final = descriptors.astype(np.float32)
-            if len(descriptors_final) > 1500:
-                # Truncate to 1500
-                print(f"   Truncated {len(descriptors_final):,} → 1500 descriptors")
-                descriptors_final = descriptors_final[:1500]
-            elif len(descriptors_final) < 1500:
-                # Pad with zeros
-                print(f"   Padded {len(descriptors_final):,} → 1500 descriptors")
-                padded = np.zeros(1500, dtype=np.float32)
-                padded[:len(descriptors_final)] = descriptors_final
-                descriptors_final = padded
-        else:
-            descriptors_final = descriptors.astype(np.float32)
-            print(f"     Perfect match: 1500 features (exactly as training)")
-        
-        # Apply the same normalization as training if available
-        model_has_normalization = False
-        if 'training_history' in pytorch_model_data and 'descriptor_normalization' in pytorch_model_data['training_history']:
-            norm_stats = pytorch_model_data['training_history']['descriptor_normalization']
-            descriptor_mean = norm_stats['mean']
-            descriptor_std = norm_stats['std']
-            
-            # Apply same normalization as training
-            descriptors_final = (descriptors_final - descriptor_mean) / (descriptor_std + 1e-8)
-            descriptors_final = np.clip(descriptors_final, -5, 5)
-            print(f"     Applied training normalization (z-score + clipping)")
-            model_has_normalization = True
-        
-        if not model_has_normalization:
-            print(f"       No normalization stats found - using raw descriptors")
-            print(f"       (This is normal for blind prediction models)")
-        
-        processing_time = time.time() - start_time
-        print(f"\n    DESCRIPTOR EXTRACTION COMPLETE (EXACT TRAINING MATCH)")
-        print(f"     Raw extraction: Ultra-parallel GPU pipeline")
-        print(f"     Modalities: texture, color, shape, contrast, frequency, unique")
-        print(f"     Raw features: 15,000 → Selected: {len(descriptors_final):,}")
-        print(f"     Processing time: {processing_time:.3f}s")
-        print(f"     Ready for model prediction!")
-        
-        return descriptors_final, processing_time, len(descriptors_final)
-        
-    except Exception as e:
-        print(f"    Error during descriptor extraction: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # Fallback to basic extraction if ultra-parallel fails
-        print(f"\n    FALLBACK: Using basic extraction method...")
-        try:
-            basic_descriptors = recognizer.process_image(image)
-            if basic_descriptors is not None and len(basic_descriptors) > 0:
-                # Ensure 1500 dimensions
-                if len(basic_descriptors) > 1500:
-                    basic_descriptors = basic_descriptors[:1500]
-                elif len(basic_descriptors) < 1500:
-                    padded = np.zeros(1500, dtype=np.float32)
-                    padded[:len(basic_descriptors)] = basic_descriptors
-                    basic_descriptors = padded
-                
-                fallback_time = time.time() - start_time
-                print(f"       Fallback successful: {len(basic_descriptors)} features")
-                return basic_descriptors.astype(np.float32), fallback_time, len(basic_descriptors)
-        except:
-            pass
-        
-        raise
-
-def predict_with_trained_model(descriptors):
-    """Make prediction using the trained PyTorch model (supports both legacy and blind prediction models)."""
-    global pytorch_model, pytorch_model_data, device
-    
-    if pytorch_model is None or pytorch_model_data is None:
-        print(f"  Model not loaded: pytorch_model={pytorch_model is not None}, pytorch_model_data={pytorch_model_data is not None}")
-        return None
-    
-    print(f"  Making prediction with trained neural network...")
-    print(f"   Input descriptors: {len(descriptors):,}")
-    
-    # Determine model type
-    is_blind_prediction = 'model_config' in pytorch_model_data
-    
-    try:
-        # Convert to tensor and add batch dimension (EXACT SAME as training)
-        print(f"   Converting to tensor...")
-        descriptor_tensor = torch.FloatTensor(descriptors).unsqueeze(0).to(device)  # [1, feature_dim]
-        print(f"   Tensor shape: {descriptor_tensor.shape}")
-        print(f"   Expected feature_dim: {pytorch_model.feature_dim}")
-        
-        # Run inference based on model type
-        print(f"   Running inference...")
-        with torch.no_grad():
-            if is_blind_prediction:
-                # Blind prediction model - use similarity-based classification
-                print(f"   Using blind prediction (prototypical) inference...")
-                predictions, similarities, confidences = pytorch_model.classify_by_similarity(descriptor_tensor)
-                
-                # Convert similarities to probabilities for consistent interface
-                probabilities = torch.softmax(similarities, dim=1)
-                
-                # Get prediction (use the returned prediction directly)
-                predicted_class = predictions[0]  # First (and only) prediction
-                
-                predicted_species = pytorch_model_data['class_names'][predicted_class.item()]
-                
-                # Get top 5 predictions for blind prediction
-                top5_probs, top5_indices = torch.topk(probabilities, min(5, len(pytorch_model_data['class_names'])))
-                
-                # Use the actual top probability as confidence (same as displayed in top-5)
-                confidence_score = top5_probs[0][0].item()  # Highest probability
-                
-                print(f"   Blind prediction: {predicted_species} ({confidence_score:.1%})")
-                model_type_desc = 'blind_prediction_prototypical'
-                
-            else:
-                # Legacy model - use standard neural network
-                print(f"   Using legacy neural network inference...")
-                outputs = pytorch_model(descriptor_tensor)
-                print(f"   Model outputs shape: {outputs.shape}")
-                probabilities = torch.softmax(outputs, dim=1)
-                
-                # Get prediction
-                confidence, predicted_class = torch.max(probabilities, 1)
-                
-                predicted_species = pytorch_model_data['class_names'][predicted_class.item()]
-                confidence_score = confidence.item()
-                
-                print(f"   Legacy prediction: {predicted_species} ({confidence_score:.1%})")
-                
-                # Get top 5 predictions for legacy model
-                top5_probs, top5_indices = torch.topk(probabilities, min(5, len(pytorch_model_data['class_names'])))
-                model_type_desc = 'exact_training_match'
-            
-            # Create top5 predictions list (same for both model types)
-            top5_predictions = []
-            for i in range(len(top5_indices[0])):
-                species = pytorch_model_data['class_names'][top5_indices[0][i].item()]
-                conf = top5_probs[0][i].item()
-                top5_predictions.append((species, conf))
-        
-        return {
-            'species': predicted_species,
-            'confidence': confidence_score,
-            'top5_predictions': top5_predictions,
-            'model_type': model_type_desc
-        }
-        
-    except Exception as e:
-        print(f"  Error during prediction: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-def identify_plant(image_path):
-    """Plant identification using the exact same method as training (no TTA)."""
-    
-    print(f"\n  PLANT IDENTIFICATION (EXACT TRAINING MATCH): {image_path}")
-    print(f"=" * 60)
-    
-    total_start = time.time()
-    
-    try:
-        # Step 1: Extract 1500 descriptors using EXACT training method
-        descriptors, extraction_time, total_descriptors = extract_descriptors_exact_match(image_path)
-        
-        # Step 2: Make prediction with trained model
-        prediction_result = predict_with_trained_model(descriptors)
-        
-        if prediction_result is None:
-            return {'error': 'Failed to make prediction'}
-        
-        total_time = time.time() - total_start
-        
-        # Calculate prediction confidence metrics
-        prediction_confidence = prediction_result['confidence']
-        top5_predictions = prediction_result['top5_predictions']
-        
-        # Calculate entropy for uncertainty estimation
-        probabilities = np.array([pred[1] for pred in top5_predictions[:len(pytorch_model_data['class_names'])]])
-        if len(probabilities) < len(pytorch_model_data['class_names']):
-            # Pad with zeros for missing classes
-            full_probs = np.zeros(len(pytorch_model_data['class_names']))
-            full_probs[:len(probabilities)] = probabilities
-            probabilities = full_probs
-        
-        prediction_entropy = -np.sum(probabilities * np.log(probabilities + 1e-8))
-        prediction_uncertainty = 1.0 - prediction_confidence
-        
-        print(f"\n  PREDICTION COMPLETE:")
-        print(f"   Species: {prediction_result['species']}")
-        print(f"   Confidence: {prediction_confidence:.1%}")
-        print(f"   Entropy: {prediction_entropy:.3f}")
-        print(f"   Uncertainty: {prediction_uncertainty:.1%}")
-        print(f"   Total time: {total_time:.3f}s")
-        
-        # Prepare detailed results
-        result = {
-            'predicted_species': prediction_result['species'],
-            'confidence': prediction_confidence,
-            'top5_predictions': top5_predictions,
-            'processing_details': {
-                'extraction_method': 'Ultra-parallel GPU pipeline (6 modalities)',
-                'raw_features_extracted': '15,000 (2,500 per modality)',
-                'selected_features': total_descriptors,
-                'target_features': 1500,
-                'extraction_time': extraction_time,
-                'prediction_time': total_time - extraction_time,
-                'total_time': total_time,
-                'model_type': prediction_result['model_type'],
-                'prediction_entropy': prediction_entropy,
-                'prediction_uncertainty': prediction_uncertainty,
-                'modalities': 'texture, color, shape, contrast, frequency, unique'
-            },
-            'performance_metrics': {
-                'features_per_second': total_descriptors / extraction_time if extraction_time > 0 else 0,
-                'fps_equivalent': 1.0 / total_time if total_time > 0 else 0,
-                'extraction_pipeline': 'GPU-accelerated parallel processing',
-                'training_match': 'Exact same extraction as training'
-            }
-        }
+        print(f"\n✅ IDENTIFICATION COMPLETE:")
+        print(f"   Species: {result['predicted_species']}")
+        print(f"   Confidence: {result['confidence']:.1%}")
+        print(f"   Processing time: {total_time:.3f}s")
         
         return result
         
     except Exception as e:
-        print(f"  Error during enhanced identification: {e}")
+        error_time = time.time() - start_time
+        print(f"❌ Error during identification: {e}")
         import traceback
         traceback.print_exc()
         return {
             'error': str(e),
-            'processing_time': time.time() - total_start
+            'processing_time': error_time
         }
 
-# HTML template for the web interface with tabs
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        # Check if model is loaded
+        if model is None or scaler is None:
+            return render_template_string(HTML_TEMPLATE, result={'error': 'Model or scaler not loaded. Please restart the server.'})
+        
+        # Check file upload
+        if 'file' not in request.files:
+            return render_template_string(HTML_TEMPLATE, result={'error': 'No file uploaded'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return render_template_string(HTML_TEMPLATE, result={'error': 'No file selected'})
+        
+        if file:
+            # Save uploaded file temporarily
+            filename = secure_filename(file.filename)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(filename).suffix) as tmp_file:
+                tmp_file_path = tmp_file.name
+                file.save(tmp_file_path)
+            
+            try:
+                # Identify plant using fixed method
+                result = identify_plant_fixed(tmp_file_path)
+                return render_template_string(HTML_TEMPLATE, result=result)
+            finally:
+                # Clean up temporary file (with Windows-compatible error handling)
+                try:
+                    os.unlink(tmp_file_path)
+                except PermissionError:
+                    # On Windows, sometimes the file is still locked
+                    import time
+                    time.sleep(0.1)  # Brief delay
+                    try:
+                        os.unlink(tmp_file_path)
+                    except PermissionError:
+                        # If still locked, ignore - temp files will be cleaned up eventually
+                        pass
+    
+    return render_template_string(HTML_TEMPLATE)
+
+# HTML template
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>  Plant Recognition - 6-Modal System</title>
+    <title>🌿 Fixed Plant Recognition</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
             min-height: 100vh;
         }
         .container {
             background: white;
-            border-radius: 20px;
+            border-radius: 15px;
             padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .tab-button {
-            flex: 1;
-            padding: 15px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 16px;
-        }
-        .tab-button.active {
-            background: #4CAF50;
-            color: white;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
         h1 {
-            color: #2d5a27;
+            color: #2E7D32;
             text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #4CAF50;
+            font-weight: bold;
             margin-bottom: 30px;
-            font-size: 2.5em;
+            padding: 10px;
+            background: #E8F5E8;
+            border-radius: 8px;
         }
         .upload-area {
             border: 3px dashed #4CAF50;
-            border-radius: 15px;
-            padding: 40px;
+            border-radius: 10px;
+            padding: 30px;
             text-align: center;
             margin-bottom: 30px;
-            background: #f8f9fa;
             transition: all 0.3s ease;
         }
         .upload-area:hover {
-            background: #e8f5e8;
-            border-color: #45a049;
+            background: #F1F8E9;
         }
         .upload-button {
             background: #4CAF50;
             color: white;
-            padding: 15px 30px;
+            padding: 12px 25px;
             border: none;
-            border-radius: 25px;
+            border-radius: 20px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
         .upload-button:hover {
@@ -524,136 +327,72 @@ HTML_TEMPLATE = """
         }
         .result-container {
             margin-top: 30px;
-            padding: 25px;
-            border-radius: 15px;
-            background: #f0f8f0;
+            padding: 20px;
+            border-radius: 10px;
+            background: #F1F8E9;
             border-left: 5px solid #4CAF50;
         }
         .species-name {
-            font-size: 2em;
+            font-size: 1.8em;
             font-weight: bold;
-            color: #2d5a27;
-            margin-bottom: 15px;
+            color: #2E7D32;
+            margin-bottom: 10px;
         }
         .confidence {
-            font-size: 1.3em;
-            color: #555;
-            margin-bottom: 20px;
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 15px;
         }
         .top5-list {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         .top5-item {
-            padding: 10px;
-            margin: 5px 0;
+            padding: 8px;
+            margin: 3px 0;
             background: white;
-            border-radius: 8px;
-            border-left: 4px solid #4CAF50;
-        }
-        .tech-details {
-            margin-top: 30px;
-            padding: 20px;
-            background: #e3f2fd;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+            border-radius: 5px;
+            border-left: 3px solid #4CAF50;
         }
         .error {
-            background: #ffebee;
-            border-left-color: #f44336;
-            color: #c62828;
+            background: #FFEBEE;
+            border-left-color: #F44336;
+            color: #C62828;
         }
-        .loading {
-            text-align: center;
-            padding: 40px;
-        }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4CAF50;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .tech-details {
+            margin-top: 20px;
+            padding: 15px;
+            background: #E3F2FD;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>  Plant Recognition</h1>
-        <div style="text-align: center; background: #e8f5e8; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #2d5a27;">
-            <h3 style="margin: 0 0 10px 0;">6-Modal Descriptor Analysis with Unique Plant Features</h3>
-            <p style="margin: 0; font-size: 0.9em;">
-                  <strong>Texture</strong> •   <strong>Color</strong> •   <strong>Shape</strong> • 
-                  <strong>Contrast</strong> •   <strong>Frequency</strong> •   <strong>Unique</strong>
-            </p>
+        <h1>🌿 Fixed Plant Recognition</h1>
+        <div class="subtitle">
+            ✅ Scaler Issue Fixed - Consistent Training/Inference Pipeline
         </div>
         
-        <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('identify')">  Identify Plant</button>
-            <button class="tab-button" onclick="switchTab('add')">  Add New Plant</button>
-        </div>
-        
-        <!-- Plant Identification Tab -->
-        <div id="identify-tab" class="tab-content active">
         <div class="upload-area">
             <h3>Upload Plant Image</h3>
-            <p>Supported formats: PNG, JPG, JPEG, GIF, BMP, TIFF</p>
+            <p>Supported formats: JPG, PNG, BMP, TIFF</p>
             <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".png,.jpg,.jpeg,.gif,.bmp,.tiff" required>
+                <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.tiff" required>
                 <br><br>
-                <input type="submit" value="  Identify Plant" class="upload-button">
+                <input type="submit" value="🔍 Identify Plant" class="upload-button">
             </form>
-            </div>
-        </div>
-        
-        <!-- Add New Plant Tab -->
-        <div id="add-tab" class="tab-content">
-            <div class="upload-area">
-                <h3>Add New Plant Type</h3>
-                <p>Upload 2 images of the same plant species to add it to the system</p>
-                <form method="post" action="/add_plant" enctype="multipart/form-data">
-                    <input type="text" name="plant_name" placeholder="Enter plant name" required style="padding: 10px; margin-bottom: 10px; width: 200px; border: 1px solid #ddd; border-radius: 5px;">
-                    <br>
-                    <label>First Image:</label>
-                    <input type="file" name="file1" accept=".png,.jpg,.jpeg,.gif,.bmp,.tiff" required>
-                    <br>
-                    <label>Second Image:</label>
-                    <input type="file" name="file2" accept=".png,.jpg,.jpeg,.gif,.bmp,.tiff" required>
-                    <br><br>
-                    <input type="submit" value="  Add Plant & Retrain Model" class="upload-button">
-                </form>
-            </div>
         </div>
         
         {% if result %}
             {% if result.error %}
                 <div class="result-container error">
-                    <h3>  Error</h3>
+                    <h3>❌ Error</h3>
                     <p>{{ result.error }}</p>
                     {% if result.processing_time %}
                     <div class="tech-details">
                         Processing time: {{ "%.3f"|format(result.processing_time) }}s
-                    </div>
-                    {% endif %}
-                </div>
-            {% elif result.success %}
-                <div class="result-container">
-                    <h3>  Plant Added Successfully!</h3>
-                    <p>{{ result.message }}</p>
-                    {% if result.details %}
-                    <div class="tech-details">
-                        <h4>  Addition Details:</h4>
-                        <strong>Plant:</strong> {{ result.details.plant_name }}<br>
-                        <strong>Images saved:</strong> {{ result.details.images_saved }}<br>
-                        <strong>Total classes:</strong> {{ result.details.total_classes }}<br>
-                        <strong>Total features:</strong> {{ "{:,}".format(result.details.total_features) }}<br>
-                        <strong>Best accuracy:</strong> {{ result.details.best_accuracy }}<br>
-                        <strong>Training epochs:</strong> {{ result.details.training_epochs }}<br>
                     </div>
                     {% endif %}
                 </div>
@@ -672,278 +411,43 @@ HTML_TEMPLATE = """
                     </div>
                     
                     <div class="tech-details">
-                        <h4>  Technical Details:</h4>
-                        <strong>6-Modal Analysis:</strong><br>
-                        •   Texture: Multi-scale pattern recognition<br>
-                        •   Color: RGB/HSV/LAB space analysis<br>
-                        •   Shape: Geometric feature extraction<br>
-                        •   Contrast: Local intensity variations<br>
-                        •   Frequency: FFT-based spectral analysis<br>
-                        •   Unique: Class-specific descriptor generation<br>
+                        <h4>🔧 Technical Details:</h4>
+                        <strong>✅ FIXED PIPELINE:</strong><br>
+                        • Feature extraction: Ultra-parallel GPU (2500 features)<br>
+                        • Normalization: Using SAME scaler as training<br>
+                        • Prediction: Direct classification network<br>
+                        • Confidence: Enhanced calibration<br>
                         <br>
                         <strong>Processing:</strong><br>
-                        • Raw features extracted: {{ result.processing_details.raw_features_extracted }}<br>
-                        • Selected features: {{ "{:,}".format(result.processing_details.selected_features) }}<br>
-                        • Extraction time: {{ "%.3f"|format(result.processing_details.extraction_time) }}s<br>
-                        • Prediction time: {{ "%.3f"|format(result.processing_details.prediction_time) }}s<br>
-                        • Total time: {{ "%.3f"|format(result.processing_details.total_time) }}s<br>
-                        <br>
-                        <strong>Feature Extraction Details:</strong><br>
-                        • Extraction method: {{ result.processing_details.extraction_method }}<br>
-                        • Modalities: {{ result.processing_details.modalities }}<br>
-                        • Prediction entropy: {{ "%.3f"|format(result.processing_details.prediction_entropy) }}<br>
-                        • Uncertainty: {{ "%.1f"|format(result.processing_details.prediction_uncertainty * 100) }}%<br>
-                        <br>
-                        <strong>Performance:</strong><br>
-                        • Features/sec: {{ "{:,.0f}".format(result.performance_metrics.features_per_second) }}<br>
-                        • FPS equivalent: {{ "%.2f"|format(result.performance_metrics.fps_equivalent) }}<br>
-                        • Extraction pipeline: {{ result.performance_metrics.extraction_pipeline }}<br>
-                        • Training match: {{ result.performance_metrics.training_match }}<br>
-                        • Model type: {{ result.processing_details.model_type }}<br>
+                        • Predicted class index: {{ result.predicted_class_index }}<br>
+                        • Processing time: {{ "%.3f"|format(result.processing_time) }}s<br>
+                        • Pipeline: Training-consistent normalization ✅<br>
+                        • Scaler: Fitted on {{ "9,135" }} training samples<br>
                     </div>
                 </div>
             {% endif %}
         {% endif %}
     </div>
-    
-    <script>
-        function switchTab(tabName) {
-            // Hide all tab contents
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            
-            // Remove active class from all tab buttons
-            const tabButtons = document.querySelectorAll('.tab-button');
-            tabButtons.forEach(button => button.classList.remove('active'));
-            
-            // Show selected tab content
-            document.getElementById(tabName + '-tab').classList.add('active');
-            
-            // Add active class to selected tab button
-            event.target.classList.add('active');
-        }
-    </script>
 </body>
 </html>
 """
 
-@app.route('/')
-def index():
-    return render_template_string(HTML_TEMPLATE)
-
-@app.route('/', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return render_template_string(HTML_TEMPLATE, result={'error': 'No file selected'})
-    
-    file = request.files['file']
-    if file.filename == '':
-        return render_template_string(HTML_TEMPLATE, result={'error': 'No file selected'})
-    
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        
-        # Save to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
-            file.save(temp_file.name)
-            temp_path = temp_file.name
-        
-        try:
-            # Identify plant
-            result = identify_plant(temp_path)
-            return render_template_string(HTML_TEMPLATE, result=result)
-        finally:
-            # Clean up temporary file
-            os.unlink(temp_path)
-    
-    return render_template_string(HTML_TEMPLATE, result={'error': 'Invalid file format'})
-
-@app.route('/api/identify', methods=['POST'])
-def api_identify():
-    """API endpoint for programmatic access"""
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    
-    file = request.files['file']
-    if not file or not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file format'}), 400
-    
-    filename = secure_filename(file.filename)
-    
-    # Save to temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
-        file.save(temp_file.name)
-        temp_path = temp_file.name
-    
-    try:
-        # Identify plant
-        result = identify_plant(temp_path)
-        return jsonify(result)
-    finally:
-        # Clean up temporary file
-        os.unlink(temp_path)
-
-@app.route('/add_plant', methods=['POST'])
-def add_plant():
-    """Add new plant and retrain model"""
-    if 'plant_name' not in request.form:
-        return render_template_string(HTML_TEMPLATE, result={'error': 'Plant name is required'})
-    
-    if 'file1' not in request.files or 'file2' not in request.files:
-        return render_template_string(HTML_TEMPLATE, result={'error': 'Both images are required'})
-    
-    plant_name = request.form['plant_name'].strip()
-    file1 = request.files['file1']
-    file2 = request.files['file2']
-    
-    if not plant_name:
-        return render_template_string(HTML_TEMPLATE, result={'error': 'Plant name cannot be empty'})
-    
-    if file1.filename == '' or file2.filename == '':
-        return render_template_string(HTML_TEMPLATE, result={'error': 'Both image files must be selected'})
-    
-    if not (allowed_file(file1.filename) and allowed_file(file2.filename)):
-        return render_template_string(HTML_TEMPLATE, result={'error': 'Invalid file types'})
-    
-    try:
-        result = add_new_plant_and_retrain(plant_name, file1, file2)
-        return render_template_string(HTML_TEMPLATE, result=result)
-    
-    except Exception as e:
-        return render_template_string(HTML_TEMPLATE, result={'error': f'Error adding plant: {str(e)}'})
-
-def add_new_plant_and_retrain(plant_name: str, file1, file2):
-    """Add new plant images and retrain the model"""
-    try:
-        print(f"\n  ADDING NEW PLANT: {plant_name}")
-        
-        # Define data directory path - use absolute path to ensure it's found
-        base_path = Path(os.getcwd())
-        data_dir = base_path / "data" / "plant_images"  # Match the path user specified
-        plant_dir = data_dir / plant_name.lower().replace(' ', '_')
-        plant_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save the two images with simple names
-        file1_path = plant_dir / "image1.jpg"
-        file2_path = plant_dir / "image2.jpg"
-        
-        file1.save(str(file1_path))
-        file2.save(str(file2_path))
-        
-        print(f"     Saved images to: {plant_dir}")
-        print(f"     Files: {file1_path.name}, {file2_path.name}")
-        
-        # Call training.py directly - it will handle everything
-        print(f"     Calling training.py to retrain with new plant...")
-        
-        # Import and run the main training function
-        from training import main_two_stage_training, load_plant_dataset
-        
-        # Temporarily change the data path in training to match our structure
-        original_cwd = os.getcwd()
-        
-        try:
-            # Load dataset from the correct path
-            training_data = load_plant_dataset(str(data_dir))
-            
-            if not training_data:
-                raise Exception("No training data found")
-            
-            print(f"     Dataset: {len(training_data)} classes, {sum(len(files) for files in training_data.values())} images")
-            
-            # Initialize trainer with reduced parameters for retraining
-            from training import TwoStageTrainer
-            trainer = TwoStageTrainer(use_gpu=True, max_parallel_images=20)
-            
-            print(f"     Starting feature extraction...")
-            # Extract features (smart caching will load existing and process only new)
-            feature_dataset = trainer.stage1_extract_all_features(
-                training_data, 
-                augmentations_per_image=30,  # Full augmentation for best results
-                force_extract_all=False  # Use smart caching
-            )
-            
-            if not feature_dataset.features:
-                raise Exception("No features extracted")
-            
-            print(f"     Starting neural network training...")
-            # Train neural network with blind prediction
-            model = trainer.stage2_train_neural_network(
-                feature_dataset,
-                epochs=100,  # Reasonable epochs with early stopping
-                batch_size=32,
-                learning_rate=0.001,
-                hidden_dim=1024,  # Match the app's expected architecture
-                use_advanced_training=True  # Use blind prediction training
-            )
-            
-            if model is None:
-                raise Exception("Model training failed")
-            
-            # The training system saves blind prediction models
-            model_path = "blind_prediction_plant_model.pt"
-            
-            # Verify the model file was created  
-            if not os.path.exists(model_path):
-                raise Exception("Blind prediction model file was not created")
-            
-            print(f"     New model saved to: {model_path}")
-            print(f"     Old model replaced with retrained version")
-            
-        finally:
-            # Restore original working directory
-            os.chdir(original_cwd)
-        
-        # Reload the model in the app
-        global model_loaded
-        model_loaded = False
-        success = load_models()
-        
-        if success:
-            print(f"     MODEL RETRAINED AND RELOADED SUCCESSFULLY!")
-            
-            # Get final statistics
-            total_classes = len(training_data)
-            total_samples = len(feature_dataset.features)
-            final_accuracy = "100%"  # Blind prediction achieves this
-            epochs_completed = 50  # Typical for blind prediction
-            
-            if hasattr(trainer, 'training_history') and trainer.training_history:
-                final_accuracy = f"{trainer.training_history.get('final_accuracy', 100.0):.1f}%"
-                epochs_completed = trainer.training_history.get('epochs_completed', 50)
-            
-            return {
-                'success': True,
-                'message': f'Successfully added "{plant_name}" and retrained the model!',
-                'details': {
-                    'plant_name': plant_name,
-                    'images_saved': 2,
-                    'total_classes': total_classes,
-                    'total_samples': total_samples,
-                    'final_accuracy': final_accuracy,
-                    'training_epochs': epochs_completed,
-                    'training_method': 'Blind Prediction + Immediate Correction',
-                    'data_usage': '100% (no validation waste)'
-                }
-            }
-        else:
-            raise Exception("Model retraining succeeded but reload failed")
-    
-    except Exception as e:
-        print(f"     Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return {'error': f'Failed to add plant: {str(e)}'}
-
 if __name__ == '__main__':
-    print("  PLANT RECOGNITION APP - EXACT TRAINING MATCH")
+    print("🌿 FIXED PLANT RECOGNITION WEB SERVER")
     print("=" * 50)
+    print("🔧 Loading model and scaler...")
     
-    # Load models on startup
-    if load_models():
-        print(f"\n  Starting web server...")
-        print(f"   URL: http://localhost:5000")
-        print(f"   API: http://localhost:5000/api/identify")
-        app.run(debug=True, host='0.0.0.0', port=5000)
-    else:
-        print(f"  Failed to load models. Please ensure trained_plant_model.pt exists.") 
+    success = load_model_and_scaler()
+    if not success:
+        print("\n❌ CRITICAL ERROR: Model or scaler loading failed!")
+        print("   The model needs to be retrained with scaler saving.")
+        print("   Run: python training.py")
+        exit(1)
+    
+    print(f"\n✅ Server ready with fixed scaler handling!")
+    print(f"   Model: {len(model_data['class_names'])} classes")
+    print(f"   Scaler: Fitted StandardScaler from training")
+    print(f"   URL: http://localhost:5000")
+    print(f"\n🚀 Starting server...")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000) 

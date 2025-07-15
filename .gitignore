@@ -5,6 +5,7 @@ checkpoints/
 # Ignore logs and stats
 logs/
 stats/
+data/plant_images/
 
 # Ignore checkpoint files
 download_checkpoint.json

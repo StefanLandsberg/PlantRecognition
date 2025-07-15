@@ -8,8 +8,8 @@ Features:
 - All complex augmentation methods from the original scripts
 - Modular design for easy integration
 - GPU acceleration support
-- Efficient memory management
-- Comprehensive plant-specific transformations
+- memory management
+- plant-specific transformations
 """
 
 import numpy as np
@@ -44,7 +44,7 @@ class UnifiedPlantAugmentationEngine:
     - Lighting conditions (shadow, sunflare, over/under exposed, indoor, golden/blue hour)
     - Plant-specific transforms (wilt, curl, focus blur, growth stages, diseases, deficiencies)
     - Weather effects (rain, wind, dust, dew)
-    - Advanced mixing (MixUp, CutMix, AugMix)
+    - mixing (MixUp, CutMix, AugMix)
     - Realistic angle variations (natural rotation, camera perspective, botanical angles)
     - Mobile photography simulation
     - Delta-based feature augmentation
@@ -60,7 +60,7 @@ class UnifiedPlantAugmentationEngine:
         self.plant_transforms = ["leaf_wilt", "leaf_curl", "focus_blur", "growth_stage", "disease_spots", "nutrient_deficiency", "pest_damage"]
         self.weather_effects = ["rain_drops", "wind_blur", "dust_particles", "morning_dew"]
         
-        # Cache for efficient augmentation
+        # Cache for augmentation
         self.augmentation_cache = {}
         self._lock = threading.Lock()
         
@@ -285,7 +285,7 @@ class UnifiedPlantAugmentationEngine:
             return cv2.warpAffine(image, rotation_matrix, (w, h), borderMode=cv2.BORDER_REFLECT)
     
     def _apply_basic_transform(self, image: np.ndarray) -> np.ndarray:
-        """Apply basic transformations (rotation, brightness, flip)"""
+        """Apply transformations (rotation, brightness, flip)"""
         h, w = image.shape[:2]
         variant = image.copy()
         
@@ -370,14 +370,14 @@ class UnifiedPlantAugmentationEngine:
             }
     
     def generate_augmented_variants(self, image: np.ndarray, num_variants: int = 12) -> List[np.ndarray]:
-        """Generate multiple augmented variants efficiently"""
-        variants = [image]  # Include original
+        """Generate multiple augmented variants efficiently - returns ONLY augmentations, not original"""
+        variants = []  # Don't include original - caller will handle that
         
         # Resize to standard size if needed
         if image.shape[:2] != (512, 512):
             image = cv2.resize(image, (512, 512))
         
-        for i in range(num_variants - 1):
+        for i in range(num_variants):  # Generate exactly num_variants augmentations
             # Apply different augmentation methods
             aug_type = np.random.choice(['basic', 'seasonal', 'lighting', 'plant', 'weather', 'angle'], 
                                        p=[0.3, 0.15, 0.15, 0.15, 0.15, 0.1])
@@ -387,15 +387,89 @@ class UnifiedPlantAugmentationEngine:
         return variants
     
     def generate_realistic_angle_augmentations(self, image: np.ndarray, num_angle_variants: int = 50) -> List[np.ndarray]:
-        """Generate realistic angle augmentations for botanical photography"""
-        variants = [image]  # Include original
+        """
+        Generate realistic angle variations that simulate natural plant photography angles
         
-        for i in range(num_angle_variants - 1):
-            # Focus on realistic angle variations
+        Args:
+            image: Input image
+            num_angle_variants: Number of angle variants to generate
+        
+        Returns:
+            List of angle-augmented images
+        """
+        variants = []
+        for i in range(num_angle_variants):
             variant = self._apply_realistic_angle_transform(image)
             variants.append(variant)
-        
         return variants
+
+    def create_augmented_batch_gpu(self, image_tensor: torch.Tensor, 
+                                 num_augmentations: int = 10) -> List[torch.Tensor]:
+        """
+        Create augmented versions staying entirely on GPU for ultra-parallel processing
+        Moved from GPUAugmentationEngine to consolidate all augmentation functionality
+        
+        Args:
+            image_tensor: Input image tensor on GPU
+            num_augmentations: Number of augmentations to generate
+            
+        Returns:
+            List of GPU tensors with augmentations
+        """
+        augmented_tensors = []
+        
+        # Ensure input is on GPU
+        image_tensor = image_tensor.to(self.device)
+        
+        for i in range(num_augmentations):
+            # Apply random augmentation directly on GPU tensor
+            augmented = self._apply_gpu_augmentation(image_tensor, i)
+            augmented_tensors.append(augmented)
+        
+        return augmented_tensors
+    
+    def _apply_gpu_augmentation(self, tensor: torch.Tensor, variant_idx: int) -> torch.Tensor:
+        """
+        Apply augmentation directly on GPU tensor for processing
+        Moved from GPUAugmentationEngine to consolidate all augmentation functionality
+        
+        Args:
+            tensor: Input tensor on GPU
+            variant_idx: Variant index to determine transform type
+            
+        Returns:
+            Augmented tensor on GPU
+        """
+        # Simple GPU-based augmentations for now
+        augmented = tensor.clone()
+        
+        # Random transformations based on variant index
+        transform_type = variant_idx % 6
+        
+        if transform_type == 0:  # Brightness
+            brightness = 0.7 + (variant_idx % 8) * 0.1
+            augmented = torch.clamp(augmented * brightness, 0, 1)
+        elif transform_type == 1:  # Contrast
+            contrast = 0.7 + (variant_idx % 8) * 0.1
+            mean_val = torch.mean(augmented)
+            augmented = torch.clamp((augmented - mean_val) * contrast + mean_val, 0, 1)
+        elif transform_type == 2:  # Noise
+            noise = torch.randn_like(augmented) * 0.03
+            augmented = torch.clamp(augmented + noise, 0, 1)
+        elif transform_type == 3:  # Color shift
+            color_shift = 0.9 + (variant_idx % 4) * 0.05
+            if len(augmented.shape) == 3:  # HWC
+                augmented[:,:,variant_idx % 3] *= color_shift
+            augmented = torch.clamp(augmented, 0, 1)
+        elif transform_type == 4:  # Saturation (HSV-like)
+            saturation = 0.8 + (variant_idx % 6) * 0.1
+            gray = torch.mean(augmented, dim=2, keepdim=True)
+            augmented = torch.clamp(gray + (augmented - gray) * saturation, 0, 1)
+        else:  # Gamma correction
+            gamma = 0.8 + (variant_idx % 6) * 0.1
+            augmented = torch.clamp(torch.pow(augmented, gamma), 0, 1)
+        
+        return augmented
 
 # Factory function for easy import
 def create_augmentation_engine(use_gpu: bool = True, enable_all_features: bool = True) -> UnifiedPlantAugmentationEngine:

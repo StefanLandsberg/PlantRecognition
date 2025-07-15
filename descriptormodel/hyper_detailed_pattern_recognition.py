@@ -9,12 +9,12 @@ This system extracts MILLIONS of different types of descriptors from plant image
 - Frequency Descriptors: Periodic structures, repetitive elements
 
 Each descriptor type gets its own curse-resistant processing, then unified combination
-with weighted analysis for optimal generalization.
+with weighted analysis for generalization.
 
   NEW: LIVE AUGMENTATION ENGINE for 98-99%+ accuracy!
 - Plant-specific augmentations: seasonal effects, growth stages, diseases
 - Environmental conditions: lighting, weather, shadows, depth-of-field
-- Advanced mixing: MixUp, CutMix, AugMix for robust training
+- mixing: MixUp, CutMix, AugMix for training
 - Biological variations: nutrient deficiency, pest damage, wilting
 
 COMPLETE INFERENCE TIME BREAKDOWN (per 512x512 image) - WITH DETAILED MS TIMING:
@@ -118,7 +118,7 @@ class GlobalGPUTensorCache:
             self._initialized = True
     
     def get_reusable_tensor(self, key: str, shape: tuple, dtype=torch.float32) -> torch.Tensor:
-        """Enhanced GPU tensor caching with memory pool management for better performance"""
+        """GPU tensor caching with memory pool management for better performance"""
         cache_key = f"{key}_{shape}_{dtype}"
         if cache_key not in self.tensor_cache:
             # Check if GPU memory is available before allocation
@@ -293,236 +293,295 @@ class CUDAStreamParallelProcessor:
         return all_results
     
     def _extract_modality_cuda_stream(self, modality: str, image_tensors: List[torch.Tensor]) -> torch.Tensor:
-        """Extract features for one modality across all images using CUDA stream"""
-        batch_features = []
+        """Extract features for one modality across all images using CUDA stream - TENSOR ONLY"""
+        batch_tensor = torch.stack(image_tensors)
         
-        for img_tensor in image_tensors:
-            # Convert tensor to numpy for current extractors (will optimize later)
-            if img_tensor.device.type == 'cuda':
-                img_np = (img_tensor.cpu().numpy() * 255).astype(np.uint8)
-            else:
-                img_np = (img_tensor.numpy() * 255).astype(np.uint8)
-            
-            # Ensure proper image format (H, W, C)
-            if len(img_np.shape) == 4:  # Batch dimension
-                img_np = img_np[0]
-            if len(img_np.shape) == 3 and img_np.shape[0] == 3:  # CHW -> HWC
-                img_np = img_np.transpose(1, 2, 0)
-            
-            # Extract features using existing methods (placeholder for now)
-            if modality == 'texture':
-                features = self._extract_texture_features_gpu(img_np)
-            elif modality == 'color':
-                features = self._extract_color_features_gpu(img_np)
-            elif modality == 'shape':
-                features = self._extract_shape_features_gpu(img_np)
-            elif modality == 'contrast':
-                features = self._extract_contrast_features_gpu(img_np)
-            elif modality == 'frequency':
-                features = self._extract_frequency_features_gpu(img_np)
-            elif modality == 'unique':
-                features = self._extract_unique_features_gpu(img_np)
-            else:
-                features = np.zeros(2500)  # Fallback
-            
-            # Convert back to GPU tensor
-            feature_tensor = torch.tensor(features, device=self.device, dtype=torch.float32)
-            batch_features.append(feature_tensor)
-        
-        # Stack all features into batch tensor
-        return torch.stack(batch_features)
-    
-    def _extract_texture_features_gpu(self, image: np.ndarray) -> np.ndarray:
-        """Fast texture extraction for CUDA streams"""
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        features = []
-        
-        # Fast texture sampling
-        for y in range(0, gray.shape[0]-8, 16):
-            for x in range(0, gray.shape[1]-8, 16):
-                patch = gray[y:y+8, x:x+8]
-                if patch.shape == (8, 8):
-                    features.extend([
-                        np.std(patch),
-                        np.mean(np.gradient(patch)[0]),
-                        np.mean(np.gradient(patch)[1]),
-                        np.percentile(patch, 90) - np.percentile(patch, 10)
-                    ])
-        
-        return self._normalize_features(features, 2500)
-    
-    def _extract_color_features_gpu(self, image: np.ndarray) -> np.ndarray:
-        """Fast color extraction for CUDA streams"""
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        features = []
-        
-        # Sample color statistics
-        for channel in range(3):
-            features.extend([
-                np.mean(image[:,:,channel]),
-                np.std(image[:,:,channel]),
-                np.mean(hsv[:,:,channel]),
-                np.std(hsv[:,:,channel]),
-                np.mean(lab[:,:,channel]),
-                np.std(lab[:,:,channel])
-            ])
-        
-        return self._normalize_features(features, 2500)
-    
-    def _extract_shape_features_gpu(self, image: np.ndarray) -> np.ndarray:
-        """Fast shape extraction for CUDA streams"""
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 50, 150)
-        features = []
-        
-        # Edge-based shape features
-        for y in range(0, edges.shape[0]-16, 32):
-            for x in range(0, edges.shape[1]-16, 32):
-                patch = edges[y:y+16, x:x+16]
-                if patch.shape == (16, 16):
-                    features.extend([
-                        np.sum(patch),
-                        np.mean(patch),
-                        len(np.unique(patch)),
-                        np.std(patch)
-                    ])
-        
-        return self._normalize_features(features, 2500)
-    
-    def _extract_contrast_features_gpu(self, image: np.ndarray) -> np.ndarray:
-        """Fast contrast extraction for CUDA streams"""
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        features = []
-        
-        # Contrast sampling
-        for y in range(0, gray.shape[0]-16, 32):
-            for x in range(0, gray.shape[1]-16, 32):
-                patch = gray[y:y+16, x:x+16]
-                if patch.shape == (16, 16):
-                    features.extend([
-                        np.std(patch),
-                        np.max(patch) - np.min(patch),
-                        np.mean(patch),
-                        np.percentile(patch, 90) - np.percentile(patch, 10)
-                    ])
-        
-        return self._normalize_features(features, 2500)
-    
-    def _extract_frequency_features_gpu(self, image: np.ndarray) -> np.ndarray:
-        """Fast frequency extraction for CUDA streams"""
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32)
-        features = []
-        
-        # DCT-based frequency features
-        for y in range(0, gray.shape[0]-32, 64):
-            for x in range(0, gray.shape[1]-32, 64):
-                patch = gray[y:y+32, x:x+32]
-                if patch.shape == (32, 32):
-                    dct = cv2.dct(patch)
-                    features.extend([
-                        np.mean(dct),
-                        np.std(dct),
-                        np.sum(np.abs(dct)),
-                        np.max(np.abs(dct))
-                    ])
-        
-        return self._normalize_features(features, 2500)
-    
-    def _extract_unique_features_gpu(self, image: np.ndarray) -> np.ndarray:
-        """Fast unique extraction for CUDA streams"""
-        features = []
-        
-        # Multi-channel unique features
-        for channel in range(3):
-            ch = image[:,:,channel]
-            for y in range(0, ch.shape[0]-8, 24):
-                for x in range(0, ch.shape[1]-8, 24):
-                    patch = ch[y:y+8, x:x+8]
-                    if patch.shape == (8, 8):
-                        features.extend([
-                            np.mean(patch),
-                            np.std(patch),
-                            np.median(patch),
-                            np.sum(patch > np.mean(patch))
-                        ])
-        
-        return self._normalize_features(features, 2500)
-    
-    def _normalize_features(self, features: List[float], target_size: int) -> np.ndarray:
-        """Normalize feature list to target size"""
-        # Pad or truncate to standard size
-        if len(features) < target_size:
-            features.extend([0.0] * (target_size - len(features)))
+        if modality == 'texture':
+            features = self._extract_texture_tensor_batch(batch_tensor)
+        elif modality == 'color':
+            features = self._extract_color_tensor_batch(batch_tensor)
+        elif modality == 'shape':
+            features = self._extract_shape_tensor_batch(batch_tensor)
+        elif modality == 'contrast':
+            features = self._extract_contrast_tensor_batch(batch_tensor)
+        elif modality == 'frequency':
+            features = self._extract_frequency_tensor_batch(batch_tensor)
+        elif modality == 'unique':
+            features = self._extract_unique_tensor_batch(batch_tensor)
         else:
-            features = features[:target_size]
+            features = torch.zeros((len(image_tensors), 5000), device=self.device, dtype=torch.float32)
         
-        return np.array(features, dtype=np.float32)
+        return features
+    
+    def _extract_texture_tensor_batch(self, batch_tensor: torch.Tensor) -> torch.Tensor:
+        """FULLY VECTORISED texture extraction for maximum GPU utilisation"""
+        B, H, W, C = batch_tensor.shape
+        
+        gray_batch = 0.299 * batch_tensor[:,:,:,2] + 0.587 * batch_tensor[:,:,:,1] + 0.114 * batch_tensor[:,:,:,0]
+        gray_batch = gray_batch.unsqueeze(1)
+        
+        sobel_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        
+        edges_x = torch.nn.functional.conv2d(gray_batch, sobel_x, padding=1)
+        edges_y = torch.nn.functional.conv2d(gray_batch, sobel_y, padding=1)
+        edges = torch.sqrt(edges_x**2 + edges_y**2).squeeze(1)
+        
+        # Vectorised statistics across batch
+        batch_means = torch.mean(edges.view(B, -1), dim=1)
+        batch_stds = torch.std(edges.view(B, -1), dim=1)
+        
+        # patch extraction with larger strides
+        patches_16 = torch.nn.functional.unfold(edges.unsqueeze(1), 16, stride=32)
+        patches_32 = torch.nn.functional.unfold(edges.unsqueeze(1), 32, stride=64)
+        
+        patch_16_means = torch.mean(patches_16, dim=1)
+        patch_32_means = torch.mean(patches_32, dim=1)
+        
+        # Enhanced texture features - more comprehensive extraction
+        # Multi-scale edge detection
+        sobel_3x3 = torch.sqrt(edges_x**2 + edges_y**2).squeeze(1)
+        
+        # Additional kernels for texture analysis
+        laplacian = torch.tensor([[0, -1, 0], [-1, 4, -1], [0, -1, 0]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        laplacian_response = torch.nn.functional.conv2d(gray_batch, laplacian, padding=1).squeeze(1)
+        
+        # Multi-scale patch analysis
+        patches_8 = torch.nn.functional.unfold(sobel_3x3.unsqueeze(1), 8, stride=16)  # Smaller patches
+        patches_16 = torch.nn.functional.unfold(sobel_3x3.unsqueeze(1), 16, stride=32) # Medium patches
+        patches_32 = torch.nn.functional.unfold(sobel_3x3.unsqueeze(1), 32, stride=64) # Large patches
+        patches_64 = torch.nn.functional.unfold(sobel_3x3.unsqueeze(1), 64, stride=128) # Extra large patches
+        
+        # Statistical features from patches
+        patch_8_stats = torch.cat([torch.mean(patches_8, dim=1), torch.std(patches_8, dim=1)], dim=1)
+        patch_16_stats = torch.cat([torch.mean(patches_16, dim=1), torch.std(patches_16, dim=1)], dim=1)
+        patch_32_stats = torch.cat([torch.mean(patches_32, dim=1), torch.std(patches_32, dim=1)], dim=1)
+        patch_64_stats = torch.cat([torch.mean(patches_64, dim=1), torch.std(patches_64, dim=1)], dim=1)
+        
+        # Combine enhanced texture features (target: 5000 features)
+        final_features = torch.cat([
+            batch_means.unsqueeze(1), batch_stds.unsqueeze(1),  # Basic stats: 2
+            torch.mean(laplacian_response.view(B, -1), dim=1).unsqueeze(1),  # Laplacian: 1
+            torch.std(laplacian_response.view(B, -1), dim=1).unsqueeze(1),   # Laplacian std: 1
+            patch_8_stats[:, :800],    # Small patch features: 800
+            patch_16_stats[:, :800],   # Medium patch features: 800  
+            patch_32_stats[:, :800],   # Large patch features: 800
+            patch_64_stats[:, :200],   # Extra large patch features: 200
+            torch.zeros(B, 2596, device=self.device)  # Padding to reach 5000
+        ], dim=1)
+        
+        return final_features
+    
+    def _extract_color_tensor_batch(self, batch_tensor: torch.Tensor) -> torch.Tensor:
+        """FULLY VECTORISED color extraction for maximum GPU utilisation"""
+        B, H, W, C = batch_tensor.shape
+        
+        # Extract RGB channels and statistics in vectorised manner
+        r, g, b = batch_tensor[:,:,:,2], batch_tensor[:,:,:,1], batch_tensor[:,:,:,0]
+        
+        # Vectorised color statistics across batch
+        rgb_means = torch.mean(torch.stack([r, g, b], dim=3).view(B, -1, 3), dim=1)
+        rgb_stds = torch.std(torch.stack([r, g, b], dim=3).view(B, -1, 3), dim=1)
+        
+        # patch extraction with minimal patches
+        rgb_patches = torch.nn.functional.unfold(
+            torch.stack([r, g, b], dim=1), 32, stride=64
+        )
+        patch_means = torch.mean(rgb_patches, dim=1)
+        
+        # Enhanced color features for better discrimination
+        # Convert to HSV for additional color information
+        hsv_batch = self._rgb_to_hsv_batch(batch_tensor)
+        h, s, v = hsv_batch[:,:,:,0], hsv_batch[:,:,:,1], hsv_batch[:,:,:,2]
+        
+        # HSV statistics
+        hsv_means = torch.mean(torch.stack([h, s, v], dim=3).view(B, -1, 3), dim=1)
+        hsv_stds = torch.std(torch.stack([h, s, v], dim=3).view(B, -1, 3), dim=1)
+        
+        # Multi-scale color patches
+        rgb_patches_16 = torch.nn.functional.unfold(torch.stack([r, g, b], dim=1), 16, stride=32)
+        rgb_patches_32 = torch.nn.functional.unfold(torch.stack([r, g, b], dim=1), 32, stride=64)
+        hsv_patches_16 = torch.nn.functional.unfold(torch.stack([h, s, v], dim=1), 16, stride=32)
+        
+        # Color distribution features
+        rgb_patch_16_means = torch.mean(rgb_patches_16, dim=1)
+        rgb_patch_32_means = torch.mean(rgb_patches_32, dim=1)
+        hsv_patch_16_means = torch.mean(hsv_patches_16, dim=1)
+        
+        # Enhanced color features (target: 5000 features)
+        final_features = torch.cat([
+            rgb_means, rgb_stds,              # RGB stats: 6
+            hsv_means, hsv_stds,              # HSV stats: 6  
+            rgb_patch_16_means[:, :1000],     # RGB 16px patches: 1000
+            rgb_patch_32_means[:, :1000],     # RGB 32px patches: 1000
+            hsv_patch_16_means[:, :1000],     # HSV 16px patches: 1000
+            torch.zeros(B, 1988, device=self.device)  # Padding to reach 5000
+        ], dim=1)
+        
+        return final_features
+    
+    def _rgb_to_hsv_batch(self, rgb_batch: torch.Tensor) -> torch.Tensor:
+        """Simple RGB to HSV conversion for batch processing"""
+        r, g, b = rgb_batch[:,:,:,2], rgb_batch[:,:,:,1], rgb_batch[:,:,:,0]
+        
+        max_val, _ = torch.max(torch.stack([r, g, b], dim=3), dim=3)
+        min_val, _ = torch.min(torch.stack([r, g, b], dim=3), dim=3)
+        delta = max_val - min_val
+        
+        # Value (brightness)
+        v = max_val
+        
+        # Saturation  
+        s = torch.where(max_val != 0, delta / max_val, torch.zeros_like(max_val))
+        
+        # Hue (simplified)
+        h = torch.where(delta != 0, 
+                       torch.where(max_val == r, (g - b) / delta,
+                       torch.where(max_val == g, 2.0 + (b - r) / delta, 4.0 + (r - g) / delta)),
+                       torch.zeros_like(delta))
+        h = (h / 6.0) % 1.0
+        
+        return torch.stack([h, s, v], dim=3)
+    
+    def _extract_shape_tensor_batch(self, batch_tensor: torch.Tensor) -> torch.Tensor:
+        """FULLY VECTORISED shape extraction for maximum GPU utilisation"""
+        B, H, W, C = batch_tensor.shape
+        
+        gray_batch = 0.299 * batch_tensor[:,:,:,2] + 0.587 * batch_tensor[:,:,:,1] + 0.114 * batch_tensor[:,:,:,0]
+        gray_batch = gray_batch.unsqueeze(1)
+        
+        sobel_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        
+        edges_x = torch.nn.functional.conv2d(gray_batch, sobel_x, padding=1)
+        edges_y = torch.nn.functional.conv2d(gray_batch, sobel_y, padding=1)
+        edges = torch.sqrt(edges_x**2 + edges_y**2).squeeze(1)
+        
+        # Vectorised edge statistics
+        edge_means = torch.mean(edges.view(B, -1), dim=1)
+        edge_stds = torch.std(edges.view(B, -1), dim=1)
+        edge_densities = torch.sum((edges > 0.1).view(B, -1), dim=1).float() / (H * W)
+        
+        # Simplified vectorised patch extraction
+        patches = torch.nn.functional.unfold(edges.unsqueeze(1), 32, stride=64)
+        patch_means = torch.mean(patches, dim=1)
+        
+        # Enhanced shape features with multiple edge detectors and scales
+        # Additional edge detection kernels
+        prewitt_x = torch.tensor([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        prewitt_y = torch.tensor([[-1, -1, -1], [0, 0, 0], [1, 1, 1]], device=self.device, dtype=torch.float32).view(1, 1, 3, 3)
+        
+        prewitt_edges_x = torch.nn.functional.conv2d(gray_batch, prewitt_x, padding=1)
+        prewitt_edges_y = torch.nn.functional.conv2d(gray_batch, prewitt_y, padding=1)
+        prewitt_edges = torch.sqrt(prewitt_edges_x**2 + prewitt_edges_y**2).squeeze(1)
+        
+        # Multi-scale shape analysis
+        patches_8 = torch.nn.functional.unfold(edges.unsqueeze(1), 8, stride=16)
+        patches_16 = torch.nn.functional.unfold(edges.unsqueeze(1), 16, stride=32)
+        patches_32 = torch.nn.functional.unfold(edges.unsqueeze(1), 32, stride=64)
+        patches_64 = torch.nn.functional.unfold(prewitt_edges.unsqueeze(1), 32, stride=64)
+        
+        # Shape statistics
+        prewitt_means = torch.mean(prewitt_edges.view(B, -1), dim=1)
+        prewitt_stds = torch.std(prewitt_edges.view(B, -1), dim=1)
+        
+        # Multi-scale patch statistics
+        patch_8_means = torch.mean(patches_8, dim=1)
+        patch_16_means = torch.mean(patches_16, dim=1)
+        patch_32_means = torch.mean(patches_32, dim=1)
+        patch_64_means = torch.mean(patches_64, dim=1)
+        
+        final_features = torch.cat([
+            edge_means.unsqueeze(1), edge_stds.unsqueeze(1), edge_densities.unsqueeze(1),  # Basic: 3
+            prewitt_means.unsqueeze(1), prewitt_stds.unsqueeze(1),                         # Prewitt: 2
+            patch_8_means[:, :800],    # Small patches: 800
+            patch_16_means[:, :800],   # Medium patches: 800
+            patch_32_means[:, :800],   # Large patches: 800
+            patch_64_means[:, :800],   # Prewitt patches: 800
+            torch.zeros(B, 1995, device=self.device)  # Padding to reach 5000
+        ], dim=1)
+        
+        return final_features
+    
+    def _extract_contrast_tensor_batch(self, batch_tensor: torch.Tensor) -> torch.Tensor:
+        """FULLY VECTORISED contrast extraction for maximum GPU utilisation"""
+        B, H, W, C = batch_tensor.shape
+        
+        gray_batch = 0.299 * batch_tensor[:,:,:,2] + 0.587 * batch_tensor[:,:,:,1] + 0.114 * batch_tensor[:,:,:,0]
+        
+        # Vectorised global statistics
+        gray_flat = gray_batch.view(B, -1)
+        global_means = torch.mean(gray_flat, dim=1)
+        global_stds = torch.std(gray_flat, dim=1)
+        global_ranges = torch.max(gray_flat, dim=1)[0] - torch.min(gray_flat, dim=1)[0]
+        
+        # minimal patch extraction
+        patches = torch.nn.functional.unfold(gray_batch.unsqueeze(1), 32, stride=64)
+        patch_means = torch.mean(patches, dim=1)
+        
+        final_features = torch.cat([
+            global_means.unsqueeze(1), global_stds.unsqueeze(1), global_ranges.unsqueeze(1),
+            patch_means[:, :500],
+            torch.zeros(B, 2496, device=self.device)  # Padding to reach 5000
+        ], dim=1)
+        
+        return final_features
+    
+    def _extract_frequency_tensor_batch(self, batch_tensor: torch.Tensor) -> torch.Tensor:
+        """FULLY VECTORISED frequency extraction for maximum GPU utilisation"""
+        B, H, W, C = batch_tensor.shape
+        
+        gray_batch = 0.299 * batch_tensor[:,:,:,2] + 0.587 * batch_tensor[:,:,:,1] + 0.114 * batch_tensor[:,:,:,0]
+        
+        # Vectorised FFT across batch
+        fft_batch = torch.fft.fft2(gray_batch)
+        fft_magnitude = torch.abs(fft_batch)
+        
+        # Simple frequency features for speed
+        dc_components = fft_magnitude[:, 0, 0]
+        high_freq = torch.mean(fft_magnitude[:, H//2:, W//2:].reshape(B, -1), dim=1)
+        low_freq = torch.mean(fft_magnitude[:, :H//4, :W//4].reshape(B, -1), dim=1)
+        
+        final_features = torch.cat([
+            dc_components.unsqueeze(1), high_freq.unsqueeze(1), low_freq.unsqueeze(1),
+            torch.zeros(B, 2497, device=self.device)  # Padding to reach 5000
+        ], dim=1)
+        
+        return final_features
+    
+    def _extract_unique_tensor_batch(self, batch_tensor: torch.Tensor) -> torch.Tensor:
+        """FULLY VECTORISED unique extraction for maximum GPU utilisation"""
+        B, H, W, C = batch_tensor.shape
+        
+        # single-scale patch extraction
+        rgb_batch = batch_tensor.permute(0, 3, 1, 2)
+        patches_8 = torch.nn.functional.unfold(rgb_batch, 16, stride=32)
+        patch_means = torch.mean(patches_8, dim=1)
+        
+        # Vectorised corner detection
+        gray_batch = 0.299 * batch_tensor[:,:,:,2] + 0.587 * batch_tensor[:,:,:,1] + 0.114 * batch_tensor[:,:,:,0]
+        corner_kernel = torch.tensor([[[[0, -1, 0], [-1, 4, -1], [0, -1, 0]]]], device=self.device, dtype=torch.float32)
+        corners = torch.nn.functional.conv2d(gray_batch.unsqueeze(1), corner_kernel, padding=1).squeeze(1)
+        corner_means = torch.mean(torch.abs(corners).view(B, -1), dim=1)
+        
+        final_features = torch.cat([
+            patch_means[:, :500],
+            corner_means.unsqueeze(1),
+            torch.zeros(B, 1999, device=self.device)  # Padding to reach 5000
+        ], dim=1)
+        
+        return final_features
 
-class GPUAugmentationEngine:
-    """GPU-based augmentation engine that keeps everything on GPU"""
-    
-    def __init__(self):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
-    def create_augmented_batch_gpu(self, image_tensor: torch.Tensor, 
-                                 num_augmentations: int = 10) -> List[torch.Tensor]:
-        """
-        Create augmented versions staying entirely on GPU
-        Returns list of GPU tensors
-        """
-        augmented_tensors = []
-        
-        # Ensure input is on GPU
-        image_tensor = image_tensor.to(self.device)
-        
-        for i in range(num_augmentations):
-            # Apply random augmentation directly on GPU tensor
-            augmented = self._apply_gpu_augmentation(image_tensor, i)
-            augmented_tensors.append(augmented)
-        
-        return augmented_tensors
-    
-    def _apply_gpu_augmentation(self, tensor: torch.Tensor, variant_idx: int) -> torch.Tensor:
-        """Apply augmentation directly on GPU tensor"""
-        # Simple GPU-based augmentations for now
-        augmented = tensor.clone()
-        
-        # Random transformations based on variant index
-        transform_type = variant_idx % 6
-        
-        if transform_type == 0:  # Brightness
-            brightness = 0.7 + (variant_idx % 8) * 0.1
-            augmented = torch.clamp(augmented * brightness, 0, 1)
-        elif transform_type == 1:  # Contrast
-            contrast = 0.7 + (variant_idx % 8) * 0.1
-            mean_val = torch.mean(augmented)
-            augmented = torch.clamp((augmented - mean_val) * contrast + mean_val, 0, 1)
-        elif transform_type == 2:  # Noise
-            noise = torch.randn_like(augmented) * 0.03
-            augmented = torch.clamp(augmented + noise, 0, 1)
-        elif transform_type == 3:  # Color shift
-            color_shift = 0.9 + (variant_idx % 4) * 0.05
-            if len(augmented.shape) == 3:  # HWC
-                augmented[:,:,variant_idx % 3] *= color_shift
-            augmented = torch.clamp(augmented, 0, 1)
-        elif transform_type == 4:  # Saturation (HSV-like)
-            saturation = 0.8 + (variant_idx % 6) * 0.1
-            gray = torch.mean(augmented, dim=2, keepdim=True)
-            augmented = torch.clamp(gray + (augmented - gray) * saturation, 0, 1)
-        else:  # Gamma correction
-            gamma = 0.8 + (variant_idx % 6) * 0.1
-            augmented = torch.clamp(torch.pow(augmented, gamma), 0, 1)
-        
-        return augmented
+# Import unified augmentation system
+from unified_plant_augmentation import create_augmentation_engine
 
 # Global instances
 _gpu_tensor_cache = GPUPersistentTensorCache()
 _cuda_processor = CUDAStreamParallelProcessor()
-_gpu_augmenter = GPUAugmentationEngine()
+_gpu_augmenter = create_augmentation_engine(use_gpu=True, enable_all_features=True)
 
 class ProgressTracker:
-    """Clean progress tracker that updates last 2 lines without scrolling"""
+    """progress tracker that updates last 2 lines without scrolling"""
     
     def __init__(self):
         self.current_stage = ""
@@ -597,7 +656,7 @@ class ProgressTracker:
         self.update(self.total, self.total, item=message)
         print()  # Add final newline
 
-# GPU-optimized feature extraction system
+# feature extraction system
 
 
 # Global instances
@@ -618,2086 +677,6 @@ def format_timing(start_ms: float, end_ms: float) -> str:
     else:
         return f"{diff_ms:.0f}ms"
 
-class ColorDescriptorExtractor:
-    """
-    Extracts MILLIONS of color descriptors from botanical images.
-    Pure descriptor-based approach for color distribution analysis.
-    
-    Expected timing: ~8-15ms (GPU) (GPU-only)
-    """
-    
-    def __init__(self, image_size: int = 512):
-        self.image_size = image_size
-        self.use_gpu = GPU_AVAILABLE
-        
-        # ULTRA-FAST Color descriptor scales - dramatically reduced for speed
-        self.color_scales = [
-            {'patch_size': 8, 'stride': 16, 'name': 'medium_color'},      # ~1K descriptors (was 65K)
-            {'patch_size': 16, 'stride': 32, 'name': 'coarse_color'},     # ~256 descriptors (was 28K)
-        ]
-        
-        # Color extractor initialized
-    
-    def extract_descriptors(self, image: np.ndarray) -> np.ndarray:
-        """Extract millions of color descriptors with ultra-fast vectorized processing"""
-        start_time = get_timestamp_ms()
-        
-        if image.shape[:2] != (self.image_size, self.image_size):
-            resize_start = get_timestamp_ms()
-            image = cv2.resize(image, (self.image_size, self.image_size))
-            resize_end = get_timestamp_ms()
-        
-        # GPU-only operation
-        all_color_descriptors = self._extract_color_gpu_ultra_fast(image)
-        
-        end_time = get_timestamp_ms()
-        return all_color_descriptors
-    
-    def _extract_color_gpu_ultra_fast(self, image: np.ndarray) -> np.ndarray:
-        """Ultra-fast GPU color extraction with single vectorized operation"""
-        gpu_start = get_timestamp_ms()
-        
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        
-        # Convert to different color spaces for descriptor diversity
-        colorspace_start = get_timestamp_ms()
-        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lab_image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        colorspace_end = get_timestamp_ms()
-        
-        # Convert to PyTorch tensors
-        tensor_start = get_timestamp_ms()
-        bgr_tensor = torch.from_numpy(image.astype(np.float32)).to(device) / 255.0
-        hsv_tensor = torch.from_numpy(hsv_image.astype(np.float32)).to(device) / 255.0
-        lab_tensor = torch.from_numpy(lab_image.astype(np.float32)).to(device) / 255.0
-        tensor_end = get_timestamp_ms()
-        
-        # Extract all color descriptors at once with vectorized operations
-        extract_start = get_timestamp_ms()
-        all_descriptors = self._extract_all_color_vectorized(bgr_tensor, hsv_tensor, lab_tensor)
-        extract_end = get_timestamp_ms()
-        
-        gpu_end = get_timestamp_ms()
-        
-        return all_descriptors
-    
-    def _extract_all_color_vectorized_shared(self, bgr_tensor: torch.Tensor, hsv_tensor: torch.Tensor, lab_tensor: torch.Tensor, shared_coverage: torch.Tensor, scale_h: float, scale_w: float) -> np.ndarray:
-        """ULTRA-OPTIMIZED COLOR: Single-pass multi-color with shared coverage"""
-        vectorize_start = get_timestamp_ms()
-        h, w, _ = bgr_tensor.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 10  # 3 channels × 3 stats + size_feature
-        
-        # SMART COLOR COMPLEXITY ANALYSIS
-        complexity_start = get_timestamp_ms()
-        # Fast color variance analysis using BGR samples
-        sample_size = min(64, h//4, w//4)
-        color_sample = bgr_tensor[:sample_size, :sample_size].reshape(-1, 3)
-        if color_sample.numel() > 0:
-            color_complexity = torch.mean(torch.var(color_sample, dim=0)).item()
-        else:
-            color_complexity = 0.05
-        complexity_end = get_timestamp_ms()
-        
-        # OPTIMIZE FOR 75% CURSE RETENTION: Dramatically increase color descriptors  
-        if color_complexity < 0.02:      # Very uniform colors
-            target_descriptors = 800      # MASSIVE INCREASE: Find curse resistance point
-            y_step = max(20, h // 20)     # Smaller steps for more data
-            x_step = max(20, w // 20)
-        elif color_complexity < 0.08:    # Medium color variation
-            target_descriptors = 1600     # MASSIVE INCREASE: Test curse limits
-            y_step = max(16, h // 24)     # Dense sampling
-            x_step = max(16, w // 24)
-        elif color_complexity < 0.20:    # High color variation
-            target_descriptors = 2500     # MASSIVE INCREASE: Match texture scaling
-            y_step = max(12, h // 28)     # Very dense sampling
-            x_step = max(12, w // 28)
-        else:                           # Very complex colors
-            target_descriptors = 4000     # EXTREME INCREASE: Find optimal curse point
-            y_step = max(8, h // 32)      # Ultra-dense steps
-            x_step = max(8, w // 32)
-        
-        # : 4-WAY QUADRANT THREADING for color processing
-        smart_start = get_timestamp_ms()
-        
-        # Divide image into 4 quadrants for parallel processing
-        h_mid, w_mid = h // 2, w // 2
-        quadrants = [
-            (0, h_mid, 0, w_mid, "TL"),           # Top-left
-            (0, h_mid, w_mid, w, "TR"),           # Top-right  
-            (h_mid, h, 0, w_mid, "BL"),           # Bottom-left
-            (h_mid, h, w_mid, w, "BR")            # Bottom-right
-        ]
-        
-        # Thread-safe patch collection
-        thread_patches = [[] for _ in range(4)]
-        thread_lock = threading.Lock()
-        
-        def process_color_quadrant(quad_idx, y_start, y_end, x_start, x_end, quad_name):
-            """Process one color quadrant in parallel"""
-            local_patches = []
-            
-            for y in range(y_start, min(y_end - 16, h - 16), y_step):
-                for x in range(x_start, min(x_end - 16, w - 16), x_step):
-                    # Ultra-quick shared coverage check
-                    cy, cx = int(y / scale_h), int(x / scale_w)
-                    if cy < shared_coverage.shape[0] and cx < shared_coverage.shape[1]:
-                        with thread_lock:  # Thread-safe coverage check
-                            if shared_coverage[cy, cx, 0] > 0:
-                                continue  # Skip if another modality already processed this area
-                    
-                    # FAST color variance analysis using BGR only (representative)
-                    max_test_size = min(16, h - y, w - x)
-                    test_patch = bgr_tensor[y:y+max_test_size, x:x+max_test_size]
-                    
-                    # LIGHTNING-FAST color variance (channel-wise variance)
-                    color_variance = torch.mean(torch.var(test_patch.reshape(-1, 3), dim=0)).item()
-                    
-                    # Determine patch size based on color complexity
-                    if color_variance < 0.05:      # Uniform color - large patch
-                        patch_size = 20
-                    elif color_variance < 0.15:    # Medium variation - medium patch  
-                        patch_size = 16
-                    else:                          # High color variation - small patch
-                        patch_size = 12
-                    
-                    # Validate and adjust patch size
-                    patch_size = min(patch_size, h - y, w - x)
-                    patch_size = max(8, patch_size)  # Minimum useful size
-                    
-                    # Process patch if valid
-                    if y + patch_size <= h and x + patch_size <= w:
-                        # SINGLE-PASS: Process all color spaces for this patch
-                        all_color_features = []
-                        
-                        for tensor in [bgr_tensor, hsv_tensor, lab_tensor]:
-                            patch = tensor[y:y+patch_size, x:x+patch_size]
-                            patch_flat = patch.reshape(-1, 3)  # (N, 3)
-                            
-                            # Fast color statistics
-                            patch_mean = torch.mean(patch_flat, dim=0)  # (3,)
-                            patch_std = torch.std(patch_flat, dim=0)    # (3,)
-                            patch_range = torch.max(patch_flat, dim=0)[0] - torch.min(patch_flat, dim=0)[0]  # (3,)
-                            
-                            all_color_features.extend([patch_mean, patch_std, patch_range])
-                        
-                        # Combine all color space features + size
-                        size_feature = torch.tensor([patch_size / 20.0], device=bgr_tensor.device)
-                        descriptor = torch.cat(all_color_features + [size_feature])
-                        local_patches.append(descriptor)
-                        
-                        # Mark area as covered in shared matrix (thread-safe)
-                        with thread_lock:
-                            cy_end, cx_end = min(int((y+patch_size) / scale_h), shared_coverage.shape[0]-1), min(int((x+patch_size) / scale_w), shared_coverage.shape[1]-1)
-                            shared_coverage[cy:cy_end+1, cx:cx_end+1, 0] = 1.0  # Processed flag
-                            shared_coverage[cy:cy_end+1, cx:cx_end+1, 1] = float(patch_size)  # Size used
-            
-            thread_patches[quad_idx] = local_patches
-        
-        # Launch 4 parallel threads for color quadrants
-        threads = []
-        for i, (y_start, y_end, x_start, x_end, quad_name) in enumerate(quadrants):
-            thread = threading.Thread(
-                target=process_color_quadrant, 
-                args=(i, y_start, y_end, x_start, x_end, quad_name),
-                name=f"Color-{quad_name}"
-            )
-            threads.append(thread)
-            thread.start()
-        
-        # Wait for all quadrant threads to complete
-        for thread in threads:
-            thread.join()
-        
-        # Combine all quadrant patches
-        all_patches = []
-        for quad_patches in thread_patches:
-            all_patches.extend(quad_patches)
-        
-        smart_end = get_timestamp_ms()
-        
-        if not all_patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack all descriptors
-        stack_start = get_timestamp_ms()
-        descriptor_tensor = torch.stack(all_patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        stack_end = get_timestamp_ms()
-        
-        # Ensure fixed size
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        
-        vectorize_end = get_timestamp_ms()
-        
-        return descriptor_array.astype(np.float32)
-
-    def _extract_all_color_vectorized(self, bgr_tensor: torch.Tensor, hsv_tensor: torch.Tensor, lab_tensor: torch.Tensor) -> np.ndarray:
-        """DYNAMIC COLOR SIZING: Context-aware adaptive color patch extraction"""
-        vectorize_start = get_timestamp_ms()
-        h, w, _ = bgr_tensor.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 10  # 3 channels × 3 stats + size_feature
-        target_descriptors = 8000  # MASSIVELY INCREASED: Dynamic sizing with many more patches
-        
-        # DYNAMIC PATCH SIZING: Fresh coverage matrix for each image (NO BIAS)
-        coverage_start = get_timestamp_ms()
-        coverage_matrix = torch.zeros((h, w, 2), dtype=torch.float32, device=bgr_tensor.device)
-        # coverage_matrix[:,:,0] = processed flag (0/1)
-        # coverage_matrix[:,:,1] = patch size used at this pixel
-        coverage_end = get_timestamp_ms()
-        
-        # DYNAMIC COLOR SIZING: Context-aware adaptive selection for all color spaces
-        smart_start = get_timestamp_ms()
-        all_patches = []
-        
-        # Process all color spaces with dynamic sizing
-        for color_idx, tensor in enumerate([bgr_tensor, hsv_tensor, lab_tensor]):
-            y = 0
-            while y < h - 8:  # Minimum patch size room
-                x = 0
-                while x < w - 8:
-                    # Skip if already covered (shared across color spaces)
-                    if coverage_matrix[y, x, 0] > 0:
-                        x += 4  # Small skip for dense coverage
-                        continue
-                    
-                    # DYNAMIC SIZING: Check neighboring patch sizes for consistency
-                    neighbor_sizes = []
-                    for dy in [-12, -6, 0, 6, 12]:
-                        for dx in [-12, -6, 0, 6, 12]:
-                            ny, nx = y + dy, x + dx
-                            if 0 <= ny < h and 0 <= nx < w and coverage_matrix[ny, nx, 0] > 0:
-                                neighbor_sizes.append(coverage_matrix[ny, nx, 1].item())
-                    
-                    # Determine patch size based on context + color variance
-                    if neighbor_sizes:
-                        # Use most common neighbor size as baseline
-                        preferred_size = int(max(set(neighbor_sizes), key=neighbor_sizes.count))
-                    else:
-                        # No neighbors - analyze color complexity
-                        max_test_size = min(24, h - y, w - x)
-                        test_patch = tensor[y:y+max_test_size, x:x+max_test_size]
-                        color_variance = torch.var(test_patch).item()
-                        
-                        if color_variance < 0.05:      # Uniform color - large patch
-                            preferred_size = 24
-                        elif color_variance < 0.15:    # Medium variation - medium patch  
-                            preferred_size = 12
-                        else:                          # High color variation - small patch
-                            preferred_size = 8
-                    
-                    # Validate and adjust patch size to fit image
-                    patch_size = min(preferred_size, h - y, w - x)
-                    patch_size = max(8, patch_size)  # Minimum useful size
-                    
-                    # Final size must be valid
-                    if y + patch_size <= h and x + patch_size <= w:
-                        # Extract patch and create enhanced descriptor
-                        patch = tensor[y:y+patch_size, x:x+patch_size]
-                        patch_flat = patch.reshape(-1, 3)  # (N, 3)
-                        
-                        # Enhanced color statistics with size awareness
-                        patch_mean = torch.mean(patch_flat, dim=0)  # (3,)
-                        patch_std = torch.std(patch_flat, dim=0)    # (3,)
-                        patch_range = torch.max(patch_flat, dim=0)[0] - torch.min(patch_flat, dim=0)[0]  # (3,)
-                        size_feature = torch.tensor([patch_size / 24.0], device=patch.device)  # Normalized size
-                        
-                        # Enhanced 10D descriptor: [3×mean, 3×std, 3×range, size_context]
-                        descriptor = torch.cat([patch_mean, patch_std, patch_range, size_feature])
-                        all_patches.append(descriptor)
-                        
-                        # Mark area as covered with patch size info (shared across color spaces)
-                        coverage_matrix[y:y+patch_size, x:x+patch_size, 0] = 1.0  # Processed flag
-                        coverage_matrix[y:y+patch_size, x:x+patch_size, 1] = float(patch_size)  # Size used
-                        
-                        # Smart jump based on patch size
-                        x += max(patch_size // 2, 4)  # Adaptive step size
-                    else:
-                        x += 4  # Small step if patch doesn't fit
-                y += 4  # Dense vertical coverage
-        
-        smart_end = get_timestamp_ms()
-        
-        if not all_patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack all descriptors
-        stack_start = get_timestamp_ms()
-        descriptor_tensor = torch.stack(all_patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        stack_end = get_timestamp_ms()
-        
-        # Ensure fixed size
-        size_start = get_timestamp_ms()
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        size_end = get_timestamp_ms()
-
-        vectorize_end = get_timestamp_ms()
-
-        return descriptor_array.astype(np.float32)
-    
-    # CPU method removed - GPU-only operation
-
-class ShapeDescriptorExtractor:
-    """
-    Extracts MILLIONS of shape descriptors from botanical images.
-    Pure descriptor-based approach for geometric structure analysis.
-    
-    Expected timing: ~12-20ms (GPU) (GPU-only)
-    """
-    
-    def __init__(self, image_size: int = 512):
-        self.image_size = image_size
-        self.use_gpu = GPU_AVAILABLE
-        
-        # Shape descriptor scales - each extracts different geometric descriptor types
-        self.shape_scales = [
-            {'patch_size': 3, 'stride': 1, 'name': 'micro_shape'},        # ~258K descriptors
-            {'patch_size': 5, 'stride': 2, 'name': 'fine_shape'},         # ~62K descriptors
-            {'patch_size': 7, 'stride': 3, 'name': 'medium_shape'},       # ~26K descriptors
-            {'patch_size': 10, 'stride': 5, 'name': 'macro_shape'},       # ~10K descriptors
-        ]
-        
-        # Shape extractor initialized
-    
-    def extract_descriptors(self, image: np.ndarray) -> np.ndarray:
-        """Extract millions of shape descriptors with ultra-fast processing"""
-        start_time = get_timestamp_ms()
-        
-        if image.shape[:2] != (self.image_size, self.image_size):
-            resize_start = get_timestamp_ms()
-            image = cv2.resize(image, (self.image_size, self.image_size))
-            resize_end = get_timestamp_ms()
- 
-        # GPU-only operation
-        all_shape_descriptors = self._extract_shape_gpu_ultra_fast(image)
-        
-        end_time = get_timestamp_ms()
-
-        return all_shape_descriptors
-    
-    def _extract_shape_gpu_ultra_fast(self, image: np.ndarray) -> np.ndarray:
-        """Ultra-fast GPU shape extraction with single vectorized operation"""
-        gpu_start = get_timestamp_ms()
-   
-        # Convert to grayscale for edge detection
-        gray_start = get_timestamp_ms()
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        gray_end = get_timestamp_ms()
-        
-        # Convert to PyTorch tensor on GPU
-        tensor_start = get_timestamp_ms()
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        tensor_end = get_timestamp_ms() 
-        
-        # Extract all shape descriptors at once
-        extract_start = get_timestamp_ms()
-        all_descriptors = self._extract_all_shape_vectorized(tensor_image)
-        extract_end = get_timestamp_ms()
-        
-        gpu_end = get_timestamp_ms()
-
-        return all_descriptors
-    
-    def _extract_all_shape_vectorized_shared(self, tensor_image: torch.Tensor, shared_coverage: torch.Tensor, scale_h: float, scale_w: float) -> np.ndarray:
-        """ULTRA-OPTIMIZED SHAPE: Fast edge analysis with shared coverage"""
-        h, w = tensor_image.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 5  # edge_density, h_edges, v_edges, edge_intensity, size_feature
-        
-        # SMART EDGE COMPLEXITY ANALYSIS
-        complexity_start = get_timestamp_ms()
-        # Fast edge analysis using corner samples
-        sample_size = min(64, h//4, w//4)
-        edge_sample = tensor_image[:sample_size, :sample_size]
-        if edge_sample.numel() > 0 and edge_sample.shape[0] > 1 and edge_sample.shape[1] > 1:
-            h_grads = torch.abs(edge_sample[1:, :] - edge_sample[:-1, :])
-            v_grads = torch.abs(edge_sample[:, 1:] - edge_sample[:, :-1])
-            edge_complexity = torch.mean(h_grads).item() + torch.mean(v_grads).item()
-        else:
-            edge_complexity = 0.05
-        complexity_end = get_timestamp_ms()
-        
-        # OPTIMIZE FOR 75% CURSE RETENTION: Dramatically increase shape descriptors
-        if edge_complexity < 0.02:      # Very smooth edges
-            target_descriptors = 1000    # MASSIVE INCREASE: Find curse resistance point
-            y_step = max(20, h // 20)    # Smaller steps for more data
-            x_step = max(20, w // 20)
-        elif edge_complexity < 0.08:    # Medium edge activity
-            target_descriptors = 2500    # MASSIVE INCREASE: Test curse limits
-            y_step = max(16, h // 24)    # Dense sampling
-            x_step = max(16, w // 24)
-        elif edge_complexity < 0.20:    # High edge activity
-            target_descriptors = 4000    # MASSIVE INCREASE: Match texture scaling
-            y_step = max(12, h // 28)    # Very dense sampling
-            x_step = max(12, w // 28)
-        else:                          # Very complex edges
-            target_descriptors = 6000    # EXTREME INCREASE: Find optimal curse point
-            y_step = max(8, h // 32)     # Ultra-dense steps
-            x_step = max(8, w // 32)
-        
-
-        # ULTRA-FAST shape sizing with shared coverage
-        smart_start = get_timestamp_ms()
-        patches = []
-        
-        for y in range(0, h - 16, y_step):
-            for x in range(0, w - 16, x_step):
-                # Ultra-quick shared coverage check
-                cy, cx = int(y / scale_h), int(x / scale_w)
-                if cy < shared_coverage.shape[0] and cx < shared_coverage.shape[1]:
-                    if shared_coverage[cy, cx, 0] > 0:
-                        continue  # Skip if another modality already processed this area
-                
-                # FAST edge complexity analysis (8x8 sample)
-                max_test_size = min(16, h - y, w - x)
-                test_patch = tensor_image[y:y+max_test_size, x:x+max_test_size]
-                
-                # LIGHTNING-FAST edge variance (gradient magnitude)
-                if test_patch.shape[0] >= 8 and test_patch.shape[1] >= 8:
-                    sample_patch = test_patch[:8, :8]
-                    grad_h = torch.abs(sample_patch[1:, :] - sample_patch[:-1, :])
-                    grad_v = torch.abs(sample_patch[:, 1:] - sample_patch[:, :-1])
-                    edge_variance = torch.mean(grad_h).item() + torch.mean(grad_v).item()
-                else:
-                    edge_variance = 0.01
-                
-                # Determine patch size based on edge complexity
-                if edge_variance < 0.02:        # Smooth areas - large patch
-                    patch_size = 24
-                elif edge_variance < 0.08:      # Medium edges - medium patch  
-                    patch_size = 16
-                else:                           # Complex edges - small patch
-                    patch_size = 12
-                
-                # Validate and adjust patch size
-                patch_size = min(patch_size, h - y, w - x)
-                patch_size = max(8, patch_size)  # Minimum useful size
-                
-                # Process patch if valid
-                if y + patch_size <= h and x + patch_size <= w:
-                    # Extract patch and create fast descriptor
-                    patch = tensor_image[y:y+patch_size, x:x+patch_size]
-                    
-                    # FAST shape descriptor computation
-                    edge_density = torch.mean((patch > 0.1).float()).item()
-                    
-                    # Fast edge orientation (using differences)
-                    if patch_size > 1:
-                        h_edges = torch.mean(torch.abs(patch[:, 1:] - patch[:, :-1])).item()
-                        v_edges = torch.mean(torch.abs(patch[1:, :] - patch[:-1, :])).item()
-                    else:
-                        h_edges = v_edges = 0.0
-                    
-                    edge_intensity = torch.mean(torch.abs(patch)).item()
-                    size_feature = patch_size / 24.0  # Normalized size feature
-                    
-                    # Enhanced 5D descriptor
-                    descriptor = torch.tensor([edge_density, h_edges, v_edges, edge_intensity, size_feature], device=patch.device)
-                    patches.append(descriptor)
-                    
-                    # Mark area as covered in shared matrix
-                    cy_end, cx_end = min(int((y+patch_size) / scale_h), shared_coverage.shape[0]-1), min(int((x+patch_size) / scale_w), shared_coverage.shape[1]-1)
-                    shared_coverage[cy:cy_end+1, cx:cx_end+1, 0] = 1.0  # Processed flag
-                    shared_coverage[cy:cy_end+1, cx:cx_end+1, 1] = float(patch_size)  # Size used
-        
-        smart_end = get_timestamp_ms()
-        
-        if not patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack all descriptors
-        stack_start = get_timestamp_ms()
-        descriptor_tensor = torch.stack(patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        stack_end = get_timestamp_ms()
-        
-        # Ensure fixed size
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        
-        return descriptor_array.astype(np.float32)
-
-    def _extract_all_shape_vectorized(self, tensor_image: torch.Tensor) -> np.ndarray:
-        """DYNAMIC SHAPE SIZING: Context-aware adaptive shape patch extraction"""
-        h, w = tensor_image.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 5  # edge_density, h_edges, v_edges, edge_intensity, size_feature
-        target_descriptors = 6000  # DRAMATICALLY INCREASED: Dynamic sizing with many more patches
-        
-        # DYNAMIC PATCH SIZING: Fresh coverage matrix for each image (NO BIAS)
-        coverage_start = get_timestamp_ms()
-        coverage_matrix = torch.zeros((h, w, 2), dtype=torch.float32, device=tensor_image.device)
-        coverage_end = get_timestamp_ms()
-        
-        # DYNAMIC SHAPE SIZING: Context-aware adaptive selection
-        smart_start = get_timestamp_ms()
-        patches = []
-        y = 0
-        while y < h - 8:  # Minimum patch size room
-            x = 0
-            while x < w - 8:
-                # Skip if already covered
-                if coverage_matrix[y, x, 0] > 0:
-                    x += 4  # Small skip for dense coverage
-                    continue
-                
-                # DYNAMIC SIZING: Check neighboring patch sizes for consistency
-                neighbor_sizes = []
-                for dy in [-20, -10, 0, 10, 20]:
-                    for dx in [-20, -10, 0, 10, 20]:
-                        ny, nx = y + dy, x + dx
-                        if 0 <= ny < h and 0 <= nx < w and coverage_matrix[ny, nx, 0] > 0:
-                            neighbor_sizes.append(coverage_matrix[ny, nx, 1].item())
-                
-                # Determine patch size based on context + edge complexity
-                if neighbor_sizes:
-                    # Use most common neighbor size as baseline
-                    preferred_size = int(max(set(neighbor_sizes), key=neighbor_sizes.count))
-                else:
-                    # No neighbors - analyze edge complexity
-                    max_test_size = min(32, h - y, w - x)
-                    test_patch = tensor_image[y:y+max_test_size, x:x+max_test_size]
-                    edge_variance = torch.var(torch.abs(torch.diff(test_patch.flatten()))).item() if test_patch.numel() > 1 else 0.0
-                    
-                    if edge_variance < 0.01:        # Smooth areas - large patch
-                        preferred_size = 32
-                    elif edge_variance < 0.05:      # Medium edges - medium patch  
-                        preferred_size = 16
-                    else:                           # Complex edges - small patch
-                        preferred_size = 8
-                
-                # Validate and adjust patch size to fit image
-                patch_size = min(preferred_size, h - y, w - x)
-                patch_size = max(8, patch_size)  # Minimum useful size
-                
-                # Final size must be valid
-                if y + patch_size <= h and x + patch_size <= w:
-                    # Extract patch and create enhanced descriptor
-                    patch = tensor_image[y:y+patch_size, x:x+patch_size]
-                    
-                    # Enhanced shape descriptor with size awareness
-                    patch_flat = patch.flatten()
-                    edge_density = torch.mean((patch > 0.1).float()).item()
-                    
-                    # Edge orientation descriptors
-                    if patch_size > 1:
-                        h_diffs = torch.diff(patch, dim=1)
-                        v_diffs = torch.diff(patch, dim=0)
-                        h_edges = torch.mean(h_diffs).item()
-                        v_edges = torch.mean(v_diffs).item()
-                    else:
-                        h_edges = v_edges = 0.0
-                    
-                    edge_intensity = torch.mean(torch.abs(patch)).item()
-                    size_feature = patch_size / 32.0  # Normalized size feature
-                    
-                    # Enhanced 5D descriptor: [edge_density, h_edges, v_edges, edge_intensity, size_context]
-                    descriptor = torch.tensor([edge_density, h_edges, v_edges, edge_intensity, size_feature], device=patch.device)
-                    patches.append(descriptor)
-                    
-                    # Mark area as covered with patch size info
-                    coverage_matrix[y:y+patch_size, x:x+patch_size, 0] = 1.0  # Processed flag
-                    coverage_matrix[y:y+patch_size, x:x+patch_size, 1] = float(patch_size)  # Size used
-                    
-                    # Smart jump based on patch size
-                    x += max(patch_size // 2, 4)  # Adaptive step size
-                else:
-                    x += 4  # Small step if patch doesn't fit
-            y += 4  # Dense vertical coverage
-        
-        smart_end = get_timestamp_ms()
-        
-        if not patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack all descriptors
-        stack_start = get_timestamp_ms()
-        descriptor_tensor = torch.stack(patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        stack_end = get_timestamp_ms()
-        
-        # Ensure fixed size
-        size_start = get_timestamp_ms()
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        size_end = get_timestamp_ms()
-        
-        return descriptor_array.astype(np.float32)
-    
-    def _extract_shape_vectorized_gpu(self, tensor_image: torch.Tensor, config: Dict) -> List[List[float]]:
-        """Vectorized shape processing for maximum GPU efficiency"""
-        patch_size = config['patch_size']
-        stride = config['stride']
-        
-        # Extract ALL patches at once
-        patches = tensor_image.unfold(0, patch_size, stride).unfold(1, patch_size, stride)
-        patches = patches.contiguous().view(-1, patch_size, patch_size)
-        
-        # Vectorized shape descriptor computation
-        # Edge density descriptor - vectorized
-        edge_density = torch.mean((patches > 0.1).float(), dim=(1, 2))
-        
-        # Edge orientation descriptors - vectorized
-        if patch_size > 1:
-            # Horizontal edges
-            h_diffs = torch.diff(patches, dim=2)
-            h_edges = torch.mean(h_diffs, dim=(1, 2))
-            
-            # Vertical edges
-            v_diffs = torch.diff(patches, dim=1)
-            v_edges = torch.mean(v_diffs, dim=(1, 2))
-            
-            # Edge intensity
-            edge_intensity = torch.mean(torch.abs(patches), dim=(1, 2))
-        else:
-            h_edges = torch.zeros(patches.size(0), device=patches.device)
-            v_edges = torch.zeros(patches.size(0), device=patches.device)
-            edge_intensity = torch.mean(patches, dim=(1, 2))
-        
-        # Stack all descriptors
-        descriptor_tensor = torch.stack([edge_density, h_edges, v_edges, edge_intensity], dim=1)
-        descriptors = descriptor_tensor.cpu().numpy().tolist()
-        
-        return descriptors
-    
-    def _extract_shape_gpu(self, image: np.ndarray) -> List[List[float]]:
-        """GPU-accelerated shape extraction using PyTorch"""
-        # Convert to grayscale for edge detection
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Convert to PyTorch tensor on GPU
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        
-        all_descriptors = []
-        
-        for config in self.shape_scales:
-            descriptors = self._extract_shape_at_scale_gpu(tensor_image, config)
-            all_descriptors.extend(descriptors)
-        
-        return all_descriptors
-    
-    def _extract_shape_at_scale_gpu(self, tensor_image: torch.Tensor, config: Dict) -> List[List[float]]:
-        """Extract shape descriptors at specific scale using PyTorch"""
-        patch_size = config['patch_size']
-        stride = config['stride']
-        descriptors = []
-        
-        # Use PyTorch unfold for efficient patch extraction
-        if patch_size == 1:
-            # Special case for 1x1 patches
-            patches = tensor_image.flatten()
-            for i in range(0, len(patches), stride):
-                if i < len(patches):
-                    descriptor = [float(patches[i])]
-                    descriptors.append(descriptor)
-        else:
-            # Extract patches using unfold
-            patches = tensor_image.unfold(0, patch_size, stride).unfold(1, patch_size, stride)
-            patches = patches.contiguous().view(-1, patch_size, patch_size)
-            
-            for patch in patches:
-                descriptor = self._patch_to_shape_descriptor_gpu(patch)
-                descriptors.append(descriptor)
-        
-        return descriptors
-    
-    def _patch_to_shape_descriptor_gpu(self, patch: torch.Tensor) -> List[float]:
-        """Convert patch to shape descriptor representation using PyTorch"""
-        # Edge density descriptor - fix boolean tensor mean
-        edge_density = float(torch.mean((patch > 0).float()))
-        
-        # Edge orientation descriptors
-        if patch.size(0) > 1:
-            # Horizontal edge descriptor
-            horizontal_edges = float(torch.mean(torch.diff(patch, dim=1)))
-            # Vertical edge descriptor  
-            vertical_edges = float(torch.mean(torch.diff(patch, dim=0)))
-            # Diagonal descriptors
-            diagonal_1 = float(torch.mean(torch.diff(torch.diag(patch))))
-            diagonal_2 = float(torch.mean(torch.diff(torch.diag(torch.flip(patch, dims=[1])))))
-        else:
-            horizontal_edges = vertical_edges = diagonal_1 = diagonal_2 = 0
-        
-        # Edge intensity descriptor
-        edge_intensity = float(torch.mean(torch.abs(patch))) / 255.0
-        
-        descriptor = [edge_density, horizontal_edges, vertical_edges, diagonal_1, diagonal_2, edge_intensity]
-        
-        return descriptor
-    
-
-class ContrastDescriptorExtractor:
-    """
-    Extracts MILLIONS of contrast descriptors from botanical images.
-    Pure descriptor-based approach for light/dark transition analysis.
-    
-    Expected timing: ~6-10ms (GPU) (GPU-only)
-    """
-    
-    def __init__(self, image_size: int = 512):
-        self.image_size = image_size
-        self.use_gpu = GPU_AVAILABLE
-        
-        # ULTRA-FAST Contrast descriptor scales - dramatically reduced for speed
-        self.contrast_scales = [
-            {'patch_size': 8, 'stride': 16, 'name': 'medium_contrast'},   # ~1K descriptors (was 64K)
-            {'patch_size': 16, 'stride': 32, 'name': 'macro_contrast'},   # ~256 descriptors (was 16K)
-        ]
-        
-        # Contrast extractor initialized
-    
-    def extract_descriptors(self, image: np.ndarray) -> np.ndarray:
-        """Extract millions of contrast descriptors with ultra-fast processing"""
-        start_time = get_timestamp_ms()
-        
-        if image.shape[:2] != (self.image_size, self.image_size):
-            resize_start = get_timestamp_ms()
-            image = cv2.resize(image, (self.image_size, self.image_size))
-            resize_end = get_timestamp_ms()
-
-        
-        # Ultra-fast single-operation extraction
-        # GPU-only operation
-        all_contrast_descriptors = self._extract_contrast_gpu_ultra_fast(image)
-        
-        end_time = get_timestamp_ms()
-
-        return all_contrast_descriptors
-    
-    def _extract_contrast_gpu_ultra_fast_shared(self, image: np.ndarray, shared_coverage: torch.Tensor, scale_h: float, scale_w: float) -> np.ndarray:
-        """ULTRA-OPTIMIZED CONTRAST: Lightning-fast contrast with shared coverage"""
-
-        # Convert to grayscale
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        h, w = tensor_image.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 5  # local_contrast, min_max, brightness, dynamic_range, size_feature
-        
-        # SMART CONTRAST COMPLEXITY ANALYSIS
-        complexity_start = get_timestamp_ms()
-        # Fast contrast analysis using corner sample
-        sample_size = min(64, h//4, w//4)
-        contrast_sample = tensor_image[:sample_size, :sample_size]
-        if contrast_sample.numel() > 0:
-            contrast_complexity = (torch.max(contrast_sample) - torch.min(contrast_sample)).item()
-        else:
-            contrast_complexity = 0.3
-        complexity_end = get_timestamp_ms()
-        
-        # OPTIMIZE FOR 75% CURSE RETENTION: Dramatically increase contrast descriptors
-        if contrast_complexity < 0.1:      # Low contrast image
-            target_descriptors = 500       # 10X INCREASE: Find curse resistance point
-            y_step = max(24, h // 20)      # Smaller steps for more data
-            x_step = max(24, w // 20)
-        elif contrast_complexity < 0.3:    # Medium contrast
-            target_descriptors = 1500      # MASSIVE INCREASE: Test curse limits
-            y_step = max(20, h // 24)      # Dense sampling
-            x_step = max(20, w // 24)
-        elif contrast_complexity < 0.6:    # High contrast
-            target_descriptors = 2000      # 8X INCREASE: Match texture scaling
-            y_step = max(16, h // 28)      # Very dense sampling
-            x_step = max(16, w // 28)
-        else:                             # Very high contrast
-            target_descriptors = 3000      # EXTREME INCREASE: Find optimal curse point
-            y_step = max(12, h // 32)      # Ultra-dense steps
-            x_step = max(12, w // 32)
-        
-        # LIGHTNING-FAST contrast sizing
-        patches = []
-        
-        for y in range(0, h - 16, y_step):
-            for x in range(0, w - 16, x_step):
-                # Ultra-quick shared coverage check
-                cy, cx = int(y / scale_h), int(x / scale_w)
-                if cy < shared_coverage.shape[0] and cx < shared_coverage.shape[1]:
-                    if shared_coverage[cy, cx, 0] > 0:
-                        continue  # Skip if another modality already processed this area
-                
-                # ULTRA-FAST contrast analysis (min-max only)
-                max_test_size = min(16, h - y, w - x)
-                test_patch = tensor_image[y:y+max_test_size, x:x+max_test_size]
-                contrast_range = torch.max(test_patch).item() - torch.min(test_patch).item()
-                
-                # Determine patch size based on contrast range
-                if contrast_range < 0.1:      # Low contrast - larger patch
-                    patch_size = 20
-                elif contrast_range < 0.3:    # Medium contrast - medium patch
-                    patch_size = 16
-                else:                         # High contrast - smaller patch
-                    patch_size = 12
-                
-                # Validate and adjust patch size
-                patch_size = min(patch_size, h - y, w - x)
-                patch_size = max(8, patch_size)  # Minimum useful size
-                
-                # Process patch if valid
-                if y + patch_size <= h and x + patch_size <= w:
-                    # Extract and process patch
-                    patch = tensor_image[y:y+patch_size, x:x+patch_size]
-                    patch_flat = patch.flatten()
-                    
-                    # LIGHTNING-FAST contrast descriptors
-                    local_contrast = torch.std(patch_flat).item()
-                    min_max_contrast = (torch.max(patch_flat) - torch.min(patch_flat)).item()
-                    brightness = torch.mean(patch_flat).item()
-                    # Fast percentile approximation
-                    sorted_patch, _ = torch.sort(patch_flat)
-                    n = len(sorted_patch)
-                    dynamic_range = (sorted_patch[int(0.9*n)] - sorted_patch[int(0.1*n)]).item()
-                    size_feature = patch_size / 20.0  # Normalized size
-                    
-                    descriptor = torch.tensor([local_contrast, min_max_contrast, brightness, dynamic_range, size_feature], device=device)
-                    patches.append(descriptor)
-                    
-                    # Mark area as covered in shared matrix
-                    cy_end, cx_end = min(int((y+patch_size) / scale_h), shared_coverage.shape[0]-1), min(int((x+patch_size) / scale_w), shared_coverage.shape[1]-1)
-                    shared_coverage[cy:cy_end+1, cx:cx_end+1, 0] = 1.0  # Processed flag
-                    shared_coverage[cy:cy_end+1, cx:cx_end+1, 1] = float(patch_size)  # Size used
-        
-        if not patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack and convert
-        descriptor_tensor = torch.stack(patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        
-        # Ensure fixed size
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        
-        return descriptor_array.astype(np.float32)
-
-    def _extract_contrast_gpu_ultra_fast(self, image: np.ndarray) -> np.ndarray:
-        """DYNAMIC CONTRAST SIZING: Lightweight contrast-aware patch extraction"""
-
-        # Convert to grayscale
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        h, w = tensor_image.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 5  # local_contrast, min_max, brightness, dynamic_range, size_feature
-        target_descriptors = 4000  # DRAMATICALLY INCREASED: Dynamic contrast patches
-        
-        # LIGHTWEIGHT dynamic coverage (smaller for speed)
-        coverage_matrix = torch.zeros((h//4, w//4, 2), dtype=torch.float32, device=device)
-        scale_factor = 4  # Downsample coverage matrix for speed
-        
-        # FAST dynamic contrast sizing
-        patches = []
-        y_step = max(8, h // 32)  # Adaptive step based on image size
-        x_step = max(8, w // 32)
-        
-        for y in range(0, h - 16, y_step):
-            for x in range(0, w - 16, x_step):
-                # Quick coverage check (downsampled)
-                cy, cx = y//scale_factor, x//scale_factor
-                if cy < coverage_matrix.shape[0] and cx < coverage_matrix.shape[1]:
-                    if coverage_matrix[cy, cx, 0] > 0:
-                        continue
-                
-                # FAST contrast analysis for patch size
-                test_patch = tensor_image[y:y+16, x:x+16]
-                contrast_std = torch.std(test_patch).item()
-                
-                # Determine patch size based on contrast variation
-                if contrast_std < 0.05:      # Low contrast - larger patch
-                    patch_size = 16
-                elif contrast_std < 0.15:    # Medium contrast - medium patch
-                    patch_size = 12
-                else:                        # High contrast - smaller patch
-                    patch_size = 8
-                
-                # Ensure patch fits
-                patch_size = min(patch_size, h - y, w - x)
-                if patch_size >= 8:
-                    # Extract and process patch
-                    patch = tensor_image[y:y+patch_size, x:x+patch_size]
-                    patch_flat = patch.flatten()
-                    
-                    # Enhanced contrast descriptors
-                    local_contrast = torch.std(patch_flat).item()
-                    min_max_contrast = (torch.max(patch_flat) - torch.min(patch_flat)).item()
-                    brightness = torch.mean(patch_flat).item()
-                    dynamic_range = (torch.quantile(patch_flat, 0.9) - torch.quantile(patch_flat, 0.1)).item()
-                    size_feature = patch_size / 16.0  # Normalized size
-                    
-                    descriptor = torch.tensor([local_contrast, min_max_contrast, brightness, dynamic_range, size_feature], device=device)
-                    patches.append(descriptor)
-                    
-                    # Mark coverage area (downsampled)
-                    cy_end, cx_end = min((y+patch_size)//scale_factor, coverage_matrix.shape[0]-1), min((x+patch_size)//scale_factor, coverage_matrix.shape[1]-1)
-                    coverage_matrix[cy:cy_end+1, cx:cx_end+1, 0] = 1.0
-                    coverage_matrix[cy:cy_end+1, cx:cx_end+1, 1] = float(patch_size)
-        
-        if not patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack and convert
-        descriptor_tensor = torch.stack(patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        
-        # Ensure fixed size
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        
-        return descriptor_array.astype(np.float32)
-    
-    
-    def _extract_contrast_gpu(self, image: np.ndarray) -> List[List[float]]:
-        """GPU-accelerated contrast extraction using PyTorch"""
-        # Convert to grayscale for contrast analysis
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Convert to PyTorch tensor on GPU
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        
-        all_descriptors = []
-        
-        for config in self.contrast_scales:
-            descriptors = self._extract_contrast_at_scale_gpu(tensor_image, config)
-            all_descriptors.extend(descriptors)
-        
-        return all_descriptors
-    
-    def _extract_contrast_at_scale_gpu(self, tensor_image: torch.Tensor, config: Dict) -> List[List[float]]:
-        """Extract contrast descriptors at specific scale using PyTorch"""
-        patch_size = config['patch_size']
-        stride = config['stride']
-        descriptors = []
-        
-        # Use PyTorch unfold for efficient patch extraction
-        if patch_size == 1:
-            # Special case for 1x1 patches
-            patches = tensor_image.flatten()
-            for i in range(0, len(patches), stride):
-                if i < len(patches):
-                    descriptor = [float(patches[i])]
-                    descriptors.append(descriptor)
-        else:
-            # Extract patches using unfold
-            patches = tensor_image.unfold(0, patch_size, stride).unfold(1, patch_size, stride)
-            patches = patches.contiguous().view(-1, patch_size, patch_size)
-            
-            for patch in patches:
-                descriptor = self._patch_to_contrast_descriptor_gpu(patch)
-                descriptors.append(descriptor)
-        
-        return descriptors
-    
-    def _patch_to_contrast_descriptor_gpu(self, patch: torch.Tensor) -> List[float]:
-        """Convert patch to contrast descriptor representation using PyTorch"""
-        # Local contrast descriptor
-        local_contrast = float(torch.std(patch)) / 255.0
-        
-        # Min-max contrast descriptor
-        min_max_contrast = float((torch.max(patch) - torch.min(patch)) / 255.0)
-        
-        # Brightness descriptor
-        brightness = float(torch.mean(patch)) / 255.0
-        
-        # Dynamic range descriptor
-        if patch.size(0) > 1:
-            sorted_vals, _ = torch.sort(patch.flatten())
-            num_vals = sorted_vals.size(0)
-            percentile_10_idx = int(0.1 * num_vals)
-            percentile_90_idx = int(0.9 * num_vals)
-            percentile_10 = sorted_vals[percentile_10_idx]
-            percentile_90 = sorted_vals[percentile_90_idx]
-            dynamic_range = float((percentile_90 - percentile_10) / 255.0)
-        else:
-            dynamic_range = 0
-        
-        descriptor = [local_contrast, min_max_contrast, brightness, dynamic_range]
-        
-        return descriptor
-    
-class FrequencyDescriptorExtractor:
-    """
-    Extracts MILLIONS of frequency descriptors from botanical images.
-    Pure descriptor-based approach for periodic structure analysis.
-    
-    Expected timing: ~3-5ms (GPU) (GPU-only)
-    """
-    
-    def __init__(self, image_size: int = 512):
-        self.image_size = image_size
-        self.use_gpu = GPU_AVAILABLE
-        
-        # ULTRA-FAST Frequency descriptor scales - dramatically reduced for speed
-        self.frequency_scales = [
-            {'patch_size': 16, 'stride': 32, 'name': 'medium_frequency'}, # ~256 descriptors (was 4K)
-            {'patch_size': 32, 'stride': 64, 'name': 'coarse_frequency'}, # ~64 descriptors (was 1K)
-        ]
-        
-        # Frequency extractor initialized
-    
-    def extract_descriptors(self, image: np.ndarray) -> np.ndarray:
-        """Extract millions of frequency descriptors with ultra-fast processing"""
-        start_time = get_timestamp_ms()
-        
-        if image.shape[:2] != (self.image_size, self.image_size):
-            resize_start = get_timestamp_ms()
-            image = cv2.resize(image, (self.image_size, self.image_size))
-            resize_end = get_timestamp_ms()
-
-        # Ultra-fast single-operation extraction
-        # GPU-only operation
-        all_frequency_descriptors = self._extract_frequency_gpu_ultra_fast(image)
-        
-        end_time = get_timestamp_ms()
-
-        return all_frequency_descriptors
-    
-    def _extract_frequency_gpu_ultra_fast_shared(self, image: np.ndarray, shared_coverage: torch.Tensor, scale_h: float, scale_w: float) -> np.ndarray:
-        """ULTRA-OPTIMIZED FREQUENCY: Lightning-fast frequency with shared coverage"""
-    
-        # Convert to grayscale
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        h, w = tensor_image.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 6  # dc_component, high_freq, texture_freq, pattern_freq, dominant_freq, size_feature
-        
-
-        # SMART FREQUENCY COMPLEXITY ANALYSIS
-        complexity_start = get_timestamp_ms()
-        # Fast frequency analysis using corner sample differences
-        sample_size = min(64, h//4, w//4)
-        freq_sample = tensor_image[:sample_size, :sample_size]
-        if freq_sample.numel() > 0 and freq_sample.shape[0] > 1 and freq_sample.shape[1] > 1:
-            h_diffs = torch.var(freq_sample[:, 1:] - freq_sample[:, :-1]).item()
-            v_diffs = torch.var(freq_sample[1:, :] - freq_sample[:-1, :]).item()
-            freq_complexity = h_diffs + v_diffs
-        else:
-            freq_complexity = 0.01
-        complexity_end = get_timestamp_ms()
-        
-        # ADAPTIVE PATCH COUNT based on frequency complexity
-        if freq_complexity < 0.005:      # Very low frequency content
-            target_descriptors = 30
-            y_step = max(48, h // 8)   # Very large steps
-            x_step = max(48, w // 8)
-        elif freq_complexity < 0.02:     # Low frequency content
-            target_descriptors = 1000    # MASSIVE INCREASE: Find curse resistance point
-            y_step = max(20, h // 20)    # Smaller steps for more data
-            x_step = max(20, w // 20)
-        elif freq_complexity < 0.08:     # Medium frequency content
-            target_descriptors = 2500    # MASSIVE INCREASE: Test curse limits
-            y_step = max(16, h // 24)    # Dense sampling
-            x_step = max(16, w // 24)
-        else:                           # High frequency content
-            target_descriptors = 4000    # EXTREME INCREASE: Find optimal curse point
-            y_step = max(12, h // 28)    # Ultra-dense steps
-            x_step = max(12, w // 28)
-        
-
-        # LIGHTNING-FAST frequency sizing
-        patches = []
-        
-        for y in range(0, h - 20, y_step):
-            for x in range(0, w - 20, x_step):
-                # Ultra-quick shared coverage check
-                cy, cx = int(y / scale_h), int(x / scale_w)
-                if cy < shared_coverage.shape[0] and cx < shared_coverage.shape[1]:
-                    if shared_coverage[cy, cx, 0] > 0:
-                        continue  # Skip if another modality already processed this area
-                
-                # ULTRA-FAST frequency analysis (variance of differences)
-                max_test_size = min(20, h - y, w - x)
-                test_patch = tensor_image[y:y+max_test_size, x:x+max_test_size]
-                
-                # Fast frequency estimation using differences
-                if test_patch.shape[0] >= 8 and test_patch.shape[1] >= 8:
-                    # Horizontal and vertical differences as frequency proxy
-                    h_diff = torch.var(test_patch[:, 1:] - test_patch[:, :-1]).item()
-                    v_diff = torch.var(test_patch[1:, :] - test_patch[:-1, :]).item()
-                    freq_activity = h_diff + v_diff
-                else:
-                    freq_activity = 0.01
-                
-                # Determine patch size based on frequency activity
-                if freq_activity < 0.01:      # Low frequency - larger patch for better analysis
-                    patch_size = 28
-                elif freq_activity < 0.05:    # Medium frequency - medium patch
-                    patch_size = 20
-                else:                         # High frequency - smaller patch
-                    patch_size = 16
-                
-                # Validate and adjust patch size
-                patch_size = min(patch_size, h - y, w - x)
-                patch_size = max(12, patch_size)  # Minimum for meaningful frequency analysis
-                
-                # Process patch if valid
-                if y + patch_size <= h and x + patch_size <= w:
-                    # Extract and process patch
-                    patch = tensor_image[y:y+patch_size, x:x+patch_size]
-                    
-                    # LIGHTNING-FAST frequency descriptors (no FFT!)
-                    dc_component = torch.mean(patch).item()
-                    
-                    # Fast high-frequency estimation using differences
-                    h_grads = torch.abs(patch[:, 1:] - patch[:, :-1])
-                    v_grads = torch.abs(patch[1:, :] - patch[:-1, :])
-                    high_freq = torch.mean(h_grads).item() + torch.mean(v_grads).item()
-                    
-                    # Fast texture frequency (variance of gradients)
-                    texture_freq = torch.var(h_grads).item() + torch.var(v_grads).item()
-                    
-                    # Pattern frequency (second-order differences)
-                    if patch_size >= 3:
-                        h_patterns = torch.abs(h_grads[:, 1:] - h_grads[:, :-1]) if h_grads.shape[1] > 1 else torch.zeros_like(h_grads[:, :1])
-                        v_patterns = torch.abs(v_grads[1:, :] - v_grads[:-1, :]) if v_grads.shape[0] > 1 else torch.zeros_like(v_grads[:1, :])
-                        pattern_freq = torch.mean(h_patterns).item() + torch.mean(v_patterns).item()
-                    else:
-                        pattern_freq = 0.0
-                    
-                    # Dominant frequency approximation (max gradient direction)
-                    dominant_freq = max(torch.max(h_grads).item(), torch.max(v_grads).item())
-                    size_feature = patch_size / 28.0  # Normalized size
-                    
-                    descriptor = torch.tensor([dc_component, high_freq, texture_freq, pattern_freq, dominant_freq, size_feature], device=device)
-                    patches.append(descriptor)
-                    
-                    # Mark area as covered in shared matrix
-                    cy_end, cx_end = min(int((y+patch_size) / scale_h), shared_coverage.shape[0]-1), min(int((x+patch_size) / scale_w), shared_coverage.shape[1]-1)
-                    shared_coverage[cy:cy_end+1, cx:cx_end+1, 0] = 1.0  # Processed flag
-                    shared_coverage[cy:cy_end+1, cx:cx_end+1, 1] = float(patch_size)  # Size used
-        
-        if not patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack and convert
-        descriptor_tensor = torch.stack(patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        
-        # Ensure fixed size
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        
-
-        return descriptor_array.astype(np.float32)
-
-    def _extract_frequency_gpu_ultra_fast(self, image: np.ndarray) -> np.ndarray:
-        """DYNAMIC FREQUENCY SIZING: Super-lightweight frequency-aware patch extraction"""
-
-        
-        # Convert to grayscale
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        h, w = tensor_image.shape
-        
-        # Enhanced descriptor with size context
-        descriptor_size = 6  # h_diffs, v_diffs, row_var, col_var, texture_reg, size_feature
-        target_descriptors = 2000  # DRAMATICALLY INCREASED: Dynamic frequency patches
-        
-        # SUPER-LIGHTWEIGHT coverage (heavily downsampled for speed)
-        coverage_matrix = torch.zeros((h//8, w//8, 2), dtype=torch.float32, device=device)
-        scale_factor = 8  # More aggressive downsampling for frequency
-        
-        # ULTRA-FAST dynamic frequency sizing
-        patches = []
-        y_step = max(16, h // 16)  # Larger steps for frequency analysis
-        x_step = max(16, w // 16)
-        
-        for y in range(0, h - 24, y_step):
-            for x in range(0, w - 24, x_step):
-                # Ultra-quick coverage check (heavily downsampled)
-                cy, cx = y//scale_factor, x//scale_factor
-                if cy < coverage_matrix.shape[0] and cx < coverage_matrix.shape[1]:
-                    if coverage_matrix[cy, cx, 0] > 0:
-                        continue
-                
-                # LIGHTNING-FAST frequency analysis for patch size
-                test_patch = tensor_image[y:y+24, x:x+24]
-                # Quick frequency estimate using gradient variance
-                grad_h = torch.diff(test_patch, dim=1)
-                grad_v = torch.diff(test_patch, dim=0)
-                frequency_intensity = torch.var(grad_h).item() + torch.var(grad_v).item()
-                
-                # Determine patch size based on frequency content
-                if frequency_intensity < 0.01:   # Low frequency - large patch
-                    patch_size = 24
-                elif frequency_intensity < 0.05: # Medium frequency - medium patch
-                    patch_size = 16
-                else:                            # High frequency - small patch
-                    patch_size = 12
-                
-                # Ensure patch fits
-                patch_size = min(patch_size, h - y, w - x)
-                if patch_size >= 12:
-                    # Extract and process patch
-                    patch = tensor_image[y:y+patch_size, x:x+patch_size]
-                    patch_reshaped = patch.view(patch_size, patch_size)
-                    
-                    # Lightning-fast frequency descriptors
-                    h_diffs = torch.mean(torch.abs(torch.diff(patch_reshaped, dim=1))).item()
-                    v_diffs = torch.mean(torch.abs(torch.diff(patch_reshaped, dim=0))).item()
-                    
-                    row_means = torch.mean(patch_reshaped, dim=1)
-                    row_variance = torch.var(row_means).item()
-                    
-                    col_means = torch.mean(patch_reshaped, dim=0)
-                    col_variance = torch.var(col_means).item()
-                    
-                    texture_regularity = 1.0 / (1.0 + torch.std(patch).item())
-                    size_feature = patch_size / 24.0  # Normalized size
-                    
-                    descriptor = torch.tensor([h_diffs, v_diffs, row_variance, col_variance, texture_regularity, size_feature], device=device)
-                    patches.append(descriptor)
-                    
-                    # Mark coverage area (heavily downsampled)
-                    cy_end, cx_end = min((y+patch_size)//scale_factor, coverage_matrix.shape[0]-1), min((x+patch_size)//scale_factor, coverage_matrix.shape[1]-1)
-                    coverage_matrix[cy:cy_end+1, cx:cx_end+1, 0] = 1.0
-                    coverage_matrix[cy:cy_end+1, cx:cx_end+1, 1] = float(patch_size)
-        
-        if not patches:
-            return np.zeros((target_descriptors, descriptor_size), dtype=np.float32)
-        
-        # Stack and convert
-        descriptor_tensor = torch.stack(patches)
-        descriptor_array = descriptor_tensor.cpu().numpy()
-        
-        # Ensure fixed size
-        if len(descriptor_array) > target_descriptors:
-            descriptor_array = descriptor_array[:target_descriptors]
-        elif len(descriptor_array) < target_descriptors:
-            repeat_factor = target_descriptors // len(descriptor_array) + 1
-            descriptor_array = np.tile(descriptor_array, (repeat_factor, 1))[:target_descriptors]
-        
-
-        return descriptor_array.astype(np.float32)
-    
-    def _extract_frequency_gpu(self, image: np.ndarray) -> List[List[float]]:
-        """GPU-accelerated frequency extraction using PyTorch"""
-        # Convert to grayscale for frequency analysis
-        if len(image.shape) == 3:
-            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = image
-        
-        # Convert to PyTorch tensor on GPU
-        # Use proper device allocation respecting GPU_AVAILABLE
-        device = torch.device('cuda')
-        tensor_image = torch.from_numpy(gray_image.astype(np.float32)).to(device) / 255.0
-        
-        all_descriptors = []
-        
-        for config in self.frequency_scales:
-            descriptors = self._extract_frequency_at_scale_gpu(tensor_image, config)
-            all_descriptors.extend(descriptors)
-        
-        return all_descriptors
-    
-    def _extract_frequency_at_scale_gpu(self, tensor_image: torch.Tensor, config: Dict) -> List[List[float]]:
-        """Extract frequency descriptors at specific scale using PyTorch"""
-        patch_size = config['patch_size']
-        stride = config['stride']
-        descriptors = []
-        
-        # Use PyTorch unfold for efficient patch extraction
-        if patch_size == 1:
-            # Special case for 1x1 patches
-            patches = tensor_image.flatten()
-            for i in range(0, len(patches), stride):
-                if i < len(patches):
-                    descriptor = [float(patches[i])]
-                    descriptors.append(descriptor)
-        else:
-            # Extract patches using unfold
-            patches = tensor_image.unfold(0, patch_size, stride).unfold(1, patch_size, stride)
-            patches = patches.contiguous().view(-1, patch_size, patch_size)
-            
-            for patch in patches:
-                descriptor = self._patch_to_frequency_descriptor_gpu(patch)
-                descriptors.append(descriptor)
-        
-        return descriptors
-    
-    def _patch_to_frequency_descriptor_gpu(self, patch: torch.Tensor) -> List[float]:
-        """Convert patch to frequency descriptor representation using PyTorch"""
-        # Simple frequency analysis without complex FFT
-        
-        # Repetitive pattern detection
-        if patch.shape[0] > 2 and patch.shape[1] > 2:
-            # Horizontal repetition pattern
-            horizontal_diff = float(torch.mean(torch.abs(torch.diff(patch, dim=1))))
-            # Vertical repetition pattern  
-            vertical_diff = float(torch.mean(torch.abs(torch.diff(patch, dim=0))))
-            
-            # Periodic pattern estimation - fix tensor creation
-            row_means = torch.stack([torch.mean(patch[i, :]) for i in range(patch.shape[0])])
-            col_means = torch.stack([torch.mean(patch[:, j]) for j in range(patch.shape[1])])
-            row_variance = float(torch.var(row_means))
-            col_variance = float(torch.var(col_means))
-        else:
-            horizontal_diff = vertical_diff = row_variance = col_variance = 0
-        
-        # Texture regularity pattern
-        texture_regularity = 1.0 / (1.0 + float(torch.std(patch)))
-        
-        descriptor = [horizontal_diff/255.0, vertical_diff/255.0, 
-                      row_variance/255.0, col_variance/255.0, texture_regularity]
-        
-        return descriptor
-
-class IndividualCurseResistantProcessor:
-    """
-    Applies curse-resistant processing to a specific descriptor type (texture, color, shape, etc.)
-    Each descriptor type gets its own specialized curse-resistant treatment.
-    """
-    
-    def __init__(self, descriptor_type: str, target_consolidated_descriptors: int = 50000):  # DOUBLED for better generalization
-        self.descriptor_type = descriptor_type
-        self.target_consolidated_descriptors = target_consolidated_descriptors
-        self.use_gpu = GPU_AVAILABLE
-        
-        # Enhanced discrimination weights for better generalization
-        self.discriminative_weights = {
-            'variance': 0.4,    # Information content
-            'uniqueness': 0.35,  # Distinctive features  
-            'stability': 0.25   # Consistent features
-        }
-        
-        # Individual curse-resistant processor initialized
-    
-    def apply_curse_resistance(self, millions_of_descriptors: np.ndarray) -> np.ndarray:
-        """
-        Apply curse-resistant processing to millions of descriptors of this specific type.
-        Reduces millions to thousands while preserving descriptor diversity.
-        """
-        curse_start = get_timestamp_ms()
-        # Applying curse resistance
-        
-        # Step 1: Remove redundant descriptors (similar descriptors)
-        redundancy_start = get_timestamp_ms()
-        unique_descriptors = self._remove_redundant_descriptors(millions_of_descriptors)
-        redundancy_end = get_timestamp_ms()
-        # Redundancy removal complete
-        
-        # Step 2: Cluster similar descriptors and take representatives
-        cluster_start = get_timestamp_ms()
-        clustered_descriptors = self._cluster_and_sample(unique_descriptors)
-        cluster_end = get_timestamp_ms()
-        # Clustering complete
-        
-        # Step 3: Select most discriminative descriptors
-        discrimination_start = get_timestamp_ms()
-        discriminative_descriptors = self._select_discriminative_descriptors(clustered_descriptors)
-        discrimination_end = get_timestamp_ms()
-        # Discrimination complete
-        
-        curse_end = get_timestamp_ms()
-        # Curse resistance complete
-        return discriminative_descriptors
-    
-    def _remove_redundant_descriptors(self, descriptors: np.ndarray) -> np.ndarray:
-        """Remove very similar descriptors to reduce redundancy"""
-        if len(descriptors) < 1000:
-            return descriptors
-        
-        # Sample subset for efficiency - DETERMINISTIC sampling
-        sample_size = min(len(descriptors), 50000)
-        # Use evenly spaced indices instead of random for consistent results
-        step = len(descriptors) / sample_size
-        indices = [int(i * step) for i in range(sample_size)]
-        sampled_descriptors = descriptors[indices]
-        
-        # Use simple variance-based filtering
-        descriptor_variances = np.var(sampled_descriptors, axis=1)
-        
-        # Keep descriptors with sufficient variance (not too uniform)
-        variance_threshold = np.percentile(descriptor_variances, 25)  # Bottom 25%
-        keep_indices = descriptor_variances > variance_threshold
-        
-        return sampled_descriptors[keep_indices]
-    
-    def _cluster_and_sample(self, descriptors: np.ndarray) -> np.ndarray:
-        """Cluster similar descriptors and sample representatives"""
-        if len(descriptors) <= self.target_consolidated_descriptors:
-            return descriptors
-        
-        # Simple k-means style clustering using DETERMINISTIC sampling
-        num_clusters = self.target_consolidated_descriptors
-        cluster_representatives = []
-        
-        # DETERMINISTIC sampling approach for consistent results
-        step = len(descriptors) / num_clusters
-        indices = [int(i * step) for i in range(num_clusters)]
-        cluster_representatives = descriptors[indices]
-        
-        return cluster_representatives
-    
-    def _select_discriminative_descriptors(self, descriptors: np.ndarray) -> np.ndarray:
-        """Enhanced discriminative descriptor selection for better generalization"""
-        if len(descriptors) <= self.target_consolidated_descriptors:
-            return descriptors
-        
-        # Multi-criteria discriminative power analysis
-        print(f"           Enhanced discriminative selection: {len(descriptors)} → {self.target_consolidated_descriptors}")
-        
-        # Criterion 1: Feature variance (information content)
-        feature_variances = np.var(descriptors, axis=1)
-        
-        # Criterion 2: Feature uniqueness (distance from mean)
-        mean_descriptor = np.mean(descriptors, axis=0)
-        uniqueness_scores = np.linalg.norm(descriptors - mean_descriptor, axis=1)
-        
-        # Criterion 3: Feature stability (consistency across dimensions)
-        dimension_consistency = np.std(descriptors, axis=1)  # Lower std = more consistent
-        stability_scores = 1.0 / (dimension_consistency + 1e-6)
-        
-        # Normalize all criteria to [0, 1]
-        variance_norm = (feature_variances - np.min(feature_variances)) / (np.max(feature_variances) - np.min(feature_variances) + 1e-8)
-        uniqueness_norm = (uniqueness_scores - np.min(uniqueness_scores)) / (np.max(uniqueness_scores) - np.min(uniqueness_scores) + 1e-8)
-        stability_norm = (stability_scores - np.min(stability_scores)) / (np.max(stability_scores) - np.min(stability_scores) + 1e-8)
-        
-        # Enhanced weighted combination with improved biological weighting for generalization
-        discriminative_scores = (
-            self.discriminative_weights['variance'] * variance_norm +      # 40% - High information content
-            self.discriminative_weights['uniqueness'] * uniqueness_norm +  # 35% - Distinctive features
-            self.discriminative_weights['stability'] * stability_norm      # 25% - Consistent features
-        )
-        
-        # Select top discriminative descriptors
-        sorted_indices = np.argsort(discriminative_scores)[::-1]
-        top_indices = sorted_indices[:self.target_consolidated_descriptors]
-        
-        print(f"           Selection criteria: variance={np.mean(variance_norm[top_indices]):.3f}, "
-              f"uniqueness={np.mean(uniqueness_norm[top_indices]):.3f}, "
-              f"stability={np.mean(stability_norm[top_indices]):.3f}")
-        
-        return descriptors[top_indices]
-
-class UnifiedCurseResistantCombiner:
-    """
-    DYNAMIC UNIFIED CURSE RESISTANCE: Adapts to each plant's specific needs!
-    
-    Instead of fixed counts, analyzes each plant to determine:
-    - How many descriptors this specific plant actually needs
-    - Which modalities are most important for THIS plant
-    - Dynamic weighting based on discriminative power per plant
-    
-    Some plants need more texture info, others need more shape, etc.
-    The system adapts automatically!
-    """
-    
-    def __init__(self, target_final_descriptors: int = None):  # None = fully dynamic
-        self.target_final_descriptors = target_final_descriptors
-        self.descriptor_weights = {
-            'texture': 0.30,    # Most important for species identification
-            'unique': 0.25,     # Class-specific unique patterns
-            'shape': 0.20,      # Structural differences
-            'contrast': 0.15,   # Surface pattern analysis  
-            'frequency': 0.10,  # Repetitive structures
-            'color': 0.10       # Color patterns (improved weighting for plant classification)
-        }
-        self.consolidated_descriptors = {}
-        
-        # Dynamic curse-resistant combiner initialized
-    
-    def add_descriptor_type(self, descriptor_type: str, consolidated_descriptors: np.ndarray):
-        """Add curse-resistant descriptors from a specific descriptor type (should be 10k descriptors)"""
-        self.consolidated_descriptors[descriptor_type] = consolidated_descriptors
-        
-        # Use predefined biological importance weights
-        weight = self.descriptor_weights.get(descriptor_type, 0.10)
-
-    def _calculate_descriptor_weight(self, descriptors: np.ndarray) -> float:
-        """Calculate how discriminative this descriptor type is"""
-        if len(descriptors) == 0:
-            return 0.0
-        
-        # Use variance across descriptors as discriminative power measure
-        total_variance = np.sum(np.var(descriptors, axis=0))
-        
-        # Normalize weight
-        weight = np.clip(total_variance, 0.1, 2.0)
-        
-        return weight
-    
-    def get_unified_descriptors(self) -> np.ndarray:
-        """DYNAMIC curse resistance - adapts to each plant's specific discriminative needs"""
-        if not self.consolidated_descriptors:
-            return np.array([])
-        
-        unified_start = get_timestamp_ms()
-
-        # Step 1: ANALYZE each modality's discriminative power for THIS specific plant
-        modality_analysis = {}
-        total_discriminative_power = 0
-        
-        for descriptor_type, descriptors in self.consolidated_descriptors.items():
-            if len(descriptors) == 0:
-                modality_analysis[descriptor_type] = {'power': 0, 'variance': 0, 'uniqueness': 0, 'recommended_count': 0}
-                continue
-            
-            # Calculate discriminative metrics
-            # Ensure descriptors is 2D for consistent calculations
-            if descriptors.ndim == 1:
-                descriptors = descriptors.reshape(1, -1)
-            
-            variance_power = np.sum(np.var(descriptors, axis=0))  # How varied the descriptors are
-            uniqueness_power = len(np.unique(descriptors.round(3), axis=0)) / len(descriptors)  # How unique they are
-            magnitude_power = np.mean(np.linalg.norm(descriptors, axis=1))  # Signal strength
-            
-            # Combined discriminative power for THIS plant
-            combined_power = variance_power * uniqueness_power * magnitude_power
-            modality_analysis[descriptor_type] = {
-                'power': combined_power,
-                'variance': variance_power,
-                'uniqueness': uniqueness_power,
-                'magnitude': magnitude_power,
-                'available_count': len(descriptors)
-            }
-            total_discriminative_power += combined_power
-            
-        # Step 2: DYNAMIC SELECTION based on plant's specific needs
-        if self.target_final_descriptors is None:
-            # FULLY DYNAMIC: Let each plant determine its own needs
-            descriptor_selections = {}
-            
-            for descriptor_type, analysis in modality_analysis.items():
-                if analysis['power'] == 0:
-                    descriptor_selections[descriptor_type] = 0
-                    continue
-                
-                # Dynamic count based on discriminative power
-                power_ratio = analysis['power'] / max(total_discriminative_power, 1e-10)
-                
-                # MAXIMUM EXTRACTION TEST: Force near 100% to test 13K theory
-                if power_ratio > 0.001:    # Any detectable power - keep almost everything!
-                    base_count = int(analysis['available_count'] * 0.99)  # Keep 99%!
-                elif power_ratio > 0.0001: # Minimal power
-                    base_count = int(analysis['available_count'] * 0.95)  # Keep 95%!
-                else:                      # Nearly zero power
-                    base_count = int(analysis['available_count'] * 0.90)  # Keep 90%!
-                
-                descriptor_selections[descriptor_type] = max(1, base_count)  # Always keep at least 1
-                
-        else:
-            # SEMI-DYNAMIC: Use target but distribute based on plant's needs
-            descriptor_selections = {}
-            
-            # Distribute target count based on discriminative power
-            for descriptor_type, analysis in modality_analysis.items():
-                if total_discriminative_power == 0:
-                    weight = 1.0 / len(self.consolidated_descriptors)  # Equal if no power
-                else:
-                    weight = analysis['power'] / total_discriminative_power
-                
-                dynamic_count = int(self.target_final_descriptors * weight)
-                dynamic_count = min(dynamic_count, analysis['available_count'])  # Don't exceed available
-                dynamic_count = max(1, dynamic_count) if analysis['available_count'] > 0 else 0  # At least 1 if available
-                
-                descriptor_selections[descriptor_type] = dynamic_count
-        
-        # Print the dynamic selection results (safely handle missing keys)
-        total_selected = sum(descriptor_selections.values())
-        for descriptor_type, count in descriptor_selections.items():
-            analysis = modality_analysis.get(descriptor_type, {'available_count': 0})
-            available = analysis.get('available_count', 0)
-            percentage = (count / max(available, 1)) * 100
-        
-        # Step 2: Apply intelligent selection within each type
-        selection_start = get_timestamp_ms()
-        final_descriptors = []
-        
-        for descriptor_type, descriptors in self.consolidated_descriptors.items():
-            num_to_select = descriptor_selections[descriptor_type]
-            
-            if num_to_select == 0:
-                continue
-                
-            # Use variance-based selection to pick most discriminative descriptors
-            selected_descriptors = self._select_most_discriminative(descriptors, num_to_select)
-            final_descriptors.extend(selected_descriptors)
-        selection_end = get_timestamp_ms()
-        
-        # Step 3: Fix descriptor shape consistency and final adjustment
-        adjustment_start = get_timestamp_ms()
-        
-        # FIX: Ensure all descriptors have the same shape before creating numpy array
-        if final_descriptors:
-            # Find the expected descriptor length (most common length)
-            descriptor_lengths = [len(desc) for desc in final_descriptors]
-            target_length = max(set(descriptor_lengths), key=descriptor_lengths.count)
-            
-            # Standardize all descriptors to target length
-            standardized_descriptors = []
-            for desc in final_descriptors:
-                if len(desc) == target_length:
-                    standardized_descriptors.append(desc)
-                elif len(desc) < target_length:
-                    # Pad shorter descriptors with zeros
-                    padded = desc + [0.0] * (target_length - len(desc))
-                    standardized_descriptors.append(padded)
-                else:
-                    # Truncate longer descriptors
-                    truncated = desc[:target_length]
-                    standardized_descriptors.append(truncated)
-            
-            unified_descriptors = np.array(standardized_descriptors, dtype=np.float32)
-        else:
-            # Fallback: create empty array with reasonable dimensions
-            fallback_size = self.target_final_descriptors if self.target_final_descriptors is not None else 100
-            unified_descriptors = np.zeros((fallback_size, 3), dtype=np.float32)
-        
-        if self.target_final_descriptors is not None:
-            # Only apply size constraints if target is set (semi-dynamic mode)
-            if len(unified_descriptors) > self.target_final_descriptors:
-                # DETERMINISTIC sampling down to target (replaces random)
-                step = len(unified_descriptors) / self.target_final_descriptors
-                indices = [int(i * step) for i in range(self.target_final_descriptors)]
-                unified_descriptors = unified_descriptors[indices]
-            elif len(unified_descriptors) < self.target_final_descriptors:
-                # Pad with deterministic duplicates if needed
-                needed = self.target_final_descriptors - len(unified_descriptors)
-                if len(unified_descriptors) > 0:
-                    # Use modulo indexing for deterministic padding
-                    indices = [i % len(unified_descriptors) for i in range(needed)]
-                    padding = unified_descriptors[indices]
-                    unified_descriptors = np.concatenate([unified_descriptors, padding])
-                else:
-                    # Create default descriptors if none exist
-                    unified_descriptors = np.zeros((self.target_final_descriptors, 3), dtype=np.float32)
-        else:
-            # Fully dynamic mode - use whatever the plant needs
-            pass
-        return unified_descriptors
-    
-    def _select_most_discriminative(self, descriptors: np.ndarray, num_to_select: int) -> List:
-        """Select most discriminative descriptors using variance analysis + QUALITY OPTIMIZATION"""
-        if len(descriptors) <= num_to_select:
-            selected = descriptors.copy()
-        else:
-            # Calculate discriminative power for each descriptor
-            descriptor_variances = np.var(descriptors, axis=1)
-            
-            # Select top descriptors by variance (most discriminative)
-            top_indices = np.argsort(descriptor_variances)[-num_to_select:]
-            selected = descriptors[top_indices]
-        
-        #   APPLY QUALITY OPTIMIZATION (from analysis results)
-        if len(selected) > 1 and selected.size > 0:
-            try:
-                # Strategy 1: Outlier enhancement (best performer from analysis)
-                distances = np.linalg.norm(selected - np.mean(selected, axis=0), axis=1)
-                if np.max(distances) > 0:
-                    outlier_weights = 1 + (distances / np.max(distances))
-                    enhanced_selected = selected * outlier_weights.reshape(-1, 1)
-                    
-                    # Strategy 2: Enhanced normalization for better distribution
-                    if np.max(enhanced_selected) > np.min(enhanced_selected):
-                        minmax_normalized = (enhanced_selected - np.min(enhanced_selected)) / (np.max(enhanced_selected) - np.min(enhanced_selected) + 1e-8)
-                        enhanced_selected = minmax_normalized * 4.0 - 2.0  # Scale to [-2, 2] for better range
-                        enhanced_selected = np.tanh(enhanced_selected)  # Prevent overflow, improve distribution
-                        
-                        selected = enhanced_selected
-            except:
-                # Fallback to original selection if optimization fails
-                pass
-        
-        return selected.tolist()
-
-class CurseResistantDescriptorProcessor:
-    """
-    Advanced descriptor processor with curse-of-dimensionality resistance.
-    
-    Key innovations:
-    1. Identifies and merges overlapping/similar descriptors
-    2. Consolidates redundant descriptors into comprehensive representations
-    3. Uses curse-resistant techniques for high-dimensional descriptor processing
-    4. Automatically optimizes descriptor compression ratios
-    """
-    
-    def __init__(self, num_classes: int, descriptor_vector_size: int = 10, target_features: int = 25000):
-        self.num_classes = num_classes
-        self.descriptor_vector_size = descriptor_vector_size
-        self.target_features = target_features
-        self.use_gpu = GPU_AVAILABLE
-        
-        # Descriptor similarity threshold for merging
-        self.similarity_threshold = 0.85  # 85% similar descriptors get merged
-        self.cluster_batch_size = 50000   # Process descriptors in batches for memory efficiency
-        
-        # Curse-resistant architecture parameters
-        self.noise_std = 0.02              # Lower noise for raw descriptors
-        self.descriptor_dropout_rate = 0.10   # Descriptor-level dropout
-        self.network_dropout_rate = 0.30   # Network dropout
-        self.weight_decay = 1e-2           # Strong regularization
-        
-        # GPU-only operation
-        self._init_gpu_processor()
-    
-    def _init_gpu_processor(self):
-        """Initialize GPU-accelerated curse-resistant processor."""
-        # Descriptor consolidation stage (finds and merges similar descriptors)
-        self.descriptor_consolidator = {
-            'similarity_weights': torch.randn(self.descriptor_vector_size, 64).to(torch.device('cuda')),
-            'cluster_centers': None,  # Will be computed dynamically
-            'descriptor_mapping': {},    # Maps original descriptors to consolidated ones
-        }
-        
-        # Curse-resistant processing stages (gradual dimensionality reduction)
-        # NOTE: These weights are NOT used in the current pipeline - they're legacy from older implementation
-        # The actual processing uses the IndividualCurseResistantProcessor and UnifiedCurseResistantCombiner
-        # Stage 1: Initial compression with high capacity (DETERMINISTIC initialization)
-        torch.manual_seed(42)  # Ensure deterministic weights
-        self.stage1_weights = torch.randn(200000, self.descriptor_vector_size).to(torch.device('cuda'))
-        self.stage1_bias = torch.zeros(200000, dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Stage 2: Intermediate compression  
-        self.stage2_weights = torch.randn(100000, 200000).to(torch.device('cuda'))
-        self.stage2_bias = torch.zeros(100000, dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Stage 3: Descriptor abstraction
-        self.stage3_weights = torch.randn(50000, 100000).to(torch.device('cuda'))
-        self.stage3_bias = torch.zeros(50000, dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Stage 4: High-level descriptor features
-        self.stage4_weights = torch.randn(25000, 50000).to(torch.device('cuda'))
-        self.stage4_bias = torch.zeros(25000, dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Stage 5: Final feature extraction
-        self.stage5_weights = torch.randn(self.target_features, 25000).to(torch.device('cuda'))
-        self.stage5_bias = torch.zeros(self.target_features, dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Classification layer
-        self.classifier_weights = torch.randn(self.num_classes, self.target_features).to(torch.device('cuda'))
-        self.classifier_bias = torch.zeros(self.num_classes, dtype=torch.float32).to(torch.device('cuda'))
-        
-        
-    def consolidate_descriptors(self, millions_of_descriptors: np.ndarray) -> np.ndarray:
-        """
-        Consolidate overlapping/similar descriptors into comprehensive representations.
-        
-        This is where the magic happens - we identify descriptors that are essentially
-        the same (like overlapping 2x2 patches scanning a 100x100 leaf) and merge
-        them into single, more comprehensive descriptor representations.
-        """
-        
-        # GPU-only operation
-        return self._consolidate_descriptors_gpu(millions_of_descriptors)
-    
-    def _consolidate_descriptors_gpu(self, descriptors: np.ndarray) -> np.ndarray:
-        """GPU-accelerated descriptor consolidation using clustering."""
-        # Transfer to GPU
-        gpu_descriptors = torch.tensor(descriptors, dtype=torch.float32).to(torch.device('cuda'))
-        total_descriptors = len(descriptors)
-        
-        # Process in batches to manage memory
-        consolidated_descriptors = []
-        descriptor_clusters = []
-        
-        batch_size = min(self.cluster_batch_size, total_descriptors)
-        
-        for batch_start in range(0, total_descriptors, batch_size):
-            batch_end = min(batch_start + batch_size, total_descriptors)
-            batch_descriptors = gpu_descriptors[batch_start:batch_end]
-            
-            # Calculate descriptor similarities using efficient GPU operations
-            batch_consolidated = self._cluster_similar_descriptors_gpu(batch_descriptors)
-            consolidated_descriptors.extend(batch_consolidated)
-            
-            # Memory cleanup
-            del batch_descriptors
-            torch.cuda.empty_cache()
-        
-        return np.array(consolidated_descriptors)
-    
-    def _cluster_similar_descriptors_gpu(self, batch_descriptors: torch.Tensor) -> List[List[float]]:
-        """Optimal descriptor clustering with adaptive thresholds and biological importance."""
-        batch_size = len(batch_descriptors)
-        
-        # Calculate multiple similarity metrics for optimal merging
-        norms = torch.norm(batch_descriptors, dim=1, keepdim=True)
-        normalized_descriptors = batch_descriptors / (norms + 1e-8)
-        
-        # 1. Cosine similarity matrix
-        cosine_similarity = torch.mm(normalized_descriptors, normalized_descriptors.T)
-        
-        # 2. Euclidean distance similarity  
-        distances = torch.cdist(batch_descriptors[:, None], batch_descriptors[None, :])
-        max_dist = torch.max(distances)
-        euclidean_similarity = 1.0 - (distances / (max_dist + 1e-8))
-        
-        # 3. Biological importance weighting
-        biological_importance = self._calculate_biological_importance_gpu(batch_descriptors)
-        
-        # 4. Adaptive similarity threshold based on descriptor type
-        adaptive_thresholds = self._calculate_adaptive_thresholds_gpu(batch_descriptors)
-        
-        # Combined similarity with biological weighting
-        combined_similarity = (
-            0.6 * cosine_similarity + 
-            0.4 * euclidean_similarity
-        ) * biological_importance[:, None]
-        
-        # Adaptive clustering with variable thresholds
-        visited = torch.zeros(batch_size, dtype=torch.bool).to(torch.device('cuda'))
-        consolidated = []
-        merge_count = 0
-        
-        for i in range(batch_size):
-            if visited[i]:
-                continue
-            
-            # Use adaptive threshold for this descriptor type
-            threshold = adaptive_thresholds[i]
-            similar_mask = combined_similarity[i] > threshold
-            similar_indices = torch.where(similar_mask)[0]
-            
-            if len(similar_indices) > 1:
-                # Weighted merging based on biological importance
-                similar_descriptors = batch_descriptors[similar_indices]
-                weights = biological_importance[similar_indices]
-                weights = weights / weights.sum()  # Normalize weights
-                
-                # Weighted average instead of simple average
-                merged_descriptor = torch.sum(similar_descriptors * weights[:, None], axis=0)
-                consolidated.append(merged_descriptor.cpu().numpy().tolist())
-                
-                visited[similar_indices] = True
-                merge_count += len(similar_indices)
-                
-                if len(similar_indices) > 5:  # Only log significant merges
-                    pass
-            else:
-                # Keep unique descriptor
-                consolidated.append(batch_descriptors[i].cpu().numpy().tolist())
-                visited[i] = True
-        
-        compression_ratio = batch_size / len(consolidated)
-        
-        return consolidated
-    
-    def _calculate_biological_importance_gpu(self, descriptors: torch.Tensor) -> torch.Tensor:
-        """Calculate biological importance of descriptors for weighted merging."""
-        # Descriptors with higher variance in critical channels are more important
-        # Channel importance: [brightness, texture, R, G, B, v_grad, h_grad, diag1, diag2, contrast]
-        channel_importance = torch.tensor([0.8, 1.2, 1.0, 1.5, 1.0, 1.3, 1.3, 0.9, 0.9, 1.1], dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Calculate weighted variance for each descriptor
-        weighted_descriptors = descriptors * channel_importance[None, :]
-        descriptor_importance = torch.var(weighted_descriptors, dim=1)
-        
-        # Normalize to [0.5, 1.5] range (prevent any descriptor from being ignored)
-        min_importance, max_importance = torch.min(descriptor_importance), torch.max(descriptor_importance)
-        if max_importance > min_importance:
-            normalized_importance = 0.5 + (descriptor_importance - min_importance) / (max_importance - min_importance)
-        else:
-            normalized_importance = torch.ones_like(descriptor_importance)
-        
-        return normalized_importance
-    
-    def _calculate_adaptive_thresholds_gpu(self, descriptors: torch.Tensor) -> torch.Tensor:
-        """Calculate adaptive similarity thresholds based on descriptor characteristics."""
-        # Different descriptor types need different similarity thresholds
-        
-        # Brightness-dominant descriptors (more tolerance for merging)
-        brightness_dominant = torch.abs(descriptors[:, 0]) > torch.mean(torch.abs(descriptors[:, [1, 5, 6]]), dim=1)
-        
-        # Texture-dominant descriptors (less tolerance - more distinctive)
-        texture_dominant = torch.abs(descriptors[:, 1]) > torch.mean(torch.abs(descriptors[:, [0, 5, 6]]), dim=1)
-        
-        # Edge-dominant descriptors (medium tolerance)
-        edge_dominant = torch.max(torch.abs(descriptors[:, [5, 6]]), dim=1)[0] > torch.abs(descriptors[:, 1])
-        
-        # Color-dominant descriptors (less tolerance - species-specific)
-        color_variance = torch.var(descriptors[:, [2, 3, 4]], dim=1)
-        color_dominant = color_variance > torch.percentile(color_variance, 75)
-        
-        # Assign adaptive thresholds
-        thresholds = torch.full(len(descriptors), 0.85, dtype=torch.float32).to(torch.device('cuda'))  # Default
-        
-        thresholds[brightness_dominant] = 0.90  # Higher threshold (easier to merge)
-        thresholds[texture_dominant] = 0.75     # Lower threshold (harder to merge) 
-        thresholds[edge_dominant] = 0.80        # Medium threshold
-        thresholds[color_dominant] = 0.70       # Lowest threshold (preserve color diversity)
-        
-        return thresholds
-    
-    def process_descriptors(self, millions_of_descriptors: np.ndarray) -> np.ndarray:
-        """
-        Main descriptor processing pipeline with curse resistance.
-        
-        1. Consolidate overlapping/similar descriptors
-        2. Apply curse-resistant dimensionality reduction
-        3. Extract high-quality features for classification
-        """
-        start_time = time.time()
-        
-        # Step 1: Consolidate similar descriptors
-        consolidated_descriptors = self.consolidate_descriptors(millions_of_descriptors)
-        consolidation_time = time.time() - start_time
-        
-        
-        # Step 2: Curse-resistant feature extraction
-        # GPU-only operation
-        final_features = self._extract_features_gpu(consolidated_descriptors)
-        
-        total_time = time.time() - start_time
-
-        return final_features
-    
-    def _extract_features_gpu(self, consolidated_descriptors: np.ndarray) -> np.ndarray:
-        """GPU-accelerated curse-resistant feature extraction."""
-        # Transfer to GPU
-        gpu_descriptors = torch.tensor(consolidated_descriptors, dtype=torch.float32).to(torch.device('cuda'))
-        
-        # Flatten to vector format for processing
-        total_dims = len(consolidated_descriptors) * self.descriptor_vector_size
-        flattened_input = gpu_descriptors.view(-1)
-        
-        # Pad or truncate to match stage1 input size
-        if len(flattened_input) > self.stage1_weights.shape[1]:
-            # Truncate if too large
-            model_input = flattened_input[:self.stage1_weights.shape[1]]
-        else:
-            # Pad if too small
-            padded = torch.zeros(self.stage1_weights.shape[1], dtype=torch.float32).to(torch.device('cuda'))
-            padded[:len(flattened_input)] = flattened_input
-            model_input = padded
-        
-        # Training-specific augmentation removed - moved to training.py
-        
-        # Stage 1: Initial compression with curse resistance
-        h1 = torch.matmul(self.stage1_weights, model_input) + self.stage1_bias
-        h1 = F.relu(h1)  # ReLU activation
-        
-        # Network dropout removed - moved to training.py
-        
-        # Stage 2: Intermediate compression
-        h2 = torch.matmul(self.stage2_weights, h1) + self.stage2_bias
-        h2 = F.relu(h2)
-        
-        # Network dropout removed - moved to training.py
-        
-        # Stage 3: Descriptor abstraction
-        h3 = torch.matmul(self.stage3_weights, h2) + self.stage3_bias
-        h3 = F.relu(h3)
-        
-        # Stage 4: High-level features
-        h4 = torch.matmul(self.stage4_weights, h3) + self.stage4_bias
-        h4 = F.relu(h4)
-        
-        # Stage 5: Final feature extraction
-        final_features = torch.matmul(self.stage5_weights, h4) + self.stage5_bias
-        final_features = F.relu(final_features)
-        
-        # Transfer back to CPU
-        result = final_features.cpu().numpy()
-        
-        # GPU memory cleanup
-        del gpu_descriptors, model_input, h1, h2, h3, h4, final_features
-        torch.cuda.empty_cache()
-        
-        return result
-    
-    def predict(self, processed_features: np.ndarray) -> np.ndarray:
-        """Predict class scores from processed features."""
-        if self.use_gpu:
-            gpu_features = torch.tensor(processed_features, dtype=torch.float32).to(torch.device('cuda'))
-            scores = torch.matmul(self.classifier_weights, gpu_features) + self.classifier_bias
-            return scores.cpu().numpy()
-        else:
-            scores = np.dot(self.classifier_weights, processed_features) + self.classifier_bias
-            return scores
-    
-    # train_step method removed - moved to training.py
-    
-    def evaluate_curse_resistance(self, processed_features: np.ndarray) -> Dict[str, float]:
-        """Evaluate curse resistance metrics for the processed features."""
-        # Calculate effective dimensionality
-        feature_vars = np.var(processed_features)
-        feature_mean = np.mean(processed_features)
-        
-        # Simple curse resistance metrics
-        metrics = {
-            'feature_variance': float(feature_vars),
-            'feature_mean': float(feature_mean),
-            'feature_range': float(np.max(processed_features) - np.min(processed_features)),
-            'curse_resistance_score': min(1.0, feature_vars / (feature_mean + 1e-8))
-        }
-        
-        return metrics
-
-# Augmentation imports removed - moved to training.py
-
-# TrainingScheduler class removed - moved to training.py
 
 class MultiModalCurseResistantRecognizer:
     """
@@ -2711,9 +690,9 @@ class MultiModalCurseResistantRecognizer:
     - Frequency descriptors (~21K per image)
     
     Each descriptor type gets individual curse-resistant processing,
-    then unified weighted combination for optimal generalization.
+    then unified weighted combination for generalization.
     
-      NEW: Live augmentation engine for 98-99%+ accuracy!
+      NEW: Live augmentation engine for 98-99%+ accuracy
     """
     
     def __init__(self, image_size: int = 512, num_classes: int = 100):
@@ -2733,114 +712,11 @@ class MultiModalCurseResistantRecognizer:
         # Augmentation engine removed - moved to training.py
         
     
-    def process_image(self, image: np.ndarray) -> np.ndarray:
-        """
-        OPTIMIZED WHOLE-IMAGE EXTRACTION with single background removal
-        
-        1.   SINGLE BACKGROUND REMOVAL - Done once at start, shared by all modalities
-        2.   PLANT-FOCUSED IMAGE - Clean image passed to all feature extractors  
-        3.   WHOLE-IMAGE ANALYSIS - Each modality analyzes entire cleaned image
-        4.   DETERMINISTIC & FAST - Direct feature extraction
-        """
-        pipeline_start = get_timestamp_ms()
-        
-        # Deterministic seeds
-        np.random.seed(42)
-        torch.manual_seed(42)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(42)
-        
-        print(f"  OPTIMIZED WHOLE-IMAGE EXTRACTION:")
-        start_time = time.time()
-        
-        # STEP 1: SINGLE BACKGROUND REMOVAL (done once, shared by all modalities)
-        print(f"     Initializing uniform weights...")
-        weights_start = get_timestamp_ms()
-        # Use uniform weights across entire image (no plant region detection)
-        plant_weights = np.ones((image.shape[0], image.shape[1]), dtype=np.float32)
-        weights_end = get_timestamp_ms()
-        
-        plant_coverage = np.mean(plant_weights)
-        print(f"     Plant coverage: {plant_coverage:.1%}")
-        
-        # STEP 2: CREATE PLANT-FOCUSED IMAGE (background removal applied once)
-        print(f"     Creating plant-focused image...")
-        # Apply background removal to create a clean plant-focused image
-        h, w = image.shape[:2]
-        plant_weights_resized = cv2.resize(plant_weights, (w, h))
-        
-        # Create plant-focused image (background suppressed but not eliminated)
-        plant_focused_image = image.astype(np.float32)
-        for c in range(3):  # Apply to each RGB channel
-            plant_focused_image[:, :, c] = plant_focused_image[:, :, c] * (0.3 + 0.7 * plant_weights_resized)
-        
-        plant_focused_image = plant_focused_image.astype(np.uint8)
-        
-        # STEP 3: EXTRACT WHOLE-IMAGE FEATURES (all modalities use the cleaned image)
-        print(f"     Extracting features from plant-focused image...")
-        extraction_start = get_timestamp_ms()
-        
-        all_features = []
-        
-        # All modalities now work on the same plant-focused image
-        print(f"     Texture features (whole-image)...")
-        texture_features = self._extract_simple_texture_features(plant_focused_image, plant_weights)
-        all_features.extend(texture_features)
-        
-        print(f"     Color features (whole-image)...")
-        color_features = self._extract_simple_color_features(plant_focused_image, plant_weights)
-        all_features.extend(color_features)
-        
-        print(f"     Shape features (whole-image)...")
-        shape_features = self._extract_simple_shape_features(plant_focused_image, plant_weights)
-        all_features.extend(shape_features)
-        
-        print(f"     Contrast features (whole-image)...")
-        contrast_features = self._extract_simple_contrast_features(plant_focused_image, plant_weights)
-        all_features.extend(contrast_features)
-        
-        print(f"     Frequency features (whole-image)...")
-        frequency_features = self._extract_simple_frequency_features(plant_focused_image, plant_weights)
-        all_features.extend(frequency_features)
-        
-        print(f"     Unique features (whole-image)...")
-        unique_features = self._extract_simple_unique_features(plant_focused_image, plant_weights)
-        all_features.extend(unique_features)
-        
-        extraction_end = get_timestamp_ms()
-        
-        # STEP 4: INTELLIGENT FEATURE SELECTION (1500 highest-quality features)
-        combine_start = get_timestamp_ms()
-        print(f"     Intelligent feature selection...")
-        
-        # Convert to numpy array 
-        raw_features = np.array(all_features, dtype=np.float32)
-        
-        # Apply intelligent feature selection to get top 1500 features
-        selected_features = self._select_highest_quality_features(
-            raw_features, 
-            texture_features, color_features, shape_features,
-            contrast_features, frequency_features, unique_features,
-            target_features=1500
-        )
-        
-        unified_descriptors = selected_features
-        
-        combine_end = get_timestamp_ms()
-        pipeline_end = get_timestamp_ms()
-        
-        extraction_time = time.time() - start_time
-        print(f"     Extracted {len(all_features):,} raw features in {extraction_time:.3f}s")
-        print(f"      Texture: {len(texture_features)}, Color: {len(color_features)}, Shape: {len(shape_features)}")
-        print(f"      Contrast: {len(contrast_features)}, Frequency: {len(frequency_features)}, Unique: {len(unique_features)}")
-        print(f"     Selected {len(unified_descriptors):,} highest-quality features")
-        print(f"     Single background removal with {plant_coverage:.1%} plant focus")
-        
-        return unified_descriptors
+    
     
     def process_image_parallel_gpu(self, image: np.ndarray) -> np.ndarray:
         """
-        ULTRA-FAST GPU-accelerated parallel modality extraction
+        GPU-accelerated parallel modality extraction
         Target: <500ms per image with all 6 modalities in parallel
         """
         import time
@@ -2950,7 +826,7 @@ class MultiModalCurseResistantRecognizer:
         all_features.extend(modality_results.get('unique', []))
         
         # STEP 4: Feature selection (15K → 1.5K) 
-        print(f"     Intelligent feature selection...")
+        print(f"     feature selection...")
         raw_features = np.array(all_features, dtype=np.float32)
         
         selected_features = self._select_highest_quality_features(
@@ -2974,7 +850,7 @@ class MultiModalCurseResistantRecognizer:
         
         return selected_features
     
-    def process_image_ultra_parallel_gpu(self, image: np.ndarray, augmentations_per_image: int = 10) -> np.ndarray:
+    def process_image_ultra_parallel_gpu(self, image: np.ndarray, augmentations_per_image: int = 10) -> List[np.ndarray]:
         """
         : Ultra-parallel GPU processing with CUDA streams
         - Keeps ALL data on GPU throughout entire pipeline
@@ -2986,6 +862,23 @@ class MultiModalCurseResistantRecognizer:
         """
         import time
         start_time = time.time()
+        
+        # Check GPU memory and limit augmentations if needed
+        if torch.cuda.is_available():
+            gpu_memory_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            if gpu_memory_gb < 8 and augmentations_per_image > 20:
+                original_aug = augmentations_per_image
+                augmentations_per_image = 20
+                print(f"     GPU memory limited: reduced augmentations from {original_aug} to {augmentations_per_image}")
+            elif gpu_memory_gb < 6 and augmentations_per_image > 15:
+                original_aug = augmentations_per_image
+                augmentations_per_image = 15
+                print(f"     GPU memory limited: reduced augmentations from {original_aug} to {augmentations_per_image}")
+            elif gpu_memory_gb < 4 and augmentations_per_image > 10:
+                original_aug = augmentations_per_image
+                augmentations_per_image = 10
+                print(f"     GPU memory limited: reduced augmentations from {original_aug} to {augmentations_per_image}")
+        
         print(f"     ULTRA-PARALLEL GPU processing ({augmentations_per_image} augmentations)...")
         
         # STEP 1: Convert to GPU tensor and keep there
@@ -3034,37 +927,96 @@ class MultiModalCurseResistantRecognizer:
         extraction_time = time.time() - extraction_start
         print(f"        CUDA stream extraction: {extraction_time:.3f}s")
         
-        # STEP 5: Combine results from all images and modalities (staying on GPU)
+        # STEP 5: Extract individual feature vectors for each image (no averaging)
         combine_start = time.time()
         
-        # Flatten all results into final feature vector
-        final_features = []
         total_images = len(augmented_tensors) + 1  # Original + augmentations
+        individual_feature_vectors = []
         
-        for modality in ['texture', 'color', 'shape', 'contrast', 'frequency', 'unique']:
-            modality_tensor = stream_results.get(modality)
-            if modality_tensor is not None:
-                # Average features across all images (original + augmentations)
-                avg_features = torch.mean(modality_tensor, dim=0)  # Average across batch dimension
-                final_features.extend(avg_features.cpu().numpy().tolist())
-        
-        # Feature selection (keep on CPU for final selection logic)
-        if len(final_features) > 1500:
-            # Simple top-K selection for now
-            final_features = final_features[:1500]
-        elif len(final_features) < 1500:
-            final_features.extend([0.0] * (1500 - len(final_features)))
+        # Process each image separately to get individual 1500-feature vectors
+        for img_idx in range(total_images):
+            img_features = []
+            
+            # Collect features from all modalities for this specific image
+            for modality in ['texture', 'color', 'shape', 'contrast', 'frequency', 'unique']:
+                modality_tensor = stream_results.get(modality)
+                if modality_tensor is not None:
+                    # Get features for this specific image (no averaging)
+                    img_modality_features = modality_tensor[img_idx].cpu().numpy()
+                    img_features.extend(img_modality_features.tolist())
+            
+            # Smart feature selection (select best 2500 from 30K features)
+            if len(img_features) > 2500:
+                img_features = self._smart_feature_selection(img_features, target_count=2500)
+            elif len(img_features) < 2500:
+                img_features.extend([0.0] * (2500 - len(img_features)))
+            
+            individual_feature_vectors.append(np.array(img_features, dtype=np.float32))
         
         combine_time = time.time() - combine_start
         total_time = time.time() - start_time
         
-        print(f"        Feature combination: {combine_time:.3f}s")
+        print(f"        Feature extraction: {combine_time:.3f}s")
         print(f"     ULTRA-PARALLEL complete: {total_time:.3f}s")
         print(f"        Total speedup: {16.0/total_time:.1f}x faster than sequential")
-        print(f"        GPU utilization: {total_images} images x 6 modalities = {total_images*6} parallel operations")
-        print(f"        Final features: {len(final_features):,}")
+        print(f"        GPU utilisation: {total_images} images x 6 modalities = {total_images*6} parallel operations")
+        print(f"        Individual training samples: {len(individual_feature_vectors)} x 2500 features")
+        print(f"        Training data multiplier: {len(individual_feature_vectors)}x (1 original + {augmentations_per_image} augmentations)")
+        print(f"        Feature extraction: 30K raw → 2500 selected per image (smart selection)")
         
-        return np.array(final_features)
+        # Clear GPU memory to prevent VRAM accumulation between images
+        cleanup_start = time.time()
+        
+        # Delete all GPU tensors explicitly
+        del image_tensor
+        for aug_tensor in augmented_tensors:
+            del aug_tensor
+        del augmented_tensors
+        
+        # Clear stream results
+        for modality_name, modality_tensor in stream_results.items():
+            if modality_tensor is not None:
+                del modality_tensor
+        del stream_results
+        
+        # Clear tensor caches for this image
+        _gpu_tensor_cache.clear_cache()
+        
+        # Force GPU memory cleanup
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        
+        cleanup_time = time.time() - cleanup_start
+        print(f"        GPU memory cleanup: {cleanup_time:.3f}s")
+        
+        return individual_feature_vectors
+    
+    def _smart_feature_selection(self, features: List[float], target_count: int = 2500) -> List[float]:
+        """
+        Simple but effective feature selection - prioritize informative features
+        """
+        features_array = np.array(features, dtype=np.float32)
+        
+        # Simple quality scoring: variance + magnitude + non-zero ratio
+        variance_scores = np.abs(features_array - np.mean(features_array))  # Distance from mean
+        magnitude_scores = np.abs(features_array)  # Absolute magnitude 
+        non_zero_scores = (features_array != 0).astype(np.float32)  # Non-zero indicator
+        
+        # Combined quality score (simple weighted sum)
+        quality_scores = (
+            variance_scores * 0.4 +     # Prefer varied features
+            magnitude_scores * 0.4 +    # Prefer significant features  
+            non_zero_scores * 0.2       # Prefer non-zero features
+        )
+        
+        # Get indices of top features
+        top_indices = np.argsort(quality_scores)[-target_count:]
+        
+        # Return selected features in original order
+        selected_features = features_array[sorted(top_indices)]
+        
+        return selected_features.tolist()
     
     def numpy_to_gpu_tensor(self, image: np.ndarray) -> torch.Tensor:
         """Convert numpy image to GPU tensor in proper format"""
@@ -3084,7 +1036,7 @@ class MultiModalCurseResistantRecognizer:
                                        frequency_features: List[float], unique_features: List[float],
                                        target_features: int = 1500) -> np.ndarray:
         """
-        Intelligent feature selection: Select top 1500 highest-quality features
+        feature selection: Select top 1500 highest-quality features
         
         Quality scoring based on:
         1. Statistical significance (variance, range)
@@ -3122,7 +1074,7 @@ class MultiModalCurseResistantRecognizer:
                 feature_scores.append(quality_score)
                 idx += 1
         
-        # Convert to numpy arrays for efficient processing
+        # Convert to numpy arrays for processing
         feature_scores = np.array(feature_scores)
         feature_indices = np.array(feature_indices) 
         
@@ -3202,14 +1154,14 @@ class MultiModalCurseResistantRecognizer:
     
     def _balanced_feature_selection(self, feature_scores: np.ndarray, feature_indices: np.ndarray,
                                   modality_labels: List[str], target_features: int) -> np.ndarray:
-        """Enhanced class-aware balanced feature selection for better minority class performance"""
+        """class-aware balanced feature selection for better minority class performance"""
         
-        # Enhanced balancing with adaptive allocation based on modality importance
+        # balancing with adaptive allocation based on modality importance
         print(f"           Class-aware balanced feature selection for {len(set(modality_labels))} modalities...")
         
         # Define adaptive minimum features per modality based on biological importance
         modality_importance = {
-            'texture': 0.30,    # Most important for species differentiation
+            'texture': 0.30,    # Most for species differentiation
             'unique': 0.25,     # Class-specific discriminative features
             'shape': 0.20,      # Structural characteristics
             'contrast': 0.15,   # Surface pattern analysis
@@ -3230,7 +1182,7 @@ class MultiModalCurseResistantRecognizer:
             # Get biological importance weight
             importance = modality_importance.get(modality, 0.10)
             
-            # Adaptive allocation: more important modalities get more features
+            # Adaptive allocation: more modalities get more features
             base_allocation = int(target_features * importance)
             
             # Ensure we don't exceed available features for this modality
@@ -3284,7 +1236,7 @@ class MultiModalCurseResistantRecognizer:
         print(f"        Selection efficiency: {len(selected_indices)}/{len(modality_labels)} features")
     
     def _extract_simple_texture_features(self, image: np.ndarray, plant_weights: np.ndarray = None) -> List[float]:
-        """Extract COMPREHENSIVE texture features (2500+ features) for intelligent selection"""
+        """Extract texture features (2500+ features) for selection"""
         features = []
         
         # Convert to tensor for GPU processing
@@ -3305,7 +1257,7 @@ class MultiModalCurseResistantRecognizer:
             gray_focused = gray_tensor
             plant_weights_tensor = torch.ones_like(gray_tensor)
         
-        # ========== COMPREHENSIVE TEXTURE ANALYSIS (~2500 features) ==========
+        # ========== TEXTURE ANALYSIS (~2500 features) ==========
         
         # 1. MULTI-SCALE INTENSITY STATISTICS (100 features)
         scales = [1, 2, 4, 8, 16]  # Different downsampling scales
@@ -3317,7 +1269,7 @@ class MultiModalCurseResistantRecognizer:
                     kernel_size=scale, stride=scale
                 )[0,0]
                 
-                # Basic statistics
+                # statistics
                 features.extend([
                     torch.mean(scaled).item(),
                     torch.std(scaled).item(),
@@ -3343,12 +1295,12 @@ class MultiModalCurseResistantRecognizer:
             else:
                 features.extend([0.0] * 12)
         
-        # 2. COMPREHENSIVE GRADIENT ANALYSIS (200 features)
+        # 2. GRADIENT ANALYSIS (200 features)
         # Multi-direction gradients
         grad_x = torch.diff(gray_focused, dim=1)
         grad_y = torch.diff(gray_focused, dim=0)
         
-        # Basic gradient statistics (10 features)
+        # gradient statistics (10 features)
         # Ensure compatible dimensions for grad_magnitude calculation
         min_h = min(grad_x.shape[0], grad_y.shape[0])
         min_w = min(grad_x.shape[1], grad_y.shape[1])
@@ -3714,7 +1666,7 @@ class MultiModalCurseResistantRecognizer:
                 features.extend([0.0] * 20)
         
         # 10. ADDITIONAL PADDING TO REACH 2500+ FEATURES
-        # Ensure we have at least 2500 features by adding more comprehensive analysis
+        # Ensure we have at least 2500 features by adding more analysis
         current_feature_count = len(features)
         target_features = 2500
         
@@ -3771,7 +1723,7 @@ class MultiModalCurseResistantRecognizer:
         return features
     
     def _extract_simple_color_features(self, image: np.ndarray, plant_weights: np.ndarray = None) -> List[float]:
-        """Extract COMPREHENSIVE color features (2500+ features) for intelligent selection"""
+        """Extract color features (2500+ features) for selection"""
         features = []
         
         # Convert to tensor
@@ -3785,7 +1737,7 @@ class MultiModalCurseResistantRecognizer:
         else:
             plant_weights_tensor = torch.ones((h, w), device=self.device)
         
-        # ========== COMPREHENSIVE COLOR ANALYSIS (~2500 features) ==========
+        # ========== COLOR ANALYSIS (~2500 features) ==========
         
         # 1. MULTI-SCALE RGB ANALYSIS (300 features)
         r, g, b = img_tensor[0], img_tensor[1], img_tensor[2]
@@ -3805,7 +1757,7 @@ class MultiModalCurseResistantRecognizer:
                         kernel_size=scale, stride=scale
                     )[0,0]
                     
-                    # Comprehensive statistics
+                    # statistics
                     features.extend([
                         torch.mean(scaled_channel).item(),
                         torch.std(scaled_channel).item(),
@@ -4052,7 +2004,7 @@ class MultiModalCurseResistantRecognizer:
             else:
                 features.extend([0.0] * 6)
         
-        # 9. ADDITIONAL COMPREHENSIVE COLOR FEATURES (700+ features)
+        # 9. ADDITIONAL COLOR FEATURES (700+ features)
         # Ensure we reach 2500+ total features
         
         # Color moments and statistical measures
@@ -4154,7 +2106,7 @@ class MultiModalCurseResistantRecognizer:
         return features
     
     def _extract_simple_shape_features(self, image: np.ndarray, plant_weights: np.ndarray = None) -> List[float]:
-        """Extract COMPREHENSIVE shape features (2500+ features) for intelligent selection"""
+        """Extract shape features (2500+ features) for selection"""
         features = []
         
         # Convert to grayscale for edge detection
@@ -4171,7 +2123,7 @@ class MultiModalCurseResistantRecognizer:
         else:
             plant_weights_resized = np.ones((h, w), dtype=np.float32)
         
-        # ========== COMPREHENSIVE SHAPE ANALYSIS (~2500 features) ==========
+        # ========== SHAPE ANALYSIS (~2500 features) ==========
         
         # 1. MULTI-THRESHOLD EDGE ANALYSIS (200 features)
         edge_thresholds = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
@@ -4242,7 +2194,7 @@ class MultiModalCurseResistantRecognizer:
                 ])
         
         # 3. CONTOUR AND BOUNDARY ANALYSIS (500 features)
-        # Advanced contour detection and analysis
+        # contour detection and analysis
         
         # Multiple contour detection methods
         contour_thresholds = [50, 100, 150, 200]
@@ -4364,7 +2316,7 @@ class MultiModalCurseResistantRecognizer:
             else:
                 features.extend([0.0] * 3)
         
-        # 6. COMPREHENSIVE PADDING TO REACH 2500+ (1100+ more features)
+        # 6. PADDING TO REACH 2500+ (1100+ more features)
         current_count = len(features)
         target_count = 2500
         
@@ -4419,7 +2371,7 @@ class MultiModalCurseResistantRecognizer:
         return features
     
     def _extract_simple_contrast_features(self, image: np.ndarray, plant_weights: np.ndarray = None) -> List[float]:
-        """Extract COMPREHENSIVE contrast features (2500+ features) for intelligent selection"""
+        """Extract contrast features (2500+ features) for selection"""
         features = []
         
         # Convert to grayscale
@@ -4437,7 +2389,7 @@ class MultiModalCurseResistantRecognizer:
         else:
             plant_weights_resized = np.ones((h, w), dtype=np.float32)
         
-        # ========== COMPREHENSIVE CONTRAST ANALYSIS (~2500 features) ==========
+        # ========== CONTRAST ANALYSIS (~2500 features) ==========
         
         # 1. MULTI-SCALE CONTRAST ANALYSIS (400 features)
         scales = [1, 2, 4, 8, 16]
@@ -4450,7 +2402,7 @@ class MultiModalCurseResistantRecognizer:
                 else:
                     scaled_gray = cv2.resize(gray_norm, (w//scale, h//scale))
                 
-                # Basic contrast metrics
+                # contrast metrics
                 global_std = np.std(scaled_gray)
                 global_range = np.max(scaled_gray) - np.min(scaled_gray)
                 global_variance = np.var(scaled_gray)
@@ -4592,7 +2544,7 @@ class MultiModalCurseResistantRecognizer:
         else:
             features.extend([0.0] * 10)
         
-        # 6. ADVANCED CONTRAST MEASURES (500 features)
+        # 6. CONTRAST MEASURES (500 features)
         # Weber contrast at multiple scales
         weber_contrasts = []
         
@@ -4667,7 +2619,7 @@ class MultiModalCurseResistantRecognizer:
             # Fallback if FFT fails
             features.extend([0.0] * 11)
         
-        # 8. COMPREHENSIVE PADDING TO REACH 2500+ FEATURES
+        # 8. PADDING TO REACH 2500+ FEATURES
         current_count = len(features)
         target_count = 2500
         
@@ -4720,7 +2672,7 @@ class MultiModalCurseResistantRecognizer:
         return features
     
     def _extract_simple_frequency_features(self, image: np.ndarray, plant_weights: np.ndarray = None) -> List[float]:
-        """Extract COMPREHENSIVE frequency features (2500+ features) for intelligent selection"""
+        """Extract frequency features (2500+ features) for selection"""
         features = []
         
         # Convert to grayscale
@@ -4737,7 +2689,7 @@ class MultiModalCurseResistantRecognizer:
         else:
             plant_weights_resized = np.ones((h, w), dtype=np.float32)
         
-        # ========== COMPREHENSIVE FREQUENCY ANALYSIS (~2500 features) ==========
+        # ========== FREQUENCY ANALYSIS (~2500 features) ==========
         
         try:
             # 1. FULL 2D FFT ANALYSIS (500 features)
@@ -4894,7 +2846,7 @@ class MultiModalCurseResistantRecognizer:
             # Fallback if FFT fails
             features.extend([0.0] * 100)
         
-        # 6. COMPREHENSIVE PADDING TO REACH 2500+ FEATURES
+        # 6. PADDING TO REACH 2500+ FEATURES
         current_count = len(features)
         target_count = 2500
         
@@ -4998,7 +2950,7 @@ class MultiModalCurseResistantRecognizer:
         return features
     
     def _extract_simple_unique_features(self, image: np.ndarray, plant_weights: np.ndarray = None) -> List[float]:
-        """Extract COMPREHENSIVE unique features (2500+ features) for intelligent selection"""
+        """Extract unique features (2500+ features) for selection"""
         features = []
         
         # Use provided plant weights (image is already plant-focused)
@@ -5008,13 +2960,13 @@ class MultiModalCurseResistantRecognizer:
         else:
             plant_weights_resized = np.ones((h, w), dtype=np.float32)
         
-        # ========== COMPREHENSIVE UNIQUE ANALYSIS (~2500 features) ==========
+        # ========== UNIQUE ANALYSIS (~2500 features) ==========
         
-        # 1. ADVANCED VEGETATION INDICES (400 features)
+        # 1. VEGETATION INDICES (400 features)
         if len(image.shape) == 3:
             r, g, b = image[:,:,0].astype(np.float32), image[:,:,1].astype(np.float32), image[:,:,2].astype(np.float32)
             
-            # Primary vegetation indices
+            # vegetation indices
             ndvi = (g - r) / (g + r + 1e-8)
             gndvi = (g - r) / (g + r + 1e-8)
             savi = 1.5 * (g - r) / (g + r + 0.5)
@@ -5025,7 +2977,7 @@ class MultiModalCurseResistantRecognizer:
             exr = 1.4 * r - g    # Excess Red
             ngrdi = (g - r) / (g + r + 1e-8)  # Normalized Green-Red Difference Index
             
-            # Advanced indices
+            # indices
             gli = (2 * g - r - b) / (2 * g + r + b + 1e-8)  # Green Leaf Index
             vari = (g - r) / (g + r - b + 1e-8)  # Visible Atmospherically Resistant Index
             
@@ -5203,14 +3155,14 @@ class MultiModalCurseResistantRecognizer:
                 else:
                     features.extend([0.0] * 4)
         
-        # 6. COMPREHENSIVE PADDING TO REACH 2500+ FEATURES
+        # 6. PADDING TO REACH 2500+ FEATURES
         current_count = len(features)
         target_count = 2500
         
         if current_count < target_count:
             remaining = target_count - current_count
             
-            # Additional comprehensive unique analysis
+            # Additional unique analysis
             # Multi-scale unique pattern analysis
             scales = [1, 2, 4, 8, 16]
             
@@ -5330,18 +3282,18 @@ class UniqueDescriptorExtractor:
     def __init__(self, image_size: int = 512):
         self.image_size = image_size
         
-        # ULTRA-FAST EXTRACTION CONFIGURATION for <500ms target
+        # EXTRACTION CONFIGURATION for <500ms target
         self.chunk_size = 32  # Larger chunks for speed
         self.skip_pattern = 4  # Skip every 4th chunk for maximum speed
         self.overlapping_stride = 28  # Minimal overlap for speed
         
-        # Single-scale ultra-fast extraction
+        # Single-scale extraction
         self.multi_scale_chunks = [32]  # Single scale for maximum speed
         
         # Global class uniqueness tracker
         self.global_unique_tracker = GlobalClassUniqueTracker()
         
-        # Advanced feature extractors for subtle differences
+        # feature extractors for subtle differences
         self.device = torch.device('cuda')
     
     def extract_descriptors(self, image: np.ndarray, class_idx: int = None, class_name: str = None) -> np.ndarray:
@@ -5359,7 +3311,7 @@ class UniqueDescriptorExtractor:
         return np.array(descriptors).flatten()
     
     def _extract_unique_gpu_optimized(self, image: np.ndarray, class_idx: int, class_name: str) -> np.ndarray:
-        """MASSIVE GPU-optimized unique descriptor extraction with multi-scale overlapping sampling"""
+        """MASSIVE unique descriptor extraction with multi-scale overlapping sampling"""
         h, w = image.shape[:2]
         
         # Convert to tensor once
@@ -5373,7 +3325,7 @@ class UniqueDescriptorExtractor:
         for chunk_size in self.multi_scale_chunks:
             scale_features = []
             
-            # ULTRA-FAST SPARSE EXTRACTION: Minimal overlap for speed
+            # SPARSE EXTRACTION: Minimal overlap for speed
             stride = self.overlapping_stride
             
             chunk_coords = []
@@ -5384,7 +3336,7 @@ class UniqueDescriptorExtractor:
                     if chunk_idx % self.skip_pattern == 0:
                         chunk_coords.append((y, x, chunk_size))
             
-            # ULTRA-FAST BATCH PROCESSING: Process 128 chunks at once
+            # BATCH PROCESSING: Process 128 chunks at once
             batch_size = 128  # Increased for maximum GPU utilization
             
             for batch_start in range(0, len(chunk_coords), batch_size):
@@ -5417,7 +3369,7 @@ class UniqueDescriptorExtractor:
                     else:
                         batch_tensor = torch.stack(batch_chunks)  # [batch, h, w]
                     
-                    # Extract ENHANCED unique features from batch
+                    # Extract unique features from batch
                     batch_features = self._extract_batch_unique_features_gpu_massive(batch_tensor, chunk_size)
                     scale_features.extend(batch_features)
             
@@ -5432,7 +3384,7 @@ class UniqueDescriptorExtractor:
         return np.array(unique_features)
     
     def _extract_batch_unique_features_gpu_massive(self, batch_tensor: torch.Tensor, chunk_size: int) -> List[float]:
-        """SPEED-OPTIMIZED unique feature extraction - Target <500ms total"""
+        """SPEED-unique feature extraction - Target <500ms total"""
         batch_features = []
         
         # Process entire batch at once for maximum speed
@@ -5443,7 +3395,7 @@ class UniqueDescriptorExtractor:
         
         # VECTORIZED FEATURE EXTRACTION (much faster than per-chunk loops)
         
-        # Feature Set 1: Basic statistics (6 features per chunk)
+        # Feature Set 1: statistics (6 features per chunk)
         means = torch.mean(batch_gray.view(batch_gray.shape[0], -1), dim=1)
         stds = torch.std(batch_gray.view(batch_gray.shape[0], -1), dim=1)
         mins = torch.min(batch_gray.view(batch_gray.shape[0], -1), dim=1)[0]
@@ -5475,7 +3427,7 @@ class UniqueDescriptorExtractor:
         # Combine all features efficiently
         for i in range(batch_tensor.shape[0]):
             chunk_features = [
-                # Basic stats (6 features)
+                # stats (6 features)
                 float(means[i]), float(stds[i]), float(mins[i]), 
                 float(maxs[i]), float(medians[i]), float(ranges[i]),
                 
