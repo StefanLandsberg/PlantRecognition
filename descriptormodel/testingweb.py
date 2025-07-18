@@ -29,6 +29,8 @@ scaler = None
 recognizer = None
 device = None
 
+
+
 def load_model_and_scaler():
     """Load the trained model and fitted scaler"""
     global model, model_data, scaler, recognizer, device
@@ -257,7 +259,7 @@ def index():
                         # If still locked, ignore - temp files will be cleaned up eventually
                         pass
     
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(HTML_TEMPLATE, result=None)
 
 # HTML template
 HTML_TEMPLATE = """
@@ -371,6 +373,7 @@ HTML_TEMPLATE = """
         <div class="upload-area">
             <h3>Upload Plant Image</h3>
             <p>Supported formats: JPG, PNG, BMP, TIFF</p>
+            <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
             <form method="post" enctype="multipart/form-data">
                 <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.tiff" required>
                 <br><br>
@@ -420,6 +423,28 @@ HTML_TEMPLATE = """
                 </div>
             {% endif %}
         {% endif %}
+        
+
+        
+        <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"][name="file"]');
+    const previewDiv = document.getElementById('preview');
+    fileInput.addEventListener('change', function(e) {
+        previewDiv.innerHTML = '';
+        const file = e.target.files[0];
+        if (file) {
+            const img = document.createElement('img');
+            img.style.maxWidth = '400px';
+            img.style.borderRadius = '10px';
+            img.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)';
+            img.src = URL.createObjectURL(file);
+            previewDiv.appendChild(img);
+        }
+    });
+});
+</script>
     </div>
 </body>
 </html>
@@ -443,4 +468,4 @@ if __name__ == '__main__':
     print(f"   URL: http://localhost:5000")
     print(f"\n Starting server...")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)  
+    app.run(debug=True, host='0.0.0.0', port=5000)
