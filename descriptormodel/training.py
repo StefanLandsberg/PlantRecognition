@@ -24,9 +24,47 @@ from hyper_detailed_pattern_recognition import MultiModalCurseResistantRecognize
 # Import the sophisticated augmentation system
 from unified_plant_augmentation import UnifiedPlantAugmentationEngine, AugmentationConfig
 import random
+import json
+import multiprocessing
 
 # Prototypical Networks for Few-Shot Plant Recognition
 import torch.nn.functional as F
+
+# Load GPU configuration for threading
+def load_gpu_config_training() -> Dict:
+    """Load GPU CUDA cores and calculate optimal thread counts automatically"""
+    config_path = Path(__file__).parent / "GPUconfig.json"
+    
+    # Default CUDA cores (RTX 3050 level)
+    cuda_cores = 2560
+    
+    try:
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                loaded_config = json.load(f)
+                cuda_cores = loaded_config.get("gpu_cuda_cores", 2560)
+    except Exception:
+        pass
+    
+    # Calculate optimal thread counts based on CUDA cores
+    # Rule of thumb: 1 thread per ~400-600 CUDA cores for optimal performance
+    optimal_threads = max(1, min(16, cuda_cores // 500))  # Cap at 16 threads max
+    
+    # Calculate worker counts based on optimal threads
+    config = {
+        "max_workers": {
+            "modality_extraction": max(1, optimal_threads),                    # Full thread utilization
+            "feature_processing": max(2, int(optimal_threads * 1.3)),         # 130% for mixed tasks
+            "batch_processing": max(4, int(optimal_threads * 2.0)),           # 200% for I/O operations
+            "gpu_workers": max(1, optimal_threads // 3),                      # 33% for heavy GPU ops
+            "cpu_workers": max(2, optimal_threads // 2)                       # 50% for CPU tasks
+        }
+    }
+    
+    return config
+
+# Global configuration for training
+_TRAINING_GPU_CONFIG = load_gpu_config_training()
 
 # Direct Classification Network for One-Shot Learning
 class DirectClassificationNetwork(nn.Module):
@@ -415,7 +453,8 @@ class TwoStageTrainer:
             return class_name, missing_count == 0
         
         # Use ThreadPoolExecutor for parallel file existence checks
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        feature_workers = _TRAINING_GPU_CONFIG["max_workers"]["feature_processing"]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=feature_workers) as executor:
             cache_results = dict(executor.map(check_class_cache, all_cache_paths.items()))
         
         # Separate cached vs processed classes
@@ -474,8 +513,9 @@ class TwoStageTrainer:
                         pass
                 return None
             
-            # Load all cache files in parallel
-            with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+            # Load all cache files in parallel  
+            batch_workers = _TRAINING_GPU_CONFIG["max_workers"]["batch_processing"]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=batch_workers) as executor:
                 cache_results = list(executor.map(load_cache_file, cache_tasks))
             
             # Add successful cache loads

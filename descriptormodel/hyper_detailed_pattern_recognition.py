@@ -73,6 +73,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import sys
 import asyncio
+import json
 # Augmentation imports removed - moved to training.py
 
 # DETERMINISTIC BEHAVIOR: Set seeds for reproducible results
@@ -99,6 +100,44 @@ try:
         pass
 except ImportError:
     GPU_AVAILABLE = False
+
+# GPU Configuration Loader
+def load_gpu_config() -> Dict:
+    """Load GPU CUDA cores and calculate optimal thread counts automatically"""
+    config_path = Path(__file__).parent / "GPUconfig.json"
+    
+    # Default CUDA cores (RTX 3050 level)
+    cuda_cores = 2560
+    
+    try:
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                loaded_config = json.load(f)
+                cuda_cores = loaded_config.get("gpu_cuda_cores", 2560)
+    except Exception as e:
+        print(f"     GPU config load failed, using default CUDA cores: {e}")
+    
+    # Calculate optimal thread counts based on CUDA cores
+    # Rule of thumb: 1 thread per ~400-600 CUDA cores for optimal performance
+    optimal_threads = max(1, min(16, cuda_cores // 500))  # Cap at 16 threads max
+    
+    # Calculate worker counts based on optimal threads
+    config = {
+        "max_workers": {
+            "modality_extraction": max(1, optimal_threads),                    # Full thread utilization for 6 modalities
+            "feature_processing": max(2, int(optimal_threads * 1.3)),         # 130% - mixed CPU/GPU tasks
+            "batch_processing": max(4, int(optimal_threads * 2.0)),           # 200% - I/O intensive operations
+            "gpu_workers": max(1, optimal_threads // 3),                      # 33% - heavy GPU operations
+            "cpu_workers": max(2, optimal_threads // 2)                       # 50% - CPU-only tasks
+        }
+    }
+    
+    print(f"     GPU Config: {cuda_cores} CUDA cores → {optimal_threads} threads → modality:{config['max_workers']['modality_extraction']}, feature:{config['max_workers']['feature_processing']}, batch:{config['max_workers']['batch_processing']}")
+    
+    return config
+
+# Global configuration instance
+_GPU_CONFIG = load_gpu_config()
 
 #  SPEED OPTIMIZATION: Global GPU Tensor Cache
 class GlobalGPUTensorCache:
@@ -789,9 +828,10 @@ class MultiModalCurseResistantRecognizer:
                 print(f"   Unique extraction failed: {str(e)[:50]}")
                 return ('unique', [0.0] * 2500)
         
-        # Execute all 6 modalities in parallel with 6 GPU threads
+        # Execute all 6 modalities in parallel with configurable GPU threads
         modality_results = {}
-        with ThreadPoolExecutor(max_workers=6, thread_name_prefix="GPUModality") as executor:
+        max_workers = _GPU_CONFIG["max_workers"]["modality_extraction"]
+        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="GPUModality") as executor:
             # Submit all extractions simultaneously
             future_to_modality = {
                 executor.submit(extract_texture): 'texture',
