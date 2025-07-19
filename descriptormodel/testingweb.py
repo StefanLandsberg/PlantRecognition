@@ -368,10 +368,19 @@ HTML_TEMPLATE = """
         #drop-zone {
             transition: background 0.2s, border-color 0.2s;
 
-             background-image: url('path/to/your/camera-icon.png'); /* IMPORTANT: Update this path */
-             background-repeat: no-repeat; /* Prevents the image from tiling */
-             background-position: center; /* Centers the image horizontally and vertically */
-             background-size: 80px;
+                        background-image: url('static/drag_image.jpg');
+                        background-repeat : no-repeat;
+                        padding: 30px;
+                        border 2px dashed #386641;
+                        border-radius: 10px; 
+                        cursor:pointer;
+                        background-size: contain;
+                        background-position: center;
+
+                        width: 300px;  
+                        height: 250px;
+
+                        margin-left: 30%;
         }
     </style>
 </head>
@@ -385,7 +394,8 @@ HTML_TEMPLATE = """
             <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
             <form method="post" enctype="multipart/form-data" id="upload-form">
                 <input type="file" name="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.tiff" required style="display:none;">
-                <div id="drop-zone" style="padding: 30px; border: 2px dashed #386641; border-radius: 10px; background: #EEE8D8; cursor:pointer;">
+                <div id="drop-zone">
+                    
                     <span id="drop-zone-text">Drag &amp; drop an image here, or <span style="color:#4CAF50; text-decoration:underline; cursor:pointer;" id="browse-link">browse</span></span>
                 </div>
                 <br>
@@ -470,19 +480,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     dropZone.addEventListener('dragover', function(e) {
         e.preventDefault();
-        dropZone.style.background = '#E8F5E8';
         dropZone.style.borderColor = '#388E3C';
     });
 
     dropZone.addEventListener('dragleave', function(e) {
         e.preventDefault();
-        dropZone.style.background = '#fafafa';
         dropZone.style.borderColor = '#4CAF50';
     });
 
     dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
-        dropZone.style.background = '#fafafa';
         dropZone.style.borderColor = '#4CAF50';
         const files = e.dataTransfer.files;
         if (files.length > 0) {
