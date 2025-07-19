@@ -364,19 +364,25 @@ HTML_TEMPLATE = """
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
         }
+        #drop-zone {
+            transition: background 0.2s, border-color 0.2s;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Plant Recognition</h1>
         
-        <div class="upload-area">
+        <div class="upload-area" id="upload-area">
             <h3>Upload Plant Image</h3>
             <p>Supported formats: JPG, PNG, BMP, TIFF</p>
             <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.tiff" required>
-                <br><br>
+            <form method="post" enctype="multipart/form-data" id="upload-form">
+                <input type="file" name="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.tiff" required style="display:none;">
+                <div id="drop-zone" style="padding: 30px; border: 2px dashed #4CAF50; border-radius: 10px; background: #fafafa; cursor:pointer;">
+                    <span id="drop-zone-text">Drag &amp; drop an image here, or <span style="color:#4CAF50; text-decoration:underline; cursor:pointer;" id="browse-link">browse</span></span>
+                </div>
+                <br>
                 <input type="submit" value=" Identify Plant" class="upload-button">
             </form>
         </div>
@@ -429,8 +435,13 @@ HTML_TEMPLATE = """
         <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.querySelector('input[type="file"][name="file"]');
+    const fileInput = document.getElementById('file-input');
     const previewDiv = document.getElementById('preview');
+    const dropZone = document.getElementById('drop-zone');
+    const browseLink = document.getElementById('browse-link');
+    const dropZoneText = document.getElementById('drop-zone-text');
+
+    // Show preview when file selected
     fileInput.addEventListener('change', function(e) {
         previewDiv.innerHTML = '';
         const file = e.target.files[0];
@@ -441,6 +452,38 @@ document.addEventListener('DOMContentLoaded', function() {
             img.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)';
             img.src = URL.createObjectURL(file);
             previewDiv.appendChild(img);
+        }
+    });
+
+    // Click on drop zone or browse link triggers file input
+    dropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+    browseLink.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    // Drag and drop handlers
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.style.background = '#E8F5E8';
+        dropZone.style.borderColor = '#388E3C';
+    });
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dropZone.style.background = '#fafafa';
+        dropZone.style.borderColor = '#4CAF50';
+    });
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.style.background = '#fafafa';
+        dropZone.style.borderColor = '#4CAF50';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            // Trigger change event for preview
+            fileInput.dispatchEvent(new Event('change'));
         }
     });
 });
