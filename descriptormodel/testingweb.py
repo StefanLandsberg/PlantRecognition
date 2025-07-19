@@ -279,7 +279,7 @@ HTML_TEMPLATE = """
             min-height: 100vh;
         }
         .container {
-            background: white;
+            background: #F2E8CF;
             border-radius: 15px;
             padding: 30px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.1);
@@ -288,6 +288,7 @@ HTML_TEMPLATE = """
             color: #2E7D32;
             text-align: center;
             margin-bottom: 10px;
+            font-weight: 1200;
         }
         .subtitle {
             text-align: center;
@@ -307,10 +308,10 @@ HTML_TEMPLATE = """
             transition: all 0.3s ease;
         }
         .upload-area:hover {
-            background: #F1F8E9;
+            background: #F1E3C0;
         }
         .upload-button {
-            background: #4CAF50;
+            background: #6A994E;
             color: white;
             padding: 12px 25px;
             border: none;
@@ -366,6 +367,11 @@ HTML_TEMPLATE = """
         }
         #drop-zone {
             transition: background 0.2s, border-color 0.2s;
+
+             background-image: url('path/to/your/camera-icon.png'); /* IMPORTANT: Update this path */
+             background-repeat: no-repeat; /* Prevents the image from tiling */
+             background-position: center; /* Centers the image horizontally and vertically */
+             background-size: 80px;
         }
     </style>
 </head>
@@ -379,7 +385,7 @@ HTML_TEMPLATE = """
             <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
             <form method="post" enctype="multipart/form-data" id="upload-form">
                 <input type="file" name="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.tiff" required style="display:none;">
-                <div id="drop-zone" style="padding: 30px; border: 2px dashed #4CAF50; border-radius: 10px; background: #fafafa; cursor:pointer;">
+                <div id="drop-zone" style="padding: 30px; border: 2px dashed #386641; border-radius: 10px; background: #EEE8D8; cursor:pointer;">
                     <span id="drop-zone-text">Drag &amp; drop an image here, or <span style="color:#4CAF50; text-decoration:underline; cursor:pointer;" id="browse-link">browse</span></span>
                 </div>
                 <br>
