@@ -441,7 +441,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const browseLink = document.getElementById('browse-link');
     const dropZoneText = document.getElementById('drop-zone-text');
 
-    // Show preview when file selected
     fileInput.addEventListener('change', function(e) {
         previewDiv.innerHTML = '';
         const file = e.target.files[0];
@@ -455,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Click on drop zone or browse link triggers file input
     dropZone.addEventListener('click', function() {
         fileInput.click();
     });
@@ -464,17 +462,18 @@ document.addEventListener('DOMContentLoaded', function() {
         fileInput.click();
     });
 
-    // Drag and drop handlers
     dropZone.addEventListener('dragover', function(e) {
         e.preventDefault();
         dropZone.style.background = '#E8F5E8';
         dropZone.style.borderColor = '#388E3C';
     });
+
     dropZone.addEventListener('dragleave', function(e) {
         e.preventDefault();
         dropZone.style.background = '#fafafa';
         dropZone.style.borderColor = '#4CAF50';
     });
+
     dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
         dropZone.style.background = '#fafafa';
