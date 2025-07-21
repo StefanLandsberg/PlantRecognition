@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
-Fixed Plant Recognition Web Server with Proper Scaler Handling
+Plant Recognition Web Server
 
-This web server fixes the critical scaler issue by:
-1. Loading the fitted scaler saved during training
-2. Using the same scaler for consistent feature normalization
-3. Ensuring training/inference consistency for correct predictions
 """
 
 import os
@@ -33,6 +29,8 @@ scaler = None
 recognizer = None
 device = None
 
+
+
 def load_model_and_scaler():
     """Load the trained model and fitted scaler"""
     global model, model_data, scaler, recognizer, device
@@ -40,28 +38,28 @@ def load_model_and_scaler():
     model_path = "trained_plant_model.pt"
     
     if not os.path.exists(model_path):
-        print(f"❌ Model file not found: {model_path}")
+        print(f" Model file not found: {model_path}")
         return False
     
     try:
         # Setup device
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"🔧 Device: {device}")
+        print(f" Device: {device}")
         
         # Load model data
         model_data = torch.load(model_path, map_location=device, weights_only=False)
-        print(f"📂 Model data loaded: {model_path}")
+        print(f" Model data loaded: {model_path}")
         
         # Check if scaler is saved
         if 'feature_scaler' not in model_data:
-            print(f"❌ CRITICAL ERROR: No scaler found in model data!")
+            print(f" CRITICAL ERROR: No scaler found in model data!")
             print(f"   Available keys: {list(model_data.keys())}")
             print(f"   Model needs to be retrained with scaler saving")
             return False
         
         # Load the fitted scaler
         scaler = model_data['feature_scaler']
-        print(f"✅ Fitted scaler loaded: {type(scaler).__name__}")
+        print(f" Fitted scaler loaded: {type(scaler).__name__}")
         
         # Create model
         model_config = model_data['model_config']
@@ -74,13 +72,13 @@ def load_model_and_scaler():
         # Load model weights
         model.load_state_dict(model_data['model_state_dict'])
         model.eval()
-        print(f"🧠 Model loaded: {len(model_data['class_names'])} classes")
+        print(f" Model loaded: {len(model_data['class_names'])} classes")
         
         # Initialize recognizer
         recognizer = MultiModalCurseResistantRecognizer()
-        print(f"🔍 Feature recognizer initialized")
+        print(f" Feature recognizer initialized")
         
-        print(f"✅ MODEL AND SCALER LOADED SUCCESSFULLY")
+        print(f" MODEL AND SCALER LOADED SUCCESSFULLY")
         print(f"   Classes: {len(model_data['class_names'])}")
         print(f"   Feature dim: {model_config['feature_dim']}")
         print(f"   Training samples: {model_data.get('training_samples', 'N/A')}")
@@ -89,7 +87,7 @@ def load_model_and_scaler():
         return True
         
     except Exception as e:
-        print(f"❌ Error loading model: {e}")
+        print(f" Error loading model: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -107,9 +105,9 @@ def extract_features(image_path):
     # Resize to standard size (same as training)
     image = cv2.resize(image, (512, 512))
     
-    # Extract features using EXACT same method as training (no augmentations for fast inference)
-    print(f"🔍 Extracting features using training method...")
-    features = recognizer.process_image_parallel_gpu(image, augmentations_per_image=0)
+    # Extract features using EXACT same method as training
+    print(f" Extracting features using training method...")
+    features = recognizer.process_image_ultra_parallel_gpu(image, augmentations_per_image=10)
     
     if features is None or len(features) == 0:
         raise ValueError("Feature extraction failed")
@@ -133,15 +131,15 @@ def normalize_features(descriptor_A, descriptor_B):
     if scaler is None:
         raise ValueError("Scaler not loaded")
     
-    print(f"🔧 Normalizing dual descriptors using training scaler...")
+    print(f" Normalizing features using training scaler...")
+    print(f"   Raw features: mean={np.mean(features):.6f}, std={np.std(features):.6f}")
     
-    # Normalize both descriptors separately
-    norm_A = scaler.transform(descriptor_A.reshape(1, -1))[0]
-    norm_B = scaler.transform(descriptor_B.reshape(1, -1))[0]
+    # Apply the SAME normalization as training
+    features_2d = features.reshape(1, -1)  # Shape for sklearn
+    normalized_features = scaler.transform(features_2d)[0]  # Transform, then extract
     
-    print(f"   Descriptor A: mean={np.mean(norm_A):.6f}, std={np.std(norm_A):.6f}")
-    print(f"   Descriptor B: mean={np.mean(norm_B):.6f}, std={np.std(norm_B):.6f}")
-    print(f"   ✅ Both descriptors normalized using training scaler")
+    print(f"   Normalized features: mean={np.mean(normalized_features):.6f}, std={np.std(normalized_features):.6f}")
+    print(f"    Features normalized using training scaler")
     
     return norm_A, norm_B
 
@@ -150,7 +148,7 @@ def predict_plant(norm_A, norm_B):
     if model is None or model_data is None:
         raise ValueError("Model not loaded")
     
-    print(f"🧠 Making ensemble prediction...")
+    print(f" Making prediction...")
     
     # Convert both descriptors to tensors
     tensor_A = torch.FloatTensor(norm_A).unsqueeze(0).to(device)
@@ -186,7 +184,7 @@ def predict_plant(norm_A, norm_B):
             prob = class_probabilities[class_idx]
             top5_predictions.append((species, prob))
         
-        print(f"   ✅ Final: {predicted_species} ({confidence_score:.1%})")
+        print(f"    Prediction: {predicted_species} ({confidence_score:.1%})")
         
         return {
             'predicted_species': predicted_species,
@@ -207,7 +205,7 @@ def predict_plant(norm_A, norm_B):
 
 def identify_plant_fixed(image_path):
     """Fixed plant identification with proper scaler handling"""
-    print(f"\n🌿 FIXED PLANT IDENTIFICATION: {image_path}")
+    print(f"\n FIXED PLANT IDENTIFICATION: {image_path}")
     print(f"=" * 60)
     
     start_time = time.time()
@@ -228,13 +226,7 @@ def identify_plant_fixed(image_path):
         total_time = time.time() - start_time
         result['processing_time'] = total_time
         
-        # Add training dataset info
-        if model_data:
-            result['training_samples'] = f"{len(model_data.get('class_names', [])):,} classes, 60,600 samples"
-        else:
-            result['training_samples'] = "Unknown"
-        
-        print(f"\n✅ IDENTIFICATION COMPLETE:")
+        print(f"\n IDENTIFICATION COMPLETE:")
         print(f"   Species: {result['predicted_species']}")
         print(f"   Confidence: {result['confidence']:.1%}")
         print(f"   Processing time: {total_time:.3f}s")
@@ -243,7 +235,7 @@ def identify_plant_fixed(image_path):
         
     except Exception as e:
         error_time = time.time() - start_time
-        print(f"❌ Error during identification: {e}")
+        print(f" Error during identification: {e}")
         import traceback
         traceback.print_exc()
         return {
@@ -291,7 +283,7 @@ def index():
                         # If still locked, ignore - temp files will be cleaned up eventually
                         pass
     
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(HTML_TEMPLATE, result=None)
 
 # HTML template
 HTML_TEMPLATE = """
@@ -300,9 +292,9 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌿 Fixed Plant Recognition</title>
+    <title>Plant Recognition</title>
     <style>
-        body {
+    body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 1000px;
             margin: 0 auto;
@@ -311,7 +303,7 @@ HTML_TEMPLATE = """
             min-height: 100vh;
         }
         .container {
-            background: white;
+            background: #F2E8CF;
             border-radius: 15px;
             padding: 30px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.1);
@@ -320,6 +312,7 @@ HTML_TEMPLATE = """
             color: #2E7D32;
             text-align: center;
             margin-bottom: 10px;
+            font-weight: 1200;
         }
         .subtitle {
             text-align: center;
@@ -339,10 +332,10 @@ HTML_TEMPLATE = """
             transition: all 0.3s ease;
         }
         .upload-area:hover {
-            background: #F1F8E9;
+            background: #F1E3C0;
         }
         .upload-button {
-            background: #4CAF50;
+            background: #6A994E;
             color: white;
             padding: 12px 25px;
             border: none;
@@ -396,29 +389,48 @@ HTML_TEMPLATE = """
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
         }
+        #drop-zone {
+            transition: background 0.2s, border-color 0.2s;
+
+                        background-image: url('static/drag_image.jpg');
+                        background-repeat : no-repeat;
+                        padding: 30px;
+                        border 2px dashed #386641;
+                        border-radius: 10px; 
+                        cursor:pointer;
+                        background-size: contain;
+                        background-position: center;
+
+                        width: 300px;  
+                        height: 250px;
+
+                        margin-left: 30%;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🌿 Fixed Plant Recognition</h1>
-        <div class="subtitle">
-            ✅ Scaler Issue Fixed - Consistent Training/Inference Pipeline
-        </div>
+        <h1>Plant Recognition</h1>
         
-        <div class="upload-area">
+        <div class="upload-area" id="upload-area">
             <h3>Upload Plant Image</h3>
             <p>Supported formats: JPG, PNG, BMP, TIFF</p>
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.tiff" required>
-                <br><br>
-                <input type="submit" value="🔍 Identify Plant" class="upload-button">
+            <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
+            <form method="post" enctype="multipart/form-data" id="upload-form">
+                <input type="file" name="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.tiff" required style="display:none;">
+                <div id="drop-zone">
+                    
+                    <span id="drop-zone-text">Drag &amp; drop an image here, or <span style="color:#4CAF50; text-decoration:underline; cursor:pointer;" id="browse-link">browse</span></span>
+                </div>
+                <br>
+                <input type="submit" value=" Identify Plant" class="upload-button">
             </form>
         </div>
         
         {% if result %}
             {% if result.error %}
                 <div class="result-container error">
-                    <h3>❌ Error</h3>
+                    <h3> Error</h3>
                     <p>{{ result.error }}</p>
                     {% if result.processing_time %}
                     <div class="tech-details">
@@ -441,44 +453,100 @@ HTML_TEMPLATE = """
                     </div>
                     
                     <div class="tech-details">
-                        <h4>🔧 Technical Details:</h4>
-                        <strong>✅ DUAL DESCRIPTOR PIPELINE:</strong><br>
-                        • Feature extraction: {{ result.extraction_method }}<br>
-                        • Dual descriptors: {{ result.descriptor_count }} × 5000 features<br>
-                        • Normalization: Training scaler ({{ result.training_samples }} samples)<br>
-                        • Prediction: {{ result.prediction_method }}<br>
+                        <h4> Technical Details:</h4>
+                        <strong> FIXED PIPELINE:</strong><br>
+                        • Feature extraction: Ultra-parallel GPU (2500 features)<br>
+                        • Normalization: Using SAME scaler as training<br>
+                        • Prediction: Direct classification network<br>
+                        • Confidence: Enhanced calibration<br>
                         <br>
                         <strong>Processing:</strong><br>
                         • Descriptor A prediction: Class {{ result.descriptor_A_class }} ({{ "%.1f"|format(result.descriptor_A_conf * 100) }}%)<br>
                         • Descriptor B prediction: Class {{ result.descriptor_B_class }} ({{ "%.1f"|format(result.descriptor_B_conf * 100) }}%)<br>
                         • Ensemble prediction: Class {{ result.predicted_class_index }} ({{ "%.1f"|format(result.confidence * 100) }}%)<br>
                         • Processing time: {{ "%.3f"|format(result.processing_time) }}s<br>
-                        • Pipeline: {{ result.pipeline_status }}<br>
+                        • Pipeline: Training-consistent normalization <br>
+                        • Scaler: Fitted on {{ "9,135" }} training samples<br>
                     </div>
                 </div>
             {% endif %}
         {% endif %}
+        
+
+        
+        <div id="preview" style="text-align:center; margin-bottom:20px;"></div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file-input');
+    const previewDiv = document.getElementById('preview');
+    const dropZone = document.getElementById('drop-zone');
+    const browseLink = document.getElementById('browse-link');
+    const dropZoneText = document.getElementById('drop-zone-text');
+
+    fileInput.addEventListener('change', function(e) {
+        previewDiv.innerHTML = '';
+        const file = e.target.files[0];
+        if (file) {
+            const img = document.createElement('img');
+            img.style.maxWidth = '400px';
+            img.style.borderRadius = '10px';
+            img.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)';
+            img.src = URL.createObjectURL(file);
+            previewDiv.appendChild(img);
+        }
+    });
+
+    dropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+    browseLink.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#388E3C';
+    });
+
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#4CAF50';
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#4CAF50';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            // Trigger change event for preview
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+});
+</script>
     </div>
 </body>
 </html>
 """
 
 if __name__ == '__main__':
-    print("🌿 FIXED PLANT RECOGNITION WEB SERVER")
+    print(" PLANT RECOGNITION WEB SERVER")
     print("=" * 50)
-    print("🔧 Loading model and scaler...")
+    print(" Loading model and scaler...")
     
     success = load_model_and_scaler()
     if not success:
-        print("\n❌ CRITICAL ERROR: Model or scaler loading failed!")
+        print("\n CRITICAL ERROR: Model or scaler loading failed!")
         print("   The model needs to be retrained with scaler saving.")
         print("   Run: python training.py")
         exit(1)
     
-    print(f"\n✅ Server ready with fixed scaler handling!")
+    print(f"\n Server ready with fixed scaler handling!")
     print(f"   Model: {len(model_data['class_names'])} classes")
     print(f"   Scaler: Fitted StandardScaler from training")
     print(f"   URL: http://localhost:5000")
-    print(f"\n🚀 Starting server...")
+    print(f"\n Starting server...")
     
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5000)
