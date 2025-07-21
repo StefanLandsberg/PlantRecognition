@@ -107,64 +107,78 @@ def extract_features(image_path):
     # Resize to standard size (same as training)
     image = cv2.resize(image, (512, 512))
     
-    # Extract features using EXACT same method as training
+    # Extract features using EXACT same method as training (no augmentations for fast inference)
     print(f"🔍 Extracting features using training method...")
-    features = recognizer.process_image_ultra_parallel_gpu(image, augmentations_per_image=10)
+    features = recognizer.process_image_parallel_gpu(image, augmentations_per_image=0)
     
     if features is None or len(features) == 0:
         raise ValueError("Feature extraction failed")
     
-    # Take first feature vector (original image)
-    feature_vector = features[0]
-    print(f"   Features extracted: {len(feature_vector)} features")
-    print(f"   Feature range: [{np.min(feature_vector):.6f}, {np.max(feature_vector):.6f}]")
+    # Use BOTH dual descriptors like training (features[0] and features[1])
+    # This gives us the same 30k->10k->2x5k pipeline as training
+    if len(features) < 2:
+        raise ValueError(f"Expected 2 dual descriptors, got {len(features)}")
     
-    return feature_vector
+    dual_descriptor_A = features[0]  # First 5k descriptor
+    dual_descriptor_B = features[1]  # Second 5k descriptor
+    
+    print(f"   Dual descriptors extracted: 2 × {len(dual_descriptor_A)} features")
+    print(f"   Descriptor A range: [{np.min(dual_descriptor_A):.6f}, {np.max(dual_descriptor_A):.6f}]")
+    print(f"   Descriptor B range: [{np.min(dual_descriptor_B):.6f}, {np.max(dual_descriptor_B):.6f}]")
+    
+    return dual_descriptor_A, dual_descriptor_B
 
-def normalize_features(features):
-    """Normalize features using the SAME scaler as training"""
+def normalize_features(descriptor_A, descriptor_B):
+    """Normalize BOTH dual descriptors using the SAME scaler as training"""
     if scaler is None:
         raise ValueError("Scaler not loaded")
     
-    print(f"🔧 Normalizing features using training scaler...")
-    print(f"   Raw features: mean={np.mean(features):.6f}, std={np.std(features):.6f}")
+    print(f"🔧 Normalizing dual descriptors using training scaler...")
     
-    # Apply the SAME normalization as training
-    features_2d = features.reshape(1, -1)  # Shape for sklearn
-    normalized_features = scaler.transform(features_2d)[0]  # Transform, then extract
+    # Normalize both descriptors separately
+    norm_A = scaler.transform(descriptor_A.reshape(1, -1))[0]
+    norm_B = scaler.transform(descriptor_B.reshape(1, -1))[0]
     
-    print(f"   Normalized features: mean={np.mean(normalized_features):.6f}, std={np.std(normalized_features):.6f}")
-    print(f"   ✅ Features normalized using training scaler")
+    print(f"   Descriptor A: mean={np.mean(norm_A):.6f}, std={np.std(norm_A):.6f}")
+    print(f"   Descriptor B: mean={np.mean(norm_B):.6f}, std={np.std(norm_B):.6f}")
+    print(f"   ✅ Both descriptors normalized using training scaler")
     
-    return normalized_features
+    return norm_A, norm_B
 
-def predict_plant(features):
-    """Make prediction using the trained model"""
+def predict_plant(norm_A, norm_B):
+    """Make ensemble prediction using BOTH dual descriptors like training"""
     if model is None or model_data is None:
         raise ValueError("Model not loaded")
     
-    print(f"🧠 Making prediction...")
+    print(f"🧠 Making ensemble prediction...")
     
-    # Convert to tensor
-    feature_tensor = torch.FloatTensor(features).unsqueeze(0).to(device)
-    print(f"   Input tensor shape: {feature_tensor.shape}")
+    # Convert both descriptors to tensors
+    tensor_A = torch.FloatTensor(norm_A).unsqueeze(0).to(device)
+    tensor_B = torch.FloatTensor(norm_B).unsqueeze(0).to(device)
+    print(f"   Input tensor shapes: A{tensor_A.shape}, B{tensor_B.shape}")
     
-    # Make prediction
+    # Make predictions on both descriptors
     with torch.no_grad():
-        # Use the model's enhanced prediction method
-        predictions, probabilities, confidences = model.predict_with_confidence(feature_tensor)
+        # Predict with both dual descriptors
+        pred_A, prob_A, conf_A = model.predict_with_confidence(tensor_A)
+        pred_B, prob_B, conf_B = model.predict_with_confidence(tensor_B)
         
-        predicted_class = predictions[0].item()
-        confidence_score = confidences[0].item()
-        class_probabilities = probabilities[0].cpu().numpy()
+        # Ensemble: average the probabilities
+        ensemble_prob = (prob_A + prob_B) / 2.0
         
-        print(f"   Raw prediction: class {predicted_class}")
-        print(f"   Enhanced confidence: {confidence_score:.3f}")
+        # Get final prediction from ensemble
+        predicted_class = torch.argmax(ensemble_prob, dim=1).item()
+        confidence_score = ensemble_prob[0][predicted_class].item()
+        class_probabilities = ensemble_prob[0].cpu().numpy()
+        
+        print(f"   Descriptor A: class {pred_A[0].item()} ({conf_A[0].item()*100:.1f}%)")
+        print(f"   Descriptor B: class {pred_B[0].item()} ({conf_B[0].item()*100:.1f}%)")
+        print(f"   Ensemble: class {predicted_class} ({confidence_score*100:.1f}%)")
         
         # Get class name
         predicted_species = model_data['class_names'][predicted_class]
         
-        # Get top 5 predictions
+        # Get top 5 predictions from ensemble
         top5_indices = np.argsort(class_probabilities)[::-1][:5]
         top5_predictions = []
         for i, class_idx in enumerate(top5_indices):
@@ -172,13 +186,23 @@ def predict_plant(features):
             prob = class_probabilities[class_idx]
             top5_predictions.append((species, prob))
         
-        print(f"   ✅ Prediction: {predicted_species} ({confidence_score:.1%})")
+        print(f"   ✅ Final: {predicted_species} ({confidence_score:.1%})")
         
         return {
             'predicted_species': predicted_species,
-            'confidence': confidence_score,
+            'confidence': confidence_score,  # Use ensemble confidence
             'top5_predictions': top5_predictions,
-            'predicted_class_index': predicted_class
+            'predicted_class_index': predicted_class,
+            'calibrated_confidence': confidence_score,
+            # Dual descriptor specific metrics for template
+            'descriptor_A_class': pred_A[0].item(),
+            'descriptor_A_conf': conf_A[0].item(),
+            'descriptor_B_class': pred_B[0].item(), 
+            'descriptor_B_conf': conf_B[0].item(),
+            'extraction_method': '30k→10k→2×5k dual descriptors',
+            'descriptor_count': 2,
+            'prediction_method': 'Ensemble averaging',
+            'pipeline_status': 'Dual descriptor ensemble ✅'
         }
 
 def identify_plant_fixed(image_path):
@@ -189,20 +213,26 @@ def identify_plant_fixed(image_path):
     start_time = time.time()
     
     try:
-        # Step 1: Extract features
+        # Step 1: Extract dual descriptors
         print(f"Step 1: Feature extraction...")
-        features = extract_features(image_path)
+        descriptor_A, descriptor_B = extract_features(image_path)
         
-        # Step 2: Normalize features using training scaler
+        # Step 2: Normalize both descriptors using training scaler
         print(f"Step 2: Feature normalization...")
-        normalized_features = normalize_features(features)
+        norm_A, norm_B = normalize_features(descriptor_A, descriptor_B)
         
-        # Step 3: Make prediction
+        # Step 3: Make ensemble prediction
         print(f"Step 3: Prediction...")
-        result = predict_plant(normalized_features)
+        result = predict_plant(norm_A, norm_B)
         
         total_time = time.time() - start_time
         result['processing_time'] = total_time
+        
+        # Add training dataset info
+        if model_data:
+            result['training_samples'] = f"{len(model_data.get('class_names', [])):,} classes, 60,600 samples"
+        else:
+            result['training_samples'] = "Unknown"
         
         print(f"\n✅ IDENTIFICATION COMPLETE:")
         print(f"   Species: {result['predicted_species']}")
@@ -412,17 +442,18 @@ HTML_TEMPLATE = """
                     
                     <div class="tech-details">
                         <h4>🔧 Technical Details:</h4>
-                        <strong>✅ FIXED PIPELINE:</strong><br>
-                        • Feature extraction: Ultra-parallel GPU (2500 features)<br>
-                        • Normalization: Using SAME scaler as training<br>
-                        • Prediction: Direct classification network<br>
-                        • Confidence: Enhanced calibration<br>
+                        <strong>✅ DUAL DESCRIPTOR PIPELINE:</strong><br>
+                        • Feature extraction: {{ result.extraction_method }}<br>
+                        • Dual descriptors: {{ result.descriptor_count }} × 5000 features<br>
+                        • Normalization: Training scaler ({{ result.training_samples }} samples)<br>
+                        • Prediction: {{ result.prediction_method }}<br>
                         <br>
                         <strong>Processing:</strong><br>
-                        • Predicted class index: {{ result.predicted_class_index }}<br>
+                        • Descriptor A prediction: Class {{ result.descriptor_A_class }} ({{ "%.1f"|format(result.descriptor_A_conf * 100) }}%)<br>
+                        • Descriptor B prediction: Class {{ result.descriptor_B_class }} ({{ "%.1f"|format(result.descriptor_B_conf * 100) }}%)<br>
+                        • Ensemble prediction: Class {{ result.predicted_class_index }} ({{ "%.1f"|format(result.confidence * 100) }}%)<br>
                         • Processing time: {{ "%.3f"|format(result.processing_time) }}s<br>
-                        • Pipeline: Training-consistent normalization ✅<br>
-                        • Scaler: Fitted on {{ "9,135" }} training samples<br>
+                        • Pipeline: {{ result.pipeline_status }}<br>
                     </div>
                 </div>
             {% endif %}
