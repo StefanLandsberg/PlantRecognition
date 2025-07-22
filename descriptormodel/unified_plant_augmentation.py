@@ -16,6 +16,7 @@ import numpy as np
 import cv2
 import torch
 import random
+import time
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 import concurrent.futures
@@ -76,7 +77,7 @@ class UnifiedPlantAugmentationEngine:
             Augmented image
         """
         if method == "auto":
-            method = random.choice(['seasonal', 'lighting', 'plant', 'weather', 'angle', 'basic'])
+            method = random.choice(['seasonal', 'lighting', 'plant', 'weather', 'angle', 'basic', 'user_realistic'])
         
         if method == 'seasonal':
             effect = random.choice(self.seasonal_effects)
@@ -94,6 +95,8 @@ class UnifiedPlantAugmentationEngine:
             return self._apply_realistic_angle_transform(image)
         elif method == 'basic':
             return self._apply_basic_transform(image)
+        elif method == 'user_realistic':
+            return self._apply_user_realistic_augmentation(image)
         else:
             return self._apply_basic_transform(image)
     
@@ -370,20 +373,40 @@ class UnifiedPlantAugmentationEngine:
             }
     
     def generate_augmented_variants(self, image: np.ndarray, num_variants: int = 12) -> List[np.ndarray]:
-        """Generate multiple augmented variants efficiently - returns ONLY augmentations, not original"""
-        variants = []  # Don't include original - caller will handle that
+        """Generate multiple augmented variants efficiently - GPU-ACCELERATED VERSION"""
+        print(f"       GPU augmentation: generating {num_variants} variants...")
+        start_time = time.time()
         
         # Resize to standard size if needed
         if image.shape[:2] != (512, 512):
             image = cv2.resize(image, (512, 512))
         
-        for i in range(num_variants):  # Generate exactly num_variants augmentations
-            # Apply different augmentation methods
-            aug_type = np.random.choice(['basic', 'seasonal', 'lighting', 'plant', 'weather', 'angle'], 
-                                       p=[0.3, 0.15, 0.15, 0.15, 0.15, 0.1])
-            variant = self.generate_single_augmentation(image, method=aug_type)
-            variants.append(variant)
+        # Convert to GPU tensor for batch processing
+        if torch.cuda.is_available():
+            # GPU batch augmentation - MUCH faster
+            image_tensor = torch.from_numpy(image.astype(np.float32) / 255.0).to(self.device)
+            if len(image_tensor.shape) == 3:
+                image_tensor = image_tensor.permute(2, 0, 1)  # HWC -> CHW for batch operations
+            
+            # Generate all augmentations in a single GPU batch operation
+            augmented_tensors = self._fast_gpu_batch_augmentation(image_tensor, num_variants)
+            
+            # Convert back to numpy arrays
+            variants = []
+            for tensor in augmented_tensors:
+                if len(tensor.shape) == 3:  # CHW -> HWC
+                    tensor = tensor.permute(1, 2, 0)
+                array = (tensor.cpu().numpy() * 255.0).astype(np.uint8)
+                variants.append(array)
+        else:
+            # CPU fallback - use simplified augmentations for speed
+            variants = []
+            for i in range(num_variants):
+                variant = self._fast_cpu_augmentation(image, i)
+                variants.append(variant)
         
+        aug_time = time.time() - start_time
+        print(f"       GPU augmentation completed: {aug_time:.3f}s ({num_variants} variants)")
         return variants
     
     def generate_realistic_angle_augmentations(self, image: np.ndarray, num_angle_variants: int = 50) -> List[np.ndarray]:
@@ -406,7 +429,7 @@ class UnifiedPlantAugmentationEngine:
     def create_augmented_batch_gpu(self, image_tensor: torch.Tensor, 
                                  num_augmentations: int = 10) -> List[torch.Tensor]:
         """
-        Create augmented versions staying entirely on GPU for ultra-parallel processing
+        Create augmented versions staying entirely on GPU for parallel processing
         Moved from GPUAugmentationEngine to consolidate all augmentation functionality
         
         Args:
@@ -470,6 +493,195 @@ class UnifiedPlantAugmentationEngine:
             augmented = torch.clamp(torch.pow(augmented, gamma), 0, 1)
         
         return augmented
+
+    def _fast_gpu_batch_augmentation(self, image_tensor: torch.Tensor, num_variants: int) -> List[torch.Tensor]:
+        """GPU batch augmentation - processes all variants simultaneously"""
+        variants = []
+        
+        # Create batch tensor (replicate image for parallel processing)
+        batch_tensor = image_tensor.unsqueeze(0).repeat(num_variants, 1, 1, 1)  # [num_variants, C, H, W]
+        
+        # Apply different transformations to each image in the batch
+        for i in range(num_variants):
+            variant_idx = i % 8  # Cycle through 8 transform types
+            
+            if variant_idx == 0:  # Brightness adjustment
+                brightness = 0.7 + (i % 6) * 0.1
+                batch_tensor[i] = torch.clamp(batch_tensor[i] * brightness, 0, 1)
+            elif variant_idx == 1:  # Contrast adjustment  
+                contrast = 0.8 + (i % 5) * 0.1
+                mean_val = torch.mean(batch_tensor[i])
+                batch_tensor[i] = torch.clamp((batch_tensor[i] - mean_val) * contrast + mean_val, 0, 1)
+            elif variant_idx == 2:  # Color channel shifts
+                channel = i % 3
+                shift = 0.9 + (i % 4) * 0.05
+                batch_tensor[i][channel] *= shift
+                batch_tensor[i] = torch.clamp(batch_tensor[i], 0, 1)
+            elif variant_idx == 3:  # Gamma correction
+                gamma = 0.8 + (i % 5) * 0.1
+                batch_tensor[i] = torch.clamp(torch.pow(batch_tensor[i], gamma), 0, 1)
+            elif variant_idx == 4:  # Saturation adjustment
+                # Convert to grayscale and blend
+                gray = torch.mean(batch_tensor[i], dim=0, keepdim=True)
+                saturation = 0.7 + (i % 6) * 0.1
+                batch_tensor[i] = torch.clamp(gray + (batch_tensor[i] - gray) * saturation, 0, 1)
+            elif variant_idx == 5:  # Slight noise
+                noise = torch.randn_like(batch_tensor[i]) * 0.02
+                batch_tensor[i] = torch.clamp(batch_tensor[i] + noise, 0, 1)
+            elif variant_idx == 6:  # Hue shift (simplified)
+                # Simple hue-like shift by rotating color channels
+                batch_tensor[i] = torch.roll(batch_tensor[i], shifts=1, dims=0)
+            else:  # Combined transforms
+                # Apply multiple light transforms
+                batch_tensor[i] *= (0.9 + (i % 3) * 0.05)  # Brightness
+                batch_tensor[i] = torch.clamp(batch_tensor[i], 0, 1)
+        
+        # Convert batch back to individual tensors
+        for i in range(num_variants):
+            variants.append(batch_tensor[i])
+        
+        return variants
+    
+    def _fast_cpu_augmentation(self, image: np.ndarray, variant_idx: int) -> np.ndarray:
+        """CPU augmentation fallback - simplified transforms for speed"""
+        img = image.astype(np.float32)
+        
+        transform_type = variant_idx % 6
+        
+        if transform_type == 0:  # Brightness
+            factor = 0.8 + (variant_idx % 5) * 0.1
+            img = np.clip(img * factor, 0, 255)
+        elif transform_type == 1:  # Contrast
+            factor = 0.8 + (variant_idx % 5) * 0.1
+            img = np.clip(128 + (img - 128) * factor, 0, 255)
+        elif transform_type == 2:  # Channel shift
+            channel = variant_idx % 3
+            img[:,:,channel] *= (0.9 + (variant_idx % 4) * 0.05)
+            img = np.clip(img, 0, 255)
+        elif transform_type == 3:  # Simple blur (very light)
+            img = cv2.GaussianBlur(img, (3, 3), 0.5)
+        elif transform_type == 4:  # Slight noise
+            noise = np.random.normal(0, 2, img.shape)
+            img = np.clip(img + noise, 0, 255)
+        else:  # Color temperature shift
+            # Simple color temperature simulation
+            img[:,:,0] *= 0.95  # Reduce blue slightly
+            img[:,:,2] *= 1.05  # Increase red slightly
+            img = np.clip(img, 0, 255)
+        
+        return img.astype(np.uint8)
+    
+    def _apply_user_realistic_augmentation(self, image: np.ndarray) -> np.ndarray:
+        """
+        Fast GPU-accelerated light realistic augmentation
+        Matches typical user photo variations - very subtle changes
+        """
+        if self.config.use_gpu and GPU_AVAILABLE:
+            return self._apply_user_realistic_gpu(image)
+        else:
+            return self._apply_user_realistic_cpu(image)
+    
+    def _apply_user_realistic_gpu(self, image: np.ndarray) -> np.ndarray:
+        """GPU-accelerated user realistic augmentation for speed"""
+        # Convert to GPU tensor
+        img_tensor = torch.from_numpy(image.astype(np.float32) / 255.0).to(self.device)
+        
+        # 1. Slight brightness variation (±10% - normal lighting differences)
+        brightness_factor = 0.9 + torch.rand(1, device=self.device) * 0.2  # 0.9 to 1.1
+        img_tensor = torch.clamp(img_tensor * brightness_factor, 0.0, 1.0)
+        
+        # 2. Slight contrast variation (±10% - camera/lighting differences)
+        contrast_factor = 0.9 + torch.rand(1, device=self.device) * 0.2  # 0.9 to 1.1
+        img_tensor = torch.clamp((img_tensor - 0.5) * contrast_factor + 0.5, 0.0, 1.0)
+        
+        # 3. Very small rotation (±5° - normal handheld photo variation)
+        if torch.rand(1, device=self.device) > 0.5:  # 50% chance
+            angle = (torch.rand(1, device=self.device) - 0.5) * 10.0  # ±5°
+            img_tensor = self._gpu_rotate_light(img_tensor, angle)
+        
+        # 4. Tiny color temperature shift (indoor vs outdoor)
+        if torch.rand(1, device=self.device) > 0.7:  # 30% chance
+            temp_shift = (torch.rand(1, device=self.device) - 0.5) * 0.05  # Very subtle
+            img_tensor[:,:,0] *= (1.0 - temp_shift)  # Blue
+            img_tensor[:,:,2] *= (1.0 + temp_shift)  # Red
+            img_tensor = torch.clamp(img_tensor, 0.0, 1.0)
+        
+        # 5. Very light noise (camera sensor noise)
+        if torch.rand(1, device=self.device) > 0.8:  # 20% chance
+            noise_strength = torch.rand(1, device=self.device) * 0.01  # 1% max noise
+            noise = torch.randn_like(img_tensor) * noise_strength
+            img_tensor = torch.clamp(img_tensor + noise, 0.0, 1.0)
+        
+        # Convert back to numpy
+        result = (img_tensor.cpu().numpy() * 255).astype(np.uint8)
+        return result
+    
+    def _gpu_rotate_light(self, image_tensor: torch.Tensor, angle: torch.Tensor) -> torch.Tensor:
+        """Light GPU rotation for user realistic augmentation"""
+        H, W = image_tensor.shape[:2]
+        
+        # Convert angle to radians
+        angle_rad = angle * torch.pi / 180.0
+        cos_a, sin_a = torch.cos(angle_rad), torch.sin(angle_rad)
+        
+        # Create rotation matrix
+        rotation_matrix = torch.tensor([
+            [cos_a, -sin_a, 0],
+            [sin_a, cos_a, 0]
+        ], device=image_tensor.device, dtype=torch.float32).unsqueeze(0)
+        
+        # Create affine grid for 3-channel image
+        grid = torch.nn.functional.affine_grid(
+            rotation_matrix, 
+            [1, 3, H, W], 
+            align_corners=False
+        ).to(image_tensor.device)
+        
+        # Apply rotation - ensure CHW format
+        if len(image_tensor.shape) == 3 and image_tensor.shape[2] == 3:  # HWC -> CHW
+            img_chw = image_tensor.permute(2, 0, 1).unsqueeze(0)
+        else:
+            img_chw = image_tensor.unsqueeze(0)
+            
+        rotated = torch.nn.functional.grid_sample(
+            img_chw, grid, 
+            mode='bilinear', 
+            padding_mode='border',
+            align_corners=False
+        )
+        
+        # Convert back to HWC
+        if len(image_tensor.shape) == 3 and image_tensor.shape[2] == 3:
+            return rotated.squeeze(0).permute(1, 2, 0)
+        else:
+            return rotated.squeeze(0)
+    
+    def _apply_user_realistic_cpu(self, image: np.ndarray) -> np.ndarray:
+        """CPU fallback for user realistic augmentation"""
+        img = image.astype(np.float32)
+        
+        # Simple CPU-based variations
+        # 1. Slight brightness
+        brightness = 0.9 + random.random() * 0.2
+        img = np.clip(img * brightness, 0, 255)
+        
+        # 2. Slight contrast
+        contrast = 0.9 + random.random() * 0.2
+        img = np.clip((img - 127.5) * contrast + 127.5, 0, 255)
+        
+        # 3. Tiny rotation (±5°)
+        if random.random() > 0.5:
+            angle = (random.random() - 0.5) * 10.0
+            h, w = img.shape[:2]
+            M = cv2.getRotationMatrix2D((w//2, h//2), angle, 1.0)
+            img = cv2.warpAffine(img, M, (w, h))
+        
+        # 4. Light noise
+        if random.random() > 0.8:
+            noise = np.random.normal(0, 2.5, img.shape)
+            img = np.clip(img + noise, 0, 255)
+        
+        return img.astype(np.uint8)
 
 # Factory function for easy import
 def create_augmentation_engine(use_gpu: bool = True, enable_all_features: bool = True) -> UnifiedPlantAugmentationEngine:

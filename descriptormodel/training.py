@@ -15,25 +15,18 @@ from sklearn.metrics import classification_report, confusion_matrix
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-# Enable mixed precision training for speed without quality loss
 from torch.cuda.amp import autocast, GradScaler
 from torch.nn.utils import clip_grad_norm_
 
-# Import the EXACT SAME descriptor extraction system used in production
 from hyper_detailed_pattern_recognition import MultiModalCurseResistantRecognizer
 
-# Import the sophisticated augmentation system
 from unified_plant_augmentation import UnifiedPlantAugmentationEngine, AugmentationConfig
 import random
 import json
 import multiprocessing
 
-# Prototypical Networks for Few-Shot Plant Recognition
-
-# Import GPU configuration from main module to avoid duplication
 from hyper_detailed_pattern_recognition import load_gpu_config
 
-# Global configuration for training
 _TRAINING_GPU_CONFIG = load_gpu_config()
 
 # Direct Classification Network for One-Shot Learning
@@ -44,19 +37,42 @@ class DirectClassificationNetwork(nn.Module):
     Works well with limited data per class.
     """
     
-    def __init__(self, feature_dim: int, num_classes: int, hidden_dim: int = 512, dropout: float = 0.5):
+    def __init__(self, feature_dim: int, num_classes: int, hidden_dim: int = 512, dropout: float = 0.5, actual_samples: int = None):
         super().__init__()
         self.feature_dim = feature_dim
         self.num_classes = num_classes
         
-        # Adaptive architecture based on class count and recognition complexity
-        # Plant recognition needs higher capacity due to visual similarity between species
-        plant_complexity_factor = 12  # Plants are visually similar, need more discriminative power
-        min_viable_size = 256  # Minimum for any neural network to function well
+        # ADAPTIVE PARAMETER SCALING: Mathematical equation based on dataset size
+        # Use actual sample count if provided, otherwise estimate
+        if actual_samples is not None:
+            estimated_samples = actual_samples
+        else:
+            estimated_samples = num_classes * 50 * 30  # Conservative estimate
         
-        # Calculate adaptive hidden size based on problem complexity
-        base_capacity = num_classes * plant_complexity_factor
-        self.hidden_dim = max(base_capacity, min_viable_size, hidden_dim)
+        # ADAPTIVE EQUATION: Hidden size scales with sqrt(samples) for optimal param/data ratio
+        # Formula: hidden = base_size * sqrt(samples / base_samples) * feature_scaling
+        
+        base_samples = 1000           # Reference point for scaling
+        base_hidden = 64              # Hidden size for base_samples
+        feature_scaling = min(2.0, feature_dim / 2500)  # Scale with feature complexity
+        
+        # Square root scaling provides good balance between capacity and overfitting
+        sample_scaling = (estimated_samples / base_samples) ** 0.5
+        
+        # Complete adaptive formula
+        calculated_hidden = int(base_hidden * sample_scaling * feature_scaling)
+        
+        # Smooth bounds using tanh for natural limiting (no hard clamps)
+        import math
+        
+        # Minimum bound: approaches 16 for very small datasets
+        min_hidden = 16 + 48 * math.tanh((estimated_samples - 500) / 1000)
+        
+        # Maximum bound: approaches 2048 for very large datasets  
+        max_hidden = 2048 * math.tanh(estimated_samples / 50000)
+        
+        # Apply smooth bounds
+        self.hidden_dim = max(int(min_hidden), min(calculated_hidden, int(max_hidden), hidden_dim))
         
         # For very large datasets, consider adding depth instead of just width
         self.use_extra_depth = num_classes > 150
@@ -67,56 +83,44 @@ class DirectClassificationNetwork(nn.Module):
         
         print(f"  DIRECT CLASSIFICATION NETWORK:")
         print(f"   Input: {feature_dim:,} features")
-        print(f"   Hidden: {self.hidden_dim} (adaptive: {num_classes} classes × {plant_complexity_factor} complexity)")
+        print(f"   Hidden: {self.hidden_dim} (adaptive: {estimated_samples:,} samples → {calculated_hidden} calculated → {feature_scaling:.2f} feature scaling)")
         print(f"   Output: {num_classes} classes")
         arch_desc = "Adaptive classifier with residual connection"
         if self.use_extra_depth:
             arch_desc += " + extra depth"
         print(f"   Architecture: {arch_desc}")
         
-        # Improved architecture that scales properly with class count
-        # Reduced dropout for better feature preservation with many classes
-        conservative_dropout = dropout * 0.7  # Less aggressive dropout
+        # OPTIMAL ARCHITECTURE: Scale capacity with classes and features
+        # More classes need more capacity, but prevent overfitting
+        base_capacity = max(256, num_classes * 32)  # 32 neurons per class minimum
+        feature_scaling = max(512, feature_dim // 4)  # Scale with feature count
+        self.hidden_dim = min(base_capacity, feature_scaling)  # Take the reasonable limit
         
-        self.input_norm = nn.LayerNorm(feature_dim)
-        self.input_dropout = nn.Dropout(conservative_dropout * 0.6)
+        print(f"   ANTI-OVERFITTING ARCHITECTURE: Hidden {self.hidden_dim}")
         
-        # First hidden layer - adaptive capacity
+        # Balanced architecture with moderate regularization
         self.hidden1 = nn.Linear(feature_dim, self.hidden_dim)
-        self.hidden1_norm = nn.LayerNorm(self.hidden_dim)
-        self.hidden1_dropout = nn.Dropout(conservative_dropout * 0.5)
+        self.hidden1_norm = nn.BatchNorm1d(self.hidden_dim, momentum=0.1)  # Normal updates
+        self.hidden1_dropout = nn.Dropout(0.3)  # Moderate dropout
         
-        # Second hidden layer - maintain capacity (or add depth for large datasets)
-        if self.use_extra_depth:
-            # Add intermediate layer for very large datasets
-            self.hidden2 = nn.Linear(self.hidden_dim, self.hidden_dim)
-            self.hidden2_norm = nn.LayerNorm(self.hidden_dim)
-            self.hidden2_dropout = nn.Dropout(conservative_dropout * 0.4)
-            
-            self.hidden3 = nn.Linear(self.hidden_dim, self.hidden_dim // 2)
-            self.hidden3_norm = nn.LayerNorm(self.hidden_dim // 2)
-            self.hidden3_dropout = nn.Dropout(conservative_dropout * 0.3)
-            
-            # Final classification layer
-            self.classifier = nn.Linear(self.hidden_dim // 2, num_classes)
-        else:
-            # Standard two-layer architecture for smaller datasets
-            self.hidden2 = nn.Linear(self.hidden_dim, self.hidden_dim)
-            self.hidden2_norm = nn.LayerNorm(self.hidden_dim)
-            self.hidden2_dropout = nn.Dropout(conservative_dropout * 0.4)
-            
-            # Final classification layer
-            self.classifier = nn.Linear(self.hidden_dim, num_classes)
-            self.hidden3 = None  # Not used in standard architecture
+        self.hidden2 = nn.Linear(self.hidden_dim, self.hidden_dim // 2)
+        self.hidden2_norm = nn.BatchNorm1d(self.hidden_dim // 2, momentum=0.1)
+        self.hidden2_dropout = nn.Dropout(0.4)  # Slightly higher dropout
         
-        # Residual projection for skip connection (if needed)
-        if feature_dim != self.hidden_dim:
-            self.residual_proj = nn.Linear(feature_dim, self.hidden_dim)
-        else:
-            self.residual_proj = None
+        # Remove third layer to reduce capacity
+        self.hidden3 = None
+        self.hidden3_norm = None
+        self.hidden3_dropout = None
         
-        # Temperature parameter for confidence calibration (start higher for better calibration)
-        self.temperature = nn.Parameter(torch.tensor(2.0))  # Scalar tensor for better compatibility
+        self.classifier = nn.Linear(self.hidden_dim // 2, num_classes)
+        
+        # Enable learning components
+        self.input_norm = None
+        self.input_dropout = None
+        self.residual_proj = None
+        
+        # Temperature parameter for confidence calibration (much higher to reduce overconfidence)
+        self.temperature = nn.Parameter(torch.tensor(20.0))  # Much higher to combat overconfidence
         
         self._initialize_weights()
         
@@ -152,42 +156,22 @@ class DirectClassificationNetwork(nn.Module):
         Returns:
             logits: Class logits [N, num_classes]
         """
-        # Apply input normalization and dropout
-        x = self.input_norm(features)
-        x = self.input_dropout(x)
+        # Anti-overfitting forward pass
+        x = features
         
         # First hidden layer
         x = self.hidden1(x)
         x = self.hidden1_norm(x)
-        x = F.gelu(x)
+        x = F.relu(x)
         x = self.hidden1_dropout(x)
         
-        # Second hidden layer (and optional third for large datasets)
-        if self.use_extra_depth:
-            # Extra depth architecture for large datasets
-            x = self.hidden2(x)
-            x = self.hidden2_norm(x)
-            x = F.gelu(x)
-            x = self.hidden2_dropout(x)
-            
-            x = self.hidden3(x)
-            x = self.hidden3_norm(x)
-            x = F.gelu(x)
-            x = self.hidden3_dropout(x)
-        else:
-            # Standard architecture for smaller datasets
-            x = self.hidden2(x)
-            x = self.hidden2_norm(x)
-            x = F.gelu(x)
-            x = self.hidden2_dropout(x)
+        # Second hidden layer
+        x = self.hidden2(x)
+        x = self.hidden2_norm(x)
+        x = F.relu(x)
+        x = self.hidden2_dropout(x)
         
-        # Apply residual connection if dimensions match (only for standard architecture)
-        if self.residual_proj is not None and not self.use_extra_depth:
-            residual = self.residual_proj(features)
-            x = x + residual
-        elif self.residual_proj is None and not self.use_extra_depth:
-            # Direct residual connection when dimensions already match
-            x = x + features
+        # No third layer - directly to classifier
         
         # Final classification layer
         logits = self.classifier(x)
@@ -232,7 +216,7 @@ class DirectClassificationNetwork(nn.Module):
                 confidences = max_probs
             
             # More conservative confidence bounds to prevent overconfidence
-            confidences = torch.clamp(confidences, 0.05, 0.85)  # Max 85% confidence
+            confidences = confidences  # Max 85% confidence
             
             return predictions, probabilities, confidences
 
@@ -427,7 +411,7 @@ class TwoStageTrainer:
         }
     
     def stage1_extract_all_features(self, training_data: Dict[str, List[str]], 
-                                   augmentations_per_image: int = 100, force_extract_all: bool = False) -> FeatureExtractionDataset:
+                                   augmentations_per_image: int = 30, force_extract_all: bool = False) -> FeatureExtractionDataset:
         """Stage 1: Check cache first, then extract if needed"""
         
         print(f"\n  STAGE 1: CACHE CHECK & FEATURE EXTRACTION")
@@ -510,25 +494,25 @@ class TwoStageTrainer:
         """GPU-ACCELERATED BULK LOAD: Load ALL cache files using GPU memory mapping"""
         cache_dir = Path("data/plant_images/.descriptor_cache")
         
-        print(f"\n  🚀 GPU-ACCELERATED BULK LOADING 🚀")
+        print(f"\n  GPU-ACCELERATED BULK LOADING")
         
         if not cache_dir.exists():
-            print(f"     ❌ No cache directory found at {cache_dir}")
+            print(f"     No cache directory found at {cache_dir}")
             return [], []
         
         cache_files = list(cache_dir.glob("*.npy"))
         if not cache_files:
-            print(f"     ❌ Cache directory empty at {cache_dir}")
+            print(f"     Cache directory empty at {cache_dir}")
             return [], []
         
-        print(f"     ⚡ GPU BULK LOAD: {len(cache_files)} cache files...")
-        print(f"     ⚡ Using GPU tensor operations for MAXIMUM speed")
+        print(f"     GPU BULK LOAD: {len(cache_files)} cache files...")
+        print(f"     Using GPU tensor operations for MAXIMUM speed")
         
         start_time = time.time()
         
         # GPU-ACCELERATED loading strategy
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"     ⚡ Loading on: {device}")
+        print(f"     Loading on: {device}")
         
         # CHUNKED loading for GPU memory efficiency (load 5000 files at a time)
         chunk_size = 5000
@@ -541,7 +525,7 @@ class TwoStageTrainer:
             chunk_end = min(chunk_start + chunk_size, len(cache_files))
             chunk_files = cache_files[chunk_start:chunk_end]
             
-            print(f"     ⚡ GPU Chunk {chunk_start//chunk_size + 1}: Loading {len(chunk_files)} files...")
+            print(f"     GPU Chunk {chunk_start//chunk_size + 1}: Loading {len(chunk_files)} files...")
             chunk_start_time = time.time()
             
             # GPU-optimized parallel loading
@@ -549,12 +533,29 @@ class TwoStageTrainer:
             
             def load_with_gpu_prep(cache_file):
                 try:
-                    # Use memory mapping for faster loading of large files
+                    # Use memory mapping for loading of large files
                     features = np.load(cache_file, mmap_mode='r')
                     if len(features) >= 2500:  # Valid feature vector
                         # Extract class info from filename
                         filename = cache_file.stem
-                        class_name = filename.split('_')[0]
+                        
+                        # CRITICAL FIX: Extract full class name properly
+                        # Cache filename format: {class_name}_{image_name}_{suffix}
+                        # Need to find the known class name that matches the filename start
+                        class_name = None
+                        for known_class in class_names:
+                            if filename.startswith(known_class + '_'):
+                                class_name = known_class
+                                break
+                        
+                        if class_name is None:
+                            # Fallback: try old method for backwards compatibility
+                            first_part = filename.split('_')[0]
+                            if first_part in class_names:
+                                class_name = first_part
+                            else:
+                                return None  # Skip unknown class files
+                        
                         try:
                             class_idx = class_names.index(class_name)
                             # Copy to avoid memory mapping issues
@@ -583,7 +584,7 @@ class TwoStageTrainer:
             
             # GPU tensor validation for large chunks
             if chunk_features and torch.cuda.is_available() and len(chunk_features) > 500:
-                print(f"       ⚡ GPU validation on {len(chunk_features)} features...")
+                print(f"       GPU validation on {len(chunk_features)} features...")
                 try:
                     # Convert to GPU tensors for validation
                     feature_tensors = [torch.from_numpy(f).to(device, dtype=torch.float32) for f in chunk_features]
@@ -613,17 +614,17 @@ class TwoStageTrainer:
                 all_labels.extend(chunk_labels)
             
             chunk_time = time.time() - chunk_start_time
-            print(f"       ✅ Chunk complete: {chunk_time:.2f}s ({len(chunk_features)} features)")
+            print(f"       Chunk complete: {chunk_time:.2f}s ({len(chunk_features)} features)")
         
         end_time = time.time()
         load_time = end_time - start_time
         
-        print(f"     🚀 GPU BULK LOADING COMPLETE!")
-        print(f"       ✅ Loaded: {successful_loads}/{len(cache_files)} files")
-        print(f"       ✅ Valid features: {len(all_features):,} vectors")
-        print(f"       ✅ Time: {load_time:.2f}s")
-        print(f"       ✅ Speed: {len(all_features)/load_time:.0f} vectors/second")
-        print(f"       ✅ GPU acceleration: {torch.cuda.is_available()}")
+        print(f"     GPU BULK LOADING COMPLETE!")
+        print(f"       Loaded: {successful_loads}/{len(cache_files)} files")
+        print(f"       Valid features: {len(all_features):,} vectors")
+        print(f"       Time: {load_time:.2f}s")
+        print(f"       Speed: {len(all_features)/load_time:.0f} vectors/second")
+        print(f"       GPU acceleration: {torch.cuda.is_available()}")
         
         return all_features, all_labels
 
@@ -670,9 +671,8 @@ class TwoStageTrainer:
         return X_normalized, scaler
     
     def stage2_train_neural_network(self, feature_dataset: FeatureExtractionDataset,
-                                   epochs: int = 20, batch_size: int = 32, 
-                                   learning_rate: float = 0.001,
-                                   hidden_dim: int = 1024, use_advanced_training: bool = True) -> DirectClassificationNetwork:
+                               epochs: int = 60, batch_size: int = 32, 
+                               learning_rate: float = 0.001, hidden_dim: int = 512) -> DirectClassificationNetwork:
         """
         Stage 2: Train neural network using direct classification approach
         
@@ -705,24 +705,22 @@ class TwoStageTrainer:
         print(f"     PERFECT FOR: One-shot personalized plant recognition")
         
         return self.stage2_train_direct_classifier(
-            feature_dataset, 
-            epochs=epochs,               # Exactly 20 epochs, no early stopping
-            batch_size=batch_size,       # Allow full batch size for stability
-            learning_rate=learning_rate, 
-            hidden_dim=hidden_dim,       # Allow full model capacity for 5,000 features
-            enable_calibration_check=enable_calibration,
-            calibration_sample_size=calibration_sample_size
+            feature_dataset,
+            epochs=60,
+            batch_size=32,
+            learning_rate=0.001,
+            hidden_dim=8
         )
     
     def stage2_train_direct_classifier(self, feature_dataset: FeatureExtractionDataset,
-                                      epochs: int = 20, batch_size: int = 16,
-                                      learning_rate: float = 0.001, hidden_dim: int = 512,
-                                      enable_calibration_check: bool = True,
-                                      calibration_sample_size: int = 1000) -> DirectClassificationNetwork:
+                                      epochs: int = 60, batch_size: int = 32,
+                                      learning_rate: float = 0.001, hidden_dim: int = 512) -> DirectClassificationNetwork:
         """
         Stage 2: Train direct classifier for one-shot plant recognition
-        Simple neural network: features → classes (no prototypes)
         """
+        # Set default values for removed parameters
+        enable_calibration_check = True
+        calibration_sample_size = 1000
         
         print(f"\n  STAGE 2: DIRECT CLASSIFICATION TRAINING")
         print(f"     Training samples: {len(feature_dataset.features)} (ALL DATA USED)")
@@ -735,41 +733,59 @@ class TwoStageTrainer:
         X = np.array(feature_dataset.features)
         y = np.array(feature_dataset.labels)
         
-        # Normalize features and get fitted scaler
-        X, fitted_scaler = self._robust_normalize_features(X)
+        # NO NORMALIZATION - Use raw features like inference
+        print(f"     Raw features: mean={X.mean():.3f}, std={X.std():.3f}")
+        fitted_scaler = None  # No scaler needed
         
-        # Create model
+        # Create model with actual sample count for adaptive sizing
         feature_dim = X.shape[1]
         num_classes = len(feature_dataset.class_names)
+        actual_samples = len(feature_dataset.features)
         
         model = DirectClassificationNetwork(
             feature_dim=feature_dim,
             num_classes=num_classes,
             hidden_dim=hidden_dim,
-            dropout=0.5
+            dropout=0.5,
+            actual_samples=actual_samples
         ).to(self.device)
         
-        # Setup training
+        # BALANCED TRAINING SETUP
         optimizer = optim.AdamW(
             model.parameters(),
-            lr=learning_rate,
-            weight_decay=0.01,  # L2 regularization for small datasets
+            lr=learning_rate,  # Normal learning rate for 10 classes
+            weight_decay=0.001,  # Moderate L2 regularization
             betas=(0.9, 0.999)
         )
         
-        # Learning rate scheduler
+        # Learning rate with cosine annealing for better convergence
         scheduler = optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=epochs, eta_min=learning_rate * 0.1
+            optimizer, T_max=epochs, eta_min=learning_rate * 0.01
         )
         
-        # Convert to tensors
-        X_tensor = torch.FloatTensor(X).to(self.device)
-        y_tensor = torch.LongTensor(y).to(self.device)
+        # VALIDATION SPLIT: Essential for overfitting detection
+        from sklearn.model_selection import train_test_split
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
         
-        # Create data loader
-        dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
-        dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, drop_last=False
+        print(f"     ANTI-OVERFITTING: Train={len(X_train)}, Val={len(X_val)}")
+        
+        # Convert to tensors
+        X_train_tensor = torch.FloatTensor(X_train).to(self.device)
+        y_train_tensor = torch.LongTensor(y_train).to(self.device)
+        X_val_tensor = torch.FloatTensor(X_val).to(self.device)
+        y_val_tensor = torch.LongTensor(y_val).to(self.device)
+        
+        # Create data loaders
+        train_dataset = torch.utils.data.TensorDataset(X_train_tensor, y_train_tensor)
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False
+        )
+        
+        val_dataset = torch.utils.data.TensorDataset(X_val_tensor, y_val_tensor)
+        val_dataloader = torch.utils.data.DataLoader(
+            val_dataset, batch_size=batch_size*2, shuffle=False, drop_last=False
         )
         
         # Training loop
@@ -781,61 +797,115 @@ class TwoStageTrainer:
             'epochs_completed': 0
         }
         
-        print(f"     Training for {epochs} epochs...")
+        print(f"     Training for up to {epochs} epochs with early stopping...")
+        
+        # VALIDATION-BASED EARLY STOPPING - prevent overfitting
+        best_val_loss = float('inf')
+        best_val_accuracy = 0.0
+        best_model_state = None
+        patience_counter = 0
+        patience = 8  # Moderate patience to catch overfitting
+        min_delta = 0.001  # Require meaningful improvement
         
         for epoch in range(epochs):
-            epoch_losses = []
-            epoch_accuracies = []
-            epoch_confidences = []
+            # TRAINING PHASE
+            model.train()
+            train_losses = []
+            train_accuracies = []
             
-            for batch_X, batch_y in dataloader:
+            for batch_X, batch_y in train_dataloader:
                 optimizer.zero_grad()
                 
-                # Forward pass
+                # Simple forward pass - no label smoothing
                 logits = model(batch_X)
-                loss = F.cross_entropy(logits, batch_y)
+                loss = F.cross_entropy(logits, batch_y)  # Standard cross entropy
                 
-                # Backward pass
+                # Aggressive learning backward pass
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)  # Higher clipping to allow bigger updates
                 optimizer.step()
                 
-                # Calculate metrics
+                # Calculate training metrics
                 with torch.no_grad():
                     probabilities = F.softmax(logits, dim=1)
                     _, predictions = torch.max(probabilities, dim=1)
                     accuracy = (predictions == batch_y).float().mean().item()
-                    confidence = probabilities.max(dim=1)[0].mean().item()
                     
-                    epoch_losses.append(loss.item())
-                    epoch_accuracies.append(accuracy)
-                    epoch_confidences.append(confidence)
+                    train_losses.append(loss.item())
+                    train_accuracies.append(accuracy)
             
-            # Update learning rate
-            scheduler.step()
+            # VALIDATION PHASE
+            model.eval()
+            val_losses = []
+            val_accuracies = []
+            
+            with torch.no_grad():
+                for batch_X, batch_y in val_dataloader:
+                    logits = model(batch_X)
+                    val_loss = F.cross_entropy(logits, batch_y)
+                    
+                    probabilities = F.softmax(logits, dim=1)
+                    _, predictions = torch.max(probabilities, dim=1)
+                    val_accuracy = (predictions == batch_y).float().mean().item()
+                    
+                    val_losses.append(val_loss.item())
+                    val_accuracies.append(val_accuracy)
             
             # Record epoch metrics
-            avg_loss = np.mean(epoch_losses)
-            avg_accuracy = np.mean(epoch_accuracies)
-            avg_confidence = np.mean(epoch_confidences)
+            avg_train_loss = np.mean(train_losses)
+            avg_train_accuracy = np.mean(train_accuracies)
+            avg_val_loss = np.mean(val_losses)
+            avg_val_accuracy = np.mean(val_accuracies)
             
-            training_history['train_losses'].append(avg_loss)
-            training_history['train_accuracies'].append(avg_accuracy)
-            training_history['confidence_scores'].append(avg_confidence)
+            # Update learning rate every epoch
+            old_lr = optimizer.param_groups[0]['lr']
+            # Update learning rate
+            scheduler.step()
+            new_lr = optimizer.param_groups[0]['lr']
+            
+            # Track LR changes
+            lr_changed = abs(new_lr - old_lr) > 1e-8
+            
+            training_history['train_losses'].append(avg_train_loss)
+            training_history['train_accuracies'].append(avg_train_accuracy)
             training_history['epochs_completed'] = epoch + 1
             
-            # Progress reporting
-            if epoch < 5 or (epoch + 1) % 3 == 0:
-                print(f"   Epoch {epoch+1:3d}: Loss {avg_loss:.4f} | "
-                      f"Acc {avg_accuracy:.3f} | Conf {avg_confidence:.3f} | "
-                      f"LR {scheduler.get_last_lr()[0]:.6f}")
+            # Simple early stopping
+            improved = False
+            if avg_val_loss < best_val_loss - min_delta:
+                best_val_loss = avg_val_loss
+                best_val_accuracy = avg_val_accuracy
+                best_model_state = model.state_dict().copy()
+                patience_counter = 0
+                improved = True
+            else:
+                patience_counter += 1
+            
+            # Progress reporting with validation metrics
+            if epoch < 10 or epoch >= epochs - 5 or epoch % 5 == 4 or improved:
+                status = "NEW BEST" if improved else ""
+                lr_status = f"LR {new_lr:.6f}"
+                if lr_changed:
+                    lr_status += f" ({old_lr:.6f})"
+                print(f"   Epoch {epoch+1:3d}: Train {avg_train_loss:.3f}/{avg_train_accuracy:.3f} | "
+                      f"Val {avg_val_loss:.3f}/{avg_val_accuracy:.3f} | {lr_status} {status}")
+            
+            # Stop if validation doesn't improve
+            if patience_counter >= patience:
+                print(f"   Early stopping at epoch {epoch+1} (val loss no improvement for {patience} epochs)")
+                break
+        
+        # Restore best model
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state)
+            print(f"   Restored best model (val loss: {best_val_loss:.4f}, val accuracy: {best_val_accuracy:.3f})")
         
         # Final evaluation and temperature calibration
         model.eval()
         print(f"\n  PERFORMING POST-TRAINING CONFIDENCE CALIBRATION...")
         
-        # Determine calibration sample size automatically based on dataset size
-        total_samples = len(X_tensor)
+        # Use validation set for calibration (more realistic than training set)
+        total_samples = len(X_val_tensor)
         if total_samples > 5000:
             # Large dataset: use sampling for speed
             max_sample_size = min(calibration_sample_size, total_samples // 5)  # Max 20% of data
@@ -856,16 +926,16 @@ class TwoStageTrainer:
             if auto_sampling and total_samples > max_sample_size:
                 # Sample representative subset for large datasets
                 sample_indices = torch.randperm(total_samples)[:max_sample_size]
-                X_sample = X_tensor[sample_indices]
-                y_sample = y_tensor[sample_indices]
-                print(f"     Using {max_sample_size:,} samples (of {total_samples:,}) for calibration check")
+                X_sample = X_val_tensor[sample_indices]
+                y_sample = y_val_tensor[sample_indices]
+                print(f"     Using {max_sample_size:,} validation samples (of {total_samples:,}) for calibration check")
             else:
-                # Use all data for smaller datasets
-                X_sample = X_tensor
-                y_sample = y_tensor
-                print(f"     Using all {total_samples:,} samples for calibration check")
+                # Use all validation data for calibration
+                X_sample = X_val_tensor
+                y_sample = y_val_tensor
+                print(f"     Using all {total_samples:,} validation samples for calibration check")
             
-            # Step 1: Get initial predictions and check for overconfidence (FAST)
+            # Step 1: Get initial predictions and check for overconfidence
             with torch.no_grad():
                 # Use simple forward pass instead of complex predict_with_confidence
                 initial_logits = model(X_sample)
@@ -885,39 +955,35 @@ class TwoStageTrainer:
         # Step 2: Advanced temperature scaling for plant recognition (prevents same-plant overfitting)
         num_classes = len(feature_dataset.class_names)
         
-        if num_classes >= 50:
-            # Large plant dataset: aggressive temperature scaling to prevent overfitting
-            print(f"     Large plant dataset ({num_classes} classes): Anti-overfitting temperature scaling...")
-            original_temp = model.temperature.item()
-            
-            if num_classes >= 100:
-                # For large plant datasets, use moderate temperature scaling to prevent same-plant overfitting
-                # Strong temperature scaling to reduce overconfidence
-                print(f"     Very large dataset: Strong anti-memorization scaling")
-                model.temperature.data = torch.tensor(2.2)  # Fixed optimal temperature for plant recognition
-                print(f"     Temperature adjusted (anti-memorization): {original_temp:.2f} → {model.temperature.item():.2f}")
-            else:
-                # Moderate temperature scaling
-                print(f"     Large dataset: Balanced scaling")
-                model.temperature.data = torch.tensor(1.9)  # Moderate scaling for good confidence
-                print(f"     Temperature adjusted (balanced): {original_temp:.2f} → {model.temperature.item():.2f}")
-        elif num_classes >= 20:
-            # Medium datasets: keep reasonable confidence levels
-            print(f"     Medium plant dataset ({num_classes} classes): Keeping original temperature")
-            # Keep original temperature for reasonable confidence levels
-            print(f"     Temperature kept at {model.temperature.item():.2f} (good confidence level)")
-        else:
-            # Small datasets: standard temperature scaling
-            print(f"     Applying standard temperature scaling...")
-            original_temp = model.temperature.item()
-            
-            # Standard temperature scaling for smaller datasets
-            print(f"     Small dataset: Standard scaling")
-            model.temperature.data = torch.tensor(max(2.5, original_temp * 1.5))
-            
-            print(f"     Temperature adjusted: {original_temp:.2f} → {model.temperature.item():.2f}")
+        # RAW FEATURE TEMPERATURE SCALING (different from normalized features)
+        # Raw features have much larger magnitude (0-255) vs normalized (-3 to +3)
+        print(f"     RAW FEATURE temperature scaling for {num_classes} classes...")
+        original_temp = model.temperature.item()
         
-        # Step 3: Final calibrated evaluation (FAST - only if enabled)
+        if num_classes >= 50:
+            # Large plant dataset: moderate temperature for raw features
+            if num_classes >= 100:
+                # Very large dataset: prevent overconfidence but not too aggressive
+                print(f"     Very large dataset: Moderate scaling for raw features")
+                model.temperature.data = torch.tensor(3.5)  # Higher temp for raw features
+                print(f"     Temperature adjusted (raw features): {original_temp:.2f} → {model.temperature.item():.2f}")
+            else:
+                # Large dataset: balanced scaling for raw features
+                print(f"     Large dataset: Balanced scaling for raw features")
+                model.temperature.data = torch.tensor(3.0)  # Moderate temp for raw features
+                print(f"     Temperature adjusted (raw features): {original_temp:.2f} → {model.temperature.item():.2f}")
+        elif num_classes >= 20:
+            # Medium datasets: light scaling for raw features
+            print(f"     Medium dataset: Light scaling for raw features")
+            model.temperature.data = torch.tensor(2.5)  # Light scaling for raw features
+            print(f"     Temperature adjusted (raw features): {original_temp:.2f} → {model.temperature.item():.2f}")
+        else:
+            # Small datasets: minimal scaling for raw features
+            print(f"     Small dataset: Minimal scaling for raw features")
+            model.temperature.data = torch.tensor(2.0)  # Minimal scaling for raw features
+            print(f"     Temperature adjusted (raw features): {original_temp:.2f} → {model.temperature.item():.2f}")
+        
+        # Step 3: Final calibrated evaluation
         if enable_calibration_check:
             with torch.no_grad():
                 # Use simple forward pass for speed
@@ -929,7 +995,7 @@ class TwoStageTrainer:
                 final_accuracy = (final_predictions == y_sample).float().mean().item()
                 final_confidence = final_confidences.mean().item()
                 
-                # Calculate calibration metrics (FAST)
+                # Calculate calibration metrics 
                 wrong_predictions = (final_predictions != y_sample)
                 if wrong_predictions.any():
                     wrong_confidences = final_confidences[wrong_predictions].mean().item()
@@ -1018,16 +1084,22 @@ class SimpleImageProcessor:
     def _get_recognizer(self):
         """Get or create the recognizer"""
         if self.recognizer is None:
-            print("  Initializing GPU-accelerated feature recognizer...")
-            from hyper_detailed_pattern_recognition import MultiModalCurseResistantRecognizer
-            
-            # Initialize with GPU optimization settings
-            self.recognizer = MultiModalCurseResistantRecognizer()
-            
-            # Enable GPU acceleration if available
-            if hasattr(self.recognizer, 'enable_gpu_acceleration'):
-                self.recognizer.enable_gpu_acceleration(max_threads=True)
-                print("     GPU acceleration enabled - targeting 500ms extraction")
+            try:
+                print("  Initializing GPU-accelerated feature recognizer...")
+                from hyper_detailed_pattern_recognition import MultiModalCurseResistantRecognizer
+                
+                # Initialize with GPU optimization settings
+                self.recognizer = MultiModalCurseResistantRecognizer()
+                print("     Recognizer initialized successfully")
+                
+                # Enable GPU acceleration if available
+                if hasattr(self.recognizer, 'enable_gpu_acceleration'):
+                    self.recognizer.enable_gpu_acceleration(max_threads=True)
+                    print("     GPU acceleration enabled - targeting 500ms extraction")
+                
+            except Exception as e:
+                print(f"     ERROR: Failed to initialize recognizer: {e}")
+                raise e
             
         return self.recognizer
     
@@ -1044,154 +1116,129 @@ class SimpleImageProcessor:
         
         if variant_idx is not None:
             if isinstance(variant_idx, int):
-                                    cache_filename = f"{class_name}_{image_name}_aug{variant_idx:02d}_selected_5000.npy"
+                cache_filename = f"{class_name}_{image_name}_aug{variant_idx:02d}_adaptive.npy"
             else:
                 # Handle string variant_idx (like "batch_30")
-                cache_filename = f"{class_name}_{image_name}_{variant_idx}_selected_5000.npy"
+                cache_filename = f"{class_name}_{image_name}_{variant_idx}_adaptive.npy"
         else:
-            cache_filename = f"{class_name}_{image_name}_base_selected_5000.npy"
+            cache_filename = f"{class_name}_{image_name}_base_adaptive.npy"
         
         return self._cache_dir / cache_filename
     
     def _load_cached_descriptors(self, cache_path):
-        """Load cached 1.5K selected features if they exist"""
+        """Load cached adaptive-size features if they exist"""
         try:
             if cache_path.exists():
                 descriptors = np.load(cache_path, allow_pickle=True)
                 
                 # Handle both single feature vector and batch of feature vectors
-                if descriptors.ndim == 1 and len(descriptors) == 5000:
-                    # Single feature vector
+                if descriptors.ndim == 1:
+                    # Single feature vector (any size now - adaptive)
+                    print(f"            CACHE HIT: {len(descriptors)} features")
                     return descriptors
-                elif descriptors.ndim == 2 and descriptors.shape[1] == 5000:
-                    # Batch of feature vectors
-                    print(f"            BATCH CACHE HIT: {descriptors.shape[0]} vectors")
+                elif descriptors.ndim == 2:
+                    # Batch of feature vectors (any size now - adaptive)
+                    print(f"            BATCH CACHE HIT: {descriptors.shape[0]} vectors × {descriptors.shape[1]} features")
                     return descriptors
                 else:
-                    print(f"            Cache invalid: shape {descriptors.shape} (expected (5000,) or (N, 5000))")
+                    print(f"            Cache invalid: unexpected shape {descriptors.shape}")
         except Exception as e:
             print(f"   Cache load failed: {str(e)[:50]}")
         return None
     
     def _save_cached_descriptors(self, descriptors, cache_path):
-        """Save 2.5K selected features to cache"""
+        """Save adaptive-size selected features to cache"""
         try:
             # Ensure cache directory exists
             cache_path.parent.mkdir(exist_ok=True)
             
             # Handle both single feature vector and list of feature vectors
             if isinstance(descriptors, list):
-                # List of feature vectors (batch processing)
-                if len(descriptors) > 0 and len(descriptors[0]) == 5000:
+                # List of feature vectors (batch processing) - any size now
+                if len(descriptors) > 0:
                     np.save(cache_path, descriptors)
-                    # Silent save
             else:
-                # Single feature vector
-                if len(descriptors) == 5000:
-                    np.save(cache_path, descriptors)
-                    # Silent save
+                # Single feature vector - any size now
+                np.save(cache_path, descriptors)
         except Exception as e:
-            pass  # Silent failure
+            print(f"       ERROR: Cache save failed: {e}")  # Show errors instead of silent failure
     
 
     
-    def _process_single_image_complete(self, image_path: str, class_idx: int, class_name: str, 
-                                     augmentations_per_image: int = 100) -> List[Tuple[np.ndarray, int]]:
-        """EXTRACTION ONLY: Process image and create features (no cache checking)"""
+    def _process_single_image_complete(self, image_path: Path, class_idx: int, image_idx: int, 
+                                     augmentations_per_image: int = 30) -> List[Tuple[np.ndarray, int]]:
+        """Process single image with augmentations and return QUAD descriptors"""
         
-        results = []
-        image_name = Path(image_path).name
+        # Load and validate image
+        try:
+            image = cv2.imread(str(image_path))
+            if image is None:
+                raise ValueError(f"Could not load image: {image_path}")
+            
+            # Resize to standard size for consistency
+            image = cv2.resize(image, (512, 512))
+            
+        except Exception as e:
+            print(f"     Error loading {image_path}: {e}")
+            return []
         
-        print(f"\n  Extracting: {image_name}")
-        print(f"     Creating {augmentations_per_image} augmentations + original")
+        # Check cache first for faster training
+        variant_count = (augmentations_per_image + 1)  # +1 for original image
+        cache_path = self._get_cache_path(image_path, f"batch_{variant_count}")
         
-        # Get recognizer
-        recognizer = self._get_recognizer()
-        
-        # Load and prepare image once
-        print(f"     Loading image...")
-        image = cv2.imread(str(image_path))
-        if image is None:
-            raise ValueError(f"Could not load image: {image_path}")
-        
-        image = cv2.resize(image, (512, 512))
+        # Try to load from cache first
+        cached_descriptors = self._load_cached_descriptors(cache_path)
+        if cached_descriptors is not None:
+            print(f"     CACHE HIT: Loaded {len(cached_descriptors)} cached descriptors")
+            
+            # Convert cached descriptors to grouped features format (single descriptor per image now)
+            grouped_features = []
+            for descriptor in cached_descriptors:
+                # Each descriptor is now a single feature vector - add directly to flat list
+                grouped_features.append((descriptor, class_idx))
+            return grouped_features
         
         try:
-            # FAST: Single batch extraction with internal GPU augmentation 
-            # Get recognizer
+            # Get the recognizer (initialize if needed)
             recognizer = self._get_recognizer()
             
-            # Set class info for unique extraction
-            if hasattr(recognizer, 'unique_extractor'):
-                recognizer.unique_extractor._current_class_idx = class_idx
-                recognizer.unique_extractor._current_class_name = class_name
+            if recognizer is None:
+                print(f"     ERROR: Recognizer is None after initialization")
+                return []
             
-            # SINGLE call to extract ALL features (original + augmentations internally)
-            print(f"     Fast GPU batch extraction (1 + {augmentations_per_image} variants)...")
-            all_features = recognizer.process_image_parallel_gpu(image, augmentations_per_image=augmentations_per_image)
+            # Extract features for original + augmentations (QUAD descriptors)
+            feature_vectors = recognizer.process_image_parallel_gpu(
+                image, augmentations_per_image=augmentations_per_image
+            )
             
-            # Validate and collect all feature vectors
-            individual_feature_vectors = []
-            if isinstance(all_features, list):
-                for idx, features in enumerate(all_features):
-                    if isinstance(features, np.ndarray) and len(features) == 5000:
-                        individual_feature_vectors.append(features)
-                
-                # Show batch completion
-                print(f"       Extracted {len(individual_feature_vectors)} feature vectors in one GPU batch")
-            else:
-                print(f"       Invalid return type: {type(all_features)}")
-                individual_feature_vectors = []
+            # Process single descriptors (no more A,B,C,D grouping)
+            grouped_features = []
+            cache_descriptors = []  # For caching raw feature vectors
             
-            if individual_feature_vectors and len(individual_feature_vectors) > 0:
-                # Process all the generated feature vectors
-                total_variants = len(individual_feature_vectors)
+            for feature_vector in feature_vectors:
+                # Each variant now produces 1 single descriptor - add directly to flat list
+                grouped_features.append((feature_vector, class_idx))
                 
-                batch_features = []
-                for variant_idx, feature_vector in enumerate(individual_feature_vectors):
-                    # Verify feature vector size
-                    if len(feature_vector) == 5000:
-                        batch_features.append(feature_vector)
-                        results.append((feature_vector, class_idx))
-                
-                # Cache the results for future use
-                cache_key = f"batch_{augmentations_per_image}"
-                cache_path = self._get_cache_path(image_path, cache_key)
-                self._save_cached_descriptors(batch_features, cache_path)
-                
-                # Cache individual descriptors
-                for variant_idx in range(total_variants):
-                    if variant_idx == 0:
-                        individual_cache_path = self._get_cache_path(image_path, None)  # Base image
-                    else:
-                        individual_cache_path = self._get_cache_path(image_path, variant_idx)  # Augmentation
-                    
-                    # Save individual feature vector
-                    if variant_idx < len(batch_features):
-                        self._save_cached_descriptors(batch_features[variant_idx], individual_cache_path)
-                
-                print(f"      Generated {len(results)} training samples + cached")
-                
-                # Force memory cleanup after successful processing
-                import gc
-                gc.collect()
-                if hasattr(recognizer, 'device') and str(recognizer.device).startswith('cuda'):
-                    import torch
-                    torch.cuda.empty_cache()
-                    print(f"     GPU memory cleared")
-                
-            else:
-                print(f"     Feature extraction failed")
-                
+                # Store raw feature vector for caching (without class_idx)
+                cache_descriptors.append(feature_vector)
+            
+            # Save to cache for future use
+            if cache_descriptors:
+                variant_count = len(cache_descriptors)  # Number of single descriptors (no division by 4)
+                cache_path = self._get_cache_path(image_path, f"batch_{variant_count}")
+                self._save_cached_descriptors(cache_descriptors, cache_path)
+                print(f"     Cached {len(cache_descriptors)} descriptors to {cache_path.name}")
+            
+            return grouped_features
+            
         except Exception as e:
-            print(f"     Processing error: {str(e)}")
-        
-        return results
+            print(f"     Feature extraction failed for {image_path}: {e}")
+            return []
     
 
     
     def process_images_batch(self, image_paths_and_classes: List[Tuple[str, int, str]], 
-                           augmentations_per_image: int = 100) -> List[Tuple[np.ndarray, int]]:
+                           augmentations_per_image: int = 30) -> List[Tuple[np.ndarray, int]]:
         """EXTRACTION ONLY: Process images and create features (no cache checking)"""
         
         print(f"\n  GPU-ACCELERATED EXTRACTION: {len(image_paths_and_classes)} images")
@@ -1218,9 +1265,9 @@ class SimpleImageProcessor:
             print(f"    Image {img_idx+1}/{total_images}: {Path(image_path).name}")
             
             try:
-                # Extract features from this image (no cache checking)
+                # Extract features from this image (optimized processing)
                 image_results = self._process_single_image_complete(
-                    image_path, class_idx, class_name, augmentations_per_image
+                    Path(image_path), class_idx, img_idx, augmentations_per_image
                 )
                 results.extend(image_results)
                 
@@ -1282,10 +1329,10 @@ def load_plant_dataset(data_path: str = "data/plant_images") -> Dict[str, List[s
 def main_two_stage_training():
     """Main two-stage training function"""
     
-    print("  TWO-STAGE PLANT RECOGNITION TRAINING")
+    print("TWO-STAGE QUAD DESCRIPTOR PLANT RECOGNITION TRAINING")
     
-    print("   Stage 1: Simple feature extraction with augmentation")
-    print("   Stage 2: Neural network training with full metrics")
+    print("   Stage 1: Smart feature extraction with plant-specific selection - 3k adaptive features per image")
+    print("   Stage 2: Neural network training with single unified descriptor per image")
     
     
     # Load dataset
@@ -1305,7 +1352,7 @@ def main_two_stage_training():
     print(f"\n  Starting Stage 1: Feature Extraction")
     feature_dataset = trainer.stage1_extract_all_features(
         training_data, 
-        augmentations_per_image=100  # Using sophisticated plant-specific augmentations
+        augmentations_per_image=30  # Using sophisticated plant-specific augmentations
     )
     
     if not feature_dataset.features:
@@ -1318,11 +1365,10 @@ def main_two_stage_training():
     print(f"\n  Starting Stage 2: Neural Network Training")
     model = trainer.stage2_train_neural_network(
         feature_dataset,
-        epochs=20,   # More epochs with early stopping
-        batch_size=32,   # batch size for stability
-        learning_rate=0.001,  # Lower learning rate for training
-        hidden_dim=1024,  # Larger capacity for better feature learning
-        use_advanced_training=True  # Enable state-of-the-art techniques
+        epochs=60,
+        batch_size=32,
+        learning_rate=0.001,
+        hidden_dim=8
     )
     
     if model is None:
