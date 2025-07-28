@@ -1,0 +1,6608 @@
+INVASIVE ALIEN & PROBLEM PLANTS ON
+THE WITWATERSRAND & MAGALIESBERG.
+Field Guide
+by Karin Spottiswoode
+Copyright
+First edition 2024
+Copyright in text and photographs:  Karin Spottiswoode and others as 
+credited.
+Copyright in published edition: Karin Spottiswoode
+All rights reserved. No part of this publication may be reproduced or 
+transmitted in any form or by any means without written permission of 
+the author.
+Cover photograph: Extended Public Works Program workers showing 
+Lantana rootstock they have pulled out with the aid of tree poppers in 
+Kloofendal Nature Reserve.
+Disclaimer
+This book is intended as a guide only.
+•
+For more detailed information on the various plants, please consult 
+Lesley Henderson’s guide “Alien Invasive Plants in South Africa, 
+2020 edition published by the Agricultural Research Council,  and 
+Clive Bromilow’s book “Problem plants and Alien Weeds of Southern 
+Africa”, 2018 edition. Government information on invasive plants 
+can be found  on www.invasives.org.za. 
+•
+Some people may have allergic reactions to certain plants, so 
+anyone working on alien invasives should wear suitable personal 
+protective equipment (PPE) and consult their doctor as required.
+•
+Use of tools and herbicides is at one’s own risk.
+Non-compliance
+If declared  Alien Invasive Plants (AIP) are present in somebody’s 
+property, the owner is responsible for removing those plants. A non-
+compliance form should be issued against the landowner. Information 
+on the non-compliance application can be obtained from Stiaan Kotze 
+from dept of Forestry, Fisheries and the Environment  (DFFE) cell 082-
+447-4077, email skotze@dffe.gov.za.
+1
+Table of Contents
+Copyright, Disclaimer, Non-compliance
+1
+Table of content
+2
+Acknowledgements
+3
+Introduction
+4-5
+Functions of this book
+6
+What is the problem with AIPs?
+7,8
+Ornamental invaders
+9
+Indigenous Bush encroachment
+9, 10
+NEMBA AIS Regulations
+11
+Recommended methodology on removing AIPs
+12, 13
+Tools
+14,15,16
+Need for recording work done on removing AIPs
+17
+Documenting AIPS removed in Kloofendal
+18,19
+How the individual plant species are described 
+20,21
+Species description
+22 -150
+Glossary
+151-155
+References
+156 -161
+Index
+162 -167
+About the author
+168
+2
+Acknowledgements
+Lesley Henderson has been my mentor, ensuring that information in my 
+book is correct and providing continuous encouragement.
+Phillip Mkhombo and Percy Rathogwa, JCPZ  management of 
+Kloofendal, providing Friends of Kloofendal with students and EPWP 
+workers to work on AIP control. 
+Helene de Villiers, Friends of Kloofendal has shown continued 
+commitment, dedication and leadership in work on AIP removal in 
+Kloofendal.
+Andrew Spottiswoode has greatly assisted in reformatting my book.
+Clive Bromilow and Kay Montgomery have given encouragement and 
+support.
+Jonathan Leeming for his comments,  recommendation and 
+encouragement.
+I dedicate this book to my husband Steve Spottiswoode who has 
+encouraged and supported me in working on invasive plants and writing 
+this book, he has been and still very much is my technical advisor and 
+teacher on our much more advanced GPS recording methodology.
+3
+Introduction
+This booklet is based on declared alien invasive plants and other 
+problem invasive plants found in the Kloofendal Nature Reserve, which 
+is in the western part of Johannesburg, and in the Magaliesberg 
+mountains. 
+As part of the Friends of Kloofendal, which was founded in August 2002, 
+I have been very involved in the control of Alien Invasive Plants (AIPs) in 
+Kloofendal Nature Reserve for many years, supported by Johannesburg 
+City Parks management of the reserve, members of the Friends of 
+Kloofendal, other volunteers, students, scout groups and EPWP 
+workers employed by Johannesburg City Parks& Zoo. This booklet was 
+started as an aid towards teaching volunteers and workers how to 
+identify the Alien Invasive Plants inside the Kloofendal Reserve and 
+distinguish them from similar looking indigenous plant species.
+I have compiled this booklet on identification and control of AIPs with 
+the aid of experts as well as various people working on AIPs elsewhere 
+in Johannesburg.
+I have been reluctant in the use of herbicides as they do have an impact 
+on life of plants, animals (insects) and fungi close to the AIP to be 
+targeted. Our methodology in removal of AIPs since November 2020 
+has been mechanical in the form of simply pulling out small plants 
+where possible and using tree poppers for bigger plants. Trees too big 
+for  removal by a tree popper have been sawn or cut down, bark 
+stripped down to the roots if single-stemmed. Multiple-stemmed trees 
+simply cut down, with a two monthly follow-up  cutting away regrowth – 
+a few of such follow-ups are required for the tree to be starved and die. 
+Alternatively, we use paint-on herbicide on cut multi-stemmed trees.
+Mechanical control is a big task but, judging by the mixed success seen 
+in previous use of herbicides in AIP control, the mechanical method 
+looks more effective and is far less harmful to the natural environment.
+In a four months AIP control project starting in November 2020,  and 
+subsequent AIP control work in Kloofendal,  a daily record was kept of 
+the different species and number of plants removed of each species 
+and their location in the reserve, initially in recording books.  
+4
+These records were then transferred onto a spreadsheet for data 
+processing. Since 2022 recording is done on a GPS App on the cell, and 
+then exported via email to a spreadsheet for data processing which 
+gives numbers of AIPs pulled out,  ringbarked or treated with paint-on 
+herbicide, date and time,  with location on the Kloofendal map, an 
+overlay for each species. This is a new technology we are developing for 
+record keeping of work done.
+As many species all like to grow in the same disturbed area, it is more 
+efficient to work on all of them in an area rather than just focusing on 
+one species.
+Removing AIPs does not only involve removing the plants, rootstock 
+and all where possible, but also removing the fruit with the seeds when 
+they have been formed.
+My report  on work done November 2020 into 202, which includes  
+Colleen van Rooyen’s contribution in recording location of AIPs in 
+Kloofendal,  can be accessed  at  
+https://kloofendalfriends.org.za/alien-invasive-plant/    
+This booklet includes the South African declared AIPs, as well as non-
+declared invasive problem plants occurring in the Kloofendal Nature 
+Reserve. I have included some AIPs which do not occur in Kloofendal 
+but do occur in other Johannesburg green areas such as Klipriviersberg 
+Nature Reserve and in the Magaliesberg.
+5
+Functions of this book
+1.
+Create awareness for the need of AIP control, what harm is caused 
+by AIPs invading our natural environment and Johannesburg in 
+general. 
+2.
+Identification of AIPs and indigenous problematic invaders and 
+encroachers in Kloofendal Nature Reserve, other natural similar 
+areas in Gauteng and the Magaliesberg and in one’s own properties.
+3.
+Identification of AIPs needs to be done out in the field. The 
+Kloofendal Nature Reserve could be used as a training venue.
+4.
+Learn about methodologies used in removing the AIPs with minimal 
+damage to the natural environment.
+5.
+Learn about record keeping of plants removed, where and when, 
+this also allows for observing productivity of workers and allows for 
+a management plan for present and future work to be done, 
+including the necessary follow-up, checking up how effective the 
+AIP removal has been, and to continue cutting away new growth 
+and pulling out AIPs where possible.
+6.
+Assist in an AIP management plan for Johannesburg.
+7.
+With the aid of knowledge and experience gained in training, create 
+jobs in AIP control work in Gauteng and Northwest province.
+6
+What is the problem with AIPs?
+1.
+It is against the law (NEMBA AIS Regulations – see below)
+2.
+AIPs replace our indigenous vegetation, sometimes in a big way! 
+Alien invasive species, which includes plants, animals and other 
+organisms,  are responsible for a quarter of South Africa’s 
+indigenous biodiversity loss.
+                           
+                                                                                                        (3)                               
+Pompom weed, Campuloclinium macrocephalum, invading grassland.
+3.
+AIPs take up a lot of water. Research has shown significant current 
+water losses due to the impact of alien invasive plants. It is 
+estimated that the Western Cape Water Supply System (WCWSS) 
+currently loses about ±38 million m3/annum through these 
+impacts (equivalent to the capacity of Wemmershoek Dam). 
+4.
+AIPs often grow into big trees, thereby consuming extra lots of 
+water, as compared to our indigenous plants which mostly do not 
+tend to get as big e.g. Black Woods, mature Black and Silver Wattle 
+trees, Eucalyptus trees, Pine trees etc. 
+5.
+Riparian invasions use water in rivers and use can exceed the 
+rainfall. Dense black wattle (Acacia mearnsii) invasion is 
+estimated to result in a 90–100% reduction in annual river flows (3).
+6.
+AIPs are often poisonous, unpalatable, dangerous to animals and 
+plants, such as  Cestrum parqui, Datura stramonium. Ripe fruits 
+and seeds of some AIPs might be palatable to birds or insects, 
+aiding in the AIP’s seed dispersal.
+7
+7.
+AIPs are very good at invading natural areas, through a suckering 
+system, multiple seed production, nestling close to indigenous 
+plants while small, which offers the AIPs protection from the 
+elements such as sun, providing shade from the drying-out, 
+protection from wind, frost, fire, and then overtaking these 
+indigenous host plants once AIPs are big. 
+8.
+The AIP roots can be intertwined with the indigenous plant roots 
+(Lantanas do that), competing with the indigenous plants for water 
+and minerals in the ground, and with fungi and small creatures (eg 
+termites) essential for plants to  grow. 
+9.
+AIPs can make the soil and water in which they grow unsuitable for 
+indigenous plants to grow there (exuding germination or growth 
+inhibitors substances from their roots into the ground and water – 
+e.g. Black Wattle and Silver Wattle) a useful technique,  called 
+Allelopathy, which allow the AIPs to eliminate competition from 
+their neighbouring indigenous plants.
+10. AIPs have strong defence mechanisms making eradication difficult 
+e.g. Lantana thorns, Pyracantha spines, Cestrum parqui’s 
+poisonous fumes and sap, allergic reaction caused by hairs on 
+Bugweed, plentiful seeds such as Pompom weed, non-declared 
+invaders such as Amaranthaceae and Boraginaceae family have 
+multiple burry seeds which make work on AIPs in disturbed areas 
+very difficult.
+11. Suckering – shoots arising from the roots of a woody plant, often 
+some distance away from the main stem. (1)
+12. Coppicing – regrowth from a stump or stem that has been cut (1), 
+such as Black Wood (Acacia melanoxylon).
+13.  AIPs do well in disturbed ground which is very common in human 
+populated areas, where ground is disturbed by usage, fences, 
+paving, buildings, gardening.
+8
+Ornamental Invaders
+Plants having been brought from other countries for gardening 
+purposes, because they look beautiful, having become invaders, when 
+escaping from gardens. Their propagation is  made worse by 
+horticulturalists promoting these exotic plants over the indigenous 
+ones (1).
+Indigenous Bush Encroachment
+In certain conditions, mostly overgrazing, indigenous vegetation 
+increases in such a density that virtually all other vegetation is 
+excluded, drastically reducing number of game to almost zero and 
+making carrying capacity of domestic stock totally uneconomical (1). In 
+Kloofendal the bush encroachment is due to lack of fire, which is a 
+natural phenomenon on the Highveld.
+Examples of indigenous Bush encroachers in the reserve are:
+Diospyros lycioides
+Lippia javanica
+Leucosidea sericea
+Lopholaena coriifolia
+Senegalia caffra Acacia caffra)
+Tarchonanthus camphoratus
+                                                                   (7)                                               
+Diospyros lycioides
+9
+                     Lippia javanica          (7)            Lopholaena coriifolia   (95)         
+                                                                                            
+                                                 Leucosidea sericea
+                                                                         (7)                                                    
+(7)
+Senegalia caffra / Acacia caffra        Tarchonanthus camphoratus 
+10
+NEMBA AIS Regulations
+National Environmental Management: Biodiversity Act
+AIS – Alien Invasive Species
+Law passed in 2014, updated in 2020
+Listed invasive species are assigned to four categories:
+Category 1a:
+Species which must be combatted or eradicated
+Category 1b:
+Species which must be controlled
+Authorized officials must be permitted to enter properties to monitor, 
+assist with or implement the control of listed species
+Any Category 2 listed species (where permits are applicable) which fall 
+outside of containment and control, revert to Category 1b and must be 
+controlled.
+Any Category 3 listed species which occur within a Protected Area or 
+Riparian (wetland) revert to Category 1b and must be controlled.
+Category 2:
+Any species listed under Category 2 requires a permit issued by the 
+Department of Forestry, Fisheries and the Environment (DFFE) to carry 
+out a restricted activity (See Permit Applications.)
+Category 3:
+Category 3 listed invasive species are subject to certain exemptions in 
+terms of section 70 (1)(a) of the NEMBA Act, which applies to the listing 
+of alien invasive species.
+Any Category 3 listed plant species that occurs in riparian areas, must 
+be considered as Category 1b and the appropriate control measures 
+instituted.
+11
+Recommended methodology on removing AIPs
+Based on experienced gained on work done in Kloofendal Nature 
+Reserve and Magaliesberg over many years.
+1.
+Wear clothing that does not attract burs such as Forget-me-not 
+seeds, Black jacks, Burweed, grass seeds, so do not wear -stretchy 
+material, nor knitted clothing. It is recommended to wear gaiters to 
+cover socks and shoelaces. Hair to be covered by a hat, braids and 
+loose hair to be tied back and covered by a hat. Suncream is 
+recommended, as well as bringing something to drink.
+2.
+Welding gloves (elbow high, thick leather gloves, usually blue) to be 
+worn when working with prickly plants such as Lantana camara, 
+Solanum sysimbriifolium, American Bramble, Scotch thistle as well 
+as with plants that have allergenic properties such as Bugweed 
+hairs and sap of Cestrum and Mothcatcher.
+3.
+Do not wear leather gloves when working on plants that have burs, 
+as burs stick onto these gloves.
+4.
+Rubber gloves and mask to be worn when using herbicides. 
+Protective glasses optional – we do not use herbicide spray, only 
+the paint-on one.
+5.
+People working on the AIPs need to be warned that many plants are 
+toxic, so that, after working on these plants, hands need to be 
+washed before eating, also no rubbing of eyes or nose with 
+contaminated hands. 
+6.
+As many species all like to grow in the same disturbed area, it is 
+more efficient to work on all of them in an area rather than just 
+focusing on one species.
+12
+7.
+Sites with AIPs often seem to collect litter – litter should be removed 
+from those sites, so plastic bags for litter collection and a  litter 
+picker is advisable to take to the weeding site.
+8.
+A small First Aid kit (rubber gloves, cotton wool, gauze, clean water, 
+antiseptic, and plaster of various sizes) is useful for possible minor 
+cuts or abrasions whilst working on AIPs.
+9.
+Disposal of AIPs
+i.
+AIPs that have been pulled out roots and all, and branches 
+that have been cut, can be left on site to decompose, with 
+the exception of the Opuntias and Cereus.
+ii.
+Where manageable, fruit and seeds must be put in plastic 
+bags (“bagged”), the full  bag knotted closed, and taken to 
+a garbage disposal site, where they will rot.  The fruit and its 
+seeds must not be left on site, as they will sprout and grow 
+again. DO NOT attempt to burn dry seeds! Hot air rises and 
+will take dry seeds with them, the breeze will disperse 
+them, and a new hot spot of that plant will be created e.g. 
+Pompom weed seeds.
+13
+Tools 
+                                                                                         Tree popper used to “pop
+                                                                                          out” Lantana rootstock  
+Litter picker, secateurs, weeding fork, 
+foldable saw and tree popper
+▪
+Tree popper to pull out, roots and all, young AIP trees and shrubs. 
+Three sizes are available, the bigger size to be used on bigger 
+plants. Tree poppers do not work on herbs as those have a fleshy 
+stem, which breaks easily when trying to “pop” them out. 
+▪
+Strong small weeding tool – to dig out herbs and young shrubs. A 
+long, strong screwdriver can also be useful.
+▪
+Secateurs to cut away branches that are in the way. 
+14
+▪
+Saw to cut down the tree, if herbicide is to be applied – we use the 
+paint-on herbicide, not the spray, as spray can easily reach other 
+indigenous plants as well as the person doing the spraying.
+▪
+Leather, elbow high welding gloves – for working on thorny plants 
+such as Lantana and Pyracantha, and on poisonous plants such as 
+Bugweed.
+▪
+Panga/ Machete  to strip tree bark all the way around the stem (ring 
+barking),  from knee height, down to the roots – this should kill the 
+tree, but still follow-up is required for possible coppicing.
+▪
+A basket is useful for carrying the herbicide, a small container with 
+water for the brush, small weeding tools, plastic bags for fruit and 
+seeds, (bag above right, is full of Jerusalem cherries’ fruit -  small 
+First Aid kit, notebook & pen and a small towel for wiping hands on
+▪
+Herbicide and brush – herbicide is only used if mechanical means 
+and biocontrol do not work. 
+15
+▪
+Information on herbicides for AIPs can be found in “Problem 
+Plants and Invasive Weeds in Southern Africa” by Clive Bromilow, 
+2018 edition (1). FroK uses Kaput gel, which is a water-based paint-
+on herbicide.  The herbicide application and safety instructions 
+must be followed. It is important to apply the herbicide within ten 
+minutes of cutting the tree as it loses effectiveness if applied later. 
+Kaput gel herbicide used successfully on Cotoneaster pannosus
+▪
+Big garden fork, pick and/ or pinchbar (gwala) – to assist in taking 
+out AIPs with a big root system such as Lantana, Pampas grass, 
+Phytolacca octandra,   Cyathula uncinulata (Burweed).
+▪
+Android (Smart) cell phone for recording purposes.
+16
+Need for recording work done on removing AIPs.
+Work done must be measured to prove that work has been done.
+Management plan – in order to know what plants are alien or other 
+invasive problematic plants in the area of management, one needs to 
+be able to identify the plants, hence this book.
+Quantity or number of plants in that area – counting each plant of a 
+species that needs to be removed - if numbers are too big to count 
+individually, one has to estimate how many there are.
+Location – where exactly these plants are growing – GPS recordings are 
+far more accurate than just a description, but descriptions are useful 
+additions. Recording methodology will be discussed in the next pages.
+Same to be done on each invasive, problematic plant in the located 
+area.
+What tools are needed to remove the plants.
+How to dispose of them – stop the spread of seeds or root suckers.
+Workers to have a ‘hands-on” manager who ensures that the work is 
+done properly. The manager needs to be familiar with the invasive 
+plants to be removed, the methodology, the recording procedure and 
+how to pass on work done by the workers onto their contractor and 
+other management.
+Follow-up – 3 monthly, 6 monthly or yearly, and recording of the 
+hopeful improvement of the infested area. Comparison, this is part of 
+the original management plan.
+Ongoing recording of location and numbers of plants removed, as well 
+as observations of the occurrence of other, new problem invasive 
+plants in the area of work.
+Forward planning – what should replace the plants taken out? 
+17
+Documenting AIPs removed in Kloofendal
+The bulk of this book deals with qualitative descriptions of the AIPs, the 
+why, what and how of control of AIPs.
+The Friends of Kloofendal are developing methodologies to quantify the 
+process of controlling AIPs, in terms of Where, How much and When.
+Where - what place or position.
+How much – How many and how big
+When - at what date and time
+We are using an Android Cellphone App called GPS Essentials to
+record groups of AIPs removed from the Kloofendal NR as Waypoints.
+Once the App is set up and a Waypoint is requested, we follow a few 
+simple steps to check that the location accuracy is sufficient, namely
+-
+Checking that the location is accurately estimated, for example with 
+the error (δ) is less than 10m.
+-
+Entering the common name of the plant(s)
+-
+The number of plants 
+-
+Any relevant comment
+18
+Documenting AIPs (Continued)
+AIP removal has been recorded by more than eight people to date using 
+the GPS Essential app.  The recordings are exported by email or 
+WhatsApp to Dr Steve Spottiswoode as KML format file.  He reads these 
+files and adds new records to a master CSV file using custom-written 
+software. Further processing is under development to expand analysis 
+and reporting of the data.  This includes clustering and filtering of 
+locations in space and time.
+We are experimenting with quantifying places where AIPS still need to 
+be removed by entering a negative number in the place of the number 
+removed.
+A free on-line programme on https://www.earthpoint.us/ can be used 
+to generate a file for plotting records in Google Earth.  This programme 
+allows for a wider range of icons exported by GPS Essentials as well as 
+colours and symbol sizes
+Sample of CSV data and a spatial plot of recordings.
+19
+How the individual plant species are described 
+Each page contains: - please see example on next page.
+a) Latin genus and species name. 
+b) Common name of each plant, mostly English name, at times also 
+Afrikaans. 
+c) Number allocated to the plant if it is listed on the South Africa’s 
+National Invasive Species list 2020 edition.
+d) Category if declared.
+e)  Country of origin.
+f)
+Colour Photograph of each plant, including, where possible, 
+distinguishing features such as flowers, fruit, leaves and if 
+applicable, a description of smell and touch.
+g) How to distinguish the plant from similar-looking indigenous, non-
+invasive plants. 
+h) Where generally found.
+i)
+Removal methodology (Treatment). My preferred methodology is 
+mechanical or biocontrol, avoiding the use of herbicides.
+j)
+If parts of the plant or whole plant is poisonous, it is described in a 
+red font. 
+k) References are marked numerically according to References pages 
+at the back of the book
+The plants are divided into 8 colour-coded categories (2) :
+Grasses, Trees, Shrubs, Herbs (not woody), Flat-growing herbs, 
+Creepers, Succulents, Water weeds. 
+Within each category, the plants are arranged in alphabetical order 
+according to the Latin genus and species name.
+Each plant is allocated one or two pages. 
+20
+(c) 338
+(a) Solanum mauritianum
+(d) 1b
+Family: Solanaceae
+Common names: (b) Bugweed, Luisboom
+Tree
+Origin: (e) South America
+       (f)
+A shrub or small tree up to 4m 
+high covered with whitish-felty 
+hairs.
+      (f)
+                                                                (9)
+Big leaves with fine hairs, 
+distinctive strong, unpleasant 
+smell upon touching leaves and 
+branches.
+ 
+                           (f)
+                                                                  
+                    (k) (9)                               (k) (9)
+Purple flowers in compact, 
+terminal clusters on densely 
+felty stalks up to 10cm long all 
+year round. 
+Spherical berries which start off 
+green and turn yellow, growing in 
+compact terminal clusters.
+(h) Where found?
+In disturbed ground.
+(j) Hairy leaves and stems are a 
+respiratory tract and skin 
+irritant. Unripe fruits are 
+poisonous.
+(g) Not to be confused with
+Vangueria infausta (Wild 
+Medlar) young plants look 
+similar, but Vangueria leaves 
+don’t have the strong, 
+unpleasant smell of the 
+Bugweed.
+(i) Treatment
+Pull out with tree popper if plant 
+is young.
+Bag fruit & seed.  Cut down to 
+ground level, then paint on 
+herbicide or, if single stemmed, 
+debark with axe or garden fork. 
+The bark peels off easily.
+21
+HOW INDIVIDUAL PLANT SPECIES ARE DESCRIBED 
+45
+Arundo donax
+1b
+Family:  Poaceae
+Common names: Giant or Spanish reed
+Grass
+Origin: Asia
+A tall and vigorous aquatic reed 
+growing 2-6m high spreading 
+from tough, fibrous, horizontal 
+underground rhizomes, which 
+can grow roots when the stems 
+are cut, used for stakes.
+                                                         
+                                                             
+                                                   (9)        
+Pale green to bluish green 
+leaves, long and slender in 
+profile, leaf tips are not rigid 
+and penetrating like A. 
+mauritianus (3)
+                                                   
+                                          (3)
+Inflorescence: Compact, spear-
+shaped, flowering late summer, 
+but rarely flowering on the 
+Highveld.(3)
+Where found?
+In and near watercourses all 
+around Johannesburg but not in 
+the  Kloofendal Nature reserve.
+Broad lobes at leaf base.
+Not to be confused with
+Phragmites australis which 
+grows up to 4 meters high, so is 
+much shorter than A. donax.
+P. australis and A. donax both 
+grow in or near sources of water 
+but A. donax often occurs on 
+sites away from water (3)
+P. australis has not got broad 
+lobes at leaf base
+P.australis’ inflorescence is 
+more open and feathery.
+Treatment
+C. Bromilow suggests cutting 
+the reeds to ground level, stack 
+the  branches and preferably 
+burn them. Caution not to use as 
+stakes for the garden as pieces 
+can regrow. Allow reeds to grow 
+1-2 meters, which usually takes 
+6-8 weeks, before applying a 
+recommended systemic 
+herbicide. Thorough follow-up is 
+essential for effective control. 
+Observe any restrictions on the 
+herbicide label before  
+subsequent water use. (1)
+22
+97
+Cortaderia jubata
+1b
+Family:  Poaceae
+Common names: Jubata grass, Pampasgras
+Grass
+Origin: South America
+Vigorous, tussock grass up to 
+3m in diameter, with flowering 
+stalks up to 3m high. This grass 
+invades open grassland, 
+roadsides, riverbanks and 
+wasteland. It was introduced 
+into South Africa to stabilize the 
+mine dumps and as an 
+ornamental plant. (9)
+                                                              
+                                                              (9)
+Leaves are bright green, with 
+long slender blades, which are 
+either flat or V-shaped. Margins 
+of the leaves are sharp. Some 
+people have allergic reaction 
+(bad rash) to the leaves when 
+trying to take out the grass. The 
+flowers can cause irritation to 
+eyes and nose and respiratory 
+tract.
+Where found?
+It grows in the  goldmine and 
+power station on eastern side of 
+reserve and on the top Eastern 
+part of Rocky Ridge (Yellow) Trail 
+next to path.
+Leaf blades are flat. Flowers are 
+yellowish or purple, loosely 
+branching inflorescence, flowers 
+from November to February. It 
+spread through its seeds. (9)
+Treatment
+Cut off the flowers before 
+seeding, bag them, leave to rot 
+in a closed- up garbage bag. Dig 
+out stumps, which is a huge job 
+because of its rhizomatous 
+roots. We  find a pinch bar 
+(gwala) useful in digging the 
+plant out. First cutting off the 
+leaves with a panga makes 
+digging out the stumps easier.
+23
+ND
+Paspalum notatum
+Family:  Poaceae
+Common names: Bahia grass
+Grass
+Origin: Asia
+A dense, mat-forming perennial 
+grass spread by strong 
+rhizomes and seeds.
+It grows in any type of soil.
+Rhizome, and 
+flattened 
+culm and leaf 
+sheaths.
+Where found?
+Amphitheatre lawn, disturbed 
+areas in the reserve such as 
+next to paths.
+In road reserves, lawns and 
+gardens in towns and cities (6)
+Inflorescence is a pair of 
+racemes (“fingers”)= paired 
+digitate.  pointing upwards. 
+Spikelets are rounded, hairless, 
+shiny with dark purple flowering 
+parts sticking out. Flowers from 
+December to April (6)
+Not to be confused with
+Paspalum scrobiculatum, 
+Spaced-digitate, 
+not paired digitate. 
+A tufted grass, not 
+a creeping grass.
+Urochloa mosambicensis 
+racemes are semi-
+digitate. A hairy 
+tufted grass with 
+stolons. It likes light 
+shade. 
+Treatment
+This weed should be controlled 
+by physical removal before 
+becoming established (1).
+24
+262
+Pennisetum clandestinum
+1b
+Family:  Poacaea
+Common names: Kikuyu grass
+Grass
+Origin: Tropical East, 
+Northeast and Central Africa
+Category 1b in protected areas 
+and riparian areas. Otherwise 
+not listed.
+Dense, mat forming perennial 
+grass, which spreads quickly 
+from stolons (creeping stems 
+above the ground), growing 
+roots from their nodes - see 
+picture above and below, 
+rhizomes (underground 
+creeping stems) and from seed 
+spread by animals and 
+waterflow. 
+Where found?
+Amphitheatre lawn, disturbed 
+areas in the reserve such as 
+Southern, upper part of reserve 
+at sewerage leak site and place 
+where building structures have 
+been.
+                                               (9)
+Flowers – very small, hidden 
+partly by leaf sheaths, only white 
+feathery stigmas or anthers are 
+visible (3)
+Not to be confused with
+Cynodon dactylon/ Couch grass, 
+an indigenous grass, also with 
+many stolons and rhizomes, but 
+leaves are narrower and shorter, 
+and inflorescence is true digitate 
+(four or five terminal racemes/ 
+“fingers”)
+Treatment
+Dig out, particularly near 
+buildings, areas with tiling or 
+bricks as Kikuyu grass manages 
+to push its way under tiles, lifting 
+them, and in between bricks.  It 
+seems to be a host to many 
+small ants.
+25
+262    
+Pennisetum setaceum
+1b
+Family: Poaceae
+Common names: Fountain grass
+Grass
+Origin: North Africa 
+A tussock-forming perennial 
+grass with feathery, spike-like 
+inflorescences. The bristles are 
+long and detach with the 
+spikelets.
+Spreads by rhizomes and seed.
+The inflorescence is about 10-
+25 cm long and rose or purple-
+coloured. (1)
+Where found?
+Roadsides and waste places. 
+Introduced as ornamental grass 
+from North Africa.
+Strong pioneer forming stands 
+along road verges and in other 
+disturbed sites with the potential 
+to spread into adjacent natural 
+veld, replacing the indigenous 
+vegetation. (9)
+This grass is used for sand 
+binding and as an ornamental in 
+flower arrangements but is 
+obstructive along roadsides.
+(3) & (1)
+Treatment
+Bromilow (1) ) recommends 
+industrial herbicide. In 
+Kloofendal Fountain grass is not 
+an invasive problem, so not 
+treated as such.
+26
+2
+Acacia baileyana
+3
+Family:  Fabaceae
+Common names: Bailey’s wattle
+Tree
+Origin:  South-east Australia
+A small evergreen tree, growing 
+3-6m in height with branchlets 
+covered in greyish or silvery-
+blue foliage.
+Leaves are bipinnately 
+compound (twice divided), 2-
+5cm long. (9)
+Leaves are 
+arranged spirally 
+around the 
+branchlets.(9)
+Where found?
+Along rocky path in reserve.
+                                                                 (3)
+A gland occurs at the junction of 
+each primary leaflet pair  or only 
+the top few primary leaflet pairs.
+                 
+               (9)                                                       (3)
+Flowers from July to September 
+with bright yellow globular 
+flower heads in showy sprays. (9)
+Treatment
+As for A. dealbata, but in 
+Kloofendal we have not worked 
+on A. baileyana yet, there are not 
+many.
+27
+4
+Acacia dealbata
+2
+Family:  Fabaceae
+Common names:  Silver wattle
+Tree
+Origin:  Australia
+A fast-growing evergreen tree or 
+shrub, reaching heights of 5-
+10m.
+Unarmed (no thorns).
+Leaves are silver-grey to light 
+green, bipinnately compound, 
+very bluish in colour, with  finely 
+haired short leaflets.
+Where found?
+In Kloofendal growing in 
+clusters.
+   
+(3)
+Branchlets are shallowly ridged 
+often tinged with grey or purple. 
+A.dealbata has a raised gland at 
+each junction of pinnae pairs.
+   
+(9)
+Pale to bright yellow, globular 
+flowerheads, flowering July, 
+August.
+28
+4
+Acacia dealbata (cont.)
+2
+Family:  Fabaceae
+Common names:  Silver wattle
+Tree
+Fruit/seeds: Brown or purplish 
+brown flattened pods.
+Not to be confused with
+Acacia mearnsii (Alien invader), 
+also, bipinnately compound 
+leaves, but leaflets are dark, 
+olive green, not silver-grey to 
+light green. Leaflets, like A. 
+dealbata, are short and 
+crowded.
+A. caffra – indigenous tree. 
+Young plants have hooked 
+thorns.
+   
+(7)
+Elephantorhiza  elephantina, an 
+indigenous shrublet from a 
+large, red, woody underground 
+rootstock, often forming 
+extensive stands. 
+Leaves are bipinnately 
+compound, dying back in winter. 
+Pale, yellow flowers in dense 
+elongated spikes arising from 
+the main stem near ground level. 
+Treatment 
+Tree-pop the young Wattles. 
+Bigger ones, cut down low, 
+remove bark all the way down to 
+roots, remove new sprouts every 
+six weeks, until no more 
+sprouting.
+29
+6
+Acacia elata
+1b
+Family:  Fabaceae
+Common names: Pepper wattle tree
+Tree
+Origin: Australia
+    
+(9)
+A large, oval shaped evergreen, 
+unarmed (no thorns)  tree up to 
+20m high.
+                                                      (9)
+Bipinnately compound leaf 
+(twice divided). Leaflets lance 
+shaped.
+                                                          (9)
+Fruit – straight, flat  brown pods, 
+4-17cm long.
+Where found?
+On rocky hillside.
+   
+(9)
+Pale yellow or cream globe-
+shaped flowers, the flower 
+heads in large sprays in terminal 
+panicles, appearing in October 
+to December.
+Treatment
+Dig out small plants, tree pop 
+young trees, big trees, with saw 
+cut around stem into bark knee 
+height, with weeding fork, 
+loosen the bark at the cut, and 
+strip off the bark downwards, it 
+comes off quite easily, 
+secateurs can help to cut away 
+small branches.
+30
+9
+Acacia longifolia
+1b
+Family:  Fabaceae 
+Common names:  Long-leaved wattle
+Tree
+Origin: Australia and 
+Tasmania, the long-leaved 
+wattle was cultivated in South 
+Africa for dune reclamation.
+The Long-leaved wattle is an 
+evergreen shrub or spreading 
+tree 2-6m high. Like most 
+species of Australian Acacias, it 
+has phyllodes (enlarged, 
+flattened, green stalks) rather 
+than true leaves, which are 
+mostly straight, but 
+occasionally curved. (Wiki)
+    
+(10)
+Phyllodes are bright green, up to 
+180mm long, with 2-5 
+prominent longitudinal veins.
+Inflorescences occur singly or 
+in pairs in the phyllode axils on 
+stalks with a length of less than 
+2 mm. The cylindrical flower-
+spikes have length of 2 to 4.5cm 
+packed with bright pale yellow-
+coloured flowers, which flower 
+between June and October. 
+(Wiki)
+Where found: Quarzitic rocky 
+north-facing slope in the centre 
+of reserve.
+    
+       
+                        (3)                                           (9)
+Seed pods                           Galls 
+The fruits are pods that are 
+beaked apically, and constricted 
+between the seeds (3). 
+Stems usually have smooth, 
+spherical outgrowths or galls 
+(caused by an introduced wasp); 
+the galls are green turning 
+brown, replacing flower and leaf 
+buds (3)
+Not to be confused with
+Acacia saligna (Port Jackson 
+Willow)
+Replaces indigenous 
+vegetation in Eastern & Western 
+Cape, luckily not in Gauteng.
+                                                                         
+                                                     (9)                  
+Treatment
+As for A. dealbata
+31
+10
+Acacia mearnsii 
+2
+Family:  Fabaceae 
+Common names:  Black wattle
+Tree
+Origin: Eastern and South-
+Eastern Australia. 
+An evergreen tree growing 5-
+10m high, unarmed, bipinnately 
+compound leaves (twice 
+divided), leaves dark olive 
+green, finely hairy, growth tips 
+golden and  hairy. 
+Suckering from the roots = new 
+plants growing along the roots.
+Bark: Young trees, bark green
+Old trees, rough, greyish bark. 
+Where found?
+All over Kloofendal, growing in 
+the midst of copses.
+    
+(3)    
+                                                                      
+                                        (9)
+Extra floral nectary (raised 
+glands) at, & between  junctions 
+of pinnae pairs.
+    
+(3)
+Pale yellow or cream globular 
+flower heads, flowers August, 
+September – later than A. 
+dealbata
+                                                           (9)
+Finely haired, dark 
+32
+10
+Acacia mearnsii (cont.)
+2
+Family:  Fabaceae 
+Common names:  Black wattle
+Tree
+Not to be confused with
+Acacia/ Senegalia caffra which 
+is indigenous. Young plants 
+have hooked thorns.
+                                      
+Elephantorrhiza elephantina   (7)
+ Chamaecrista comosa         (7)
+Perennial herb with woody 
+rootstock. 
+Compound, stalked  leaf. 
+Flowers with yellow petals, 
+sepals brownish, often tinged 
+with red. (8)
+Treatment
+As for A. dealbata
+33
+11
+Acacia melanoxylon
+2
+Family:  Fabaceae 
+Common names:  Australian blackwood
+Tree
+Origin: Eastern and South-
+eastern Australia.
+Adult tree, grow tall and large.
+Young Blackwood tree, very 
+green, firm  “leaves”, pointing 
+upwards. 
+Leaves” are actually phyllodes  
+- leaf-like petioles (stalks) with 
+no leaf blade, greyish turning 
+dark green, erect straight to 
+slightly curved with 3-7 
+prominent longitudinal veins. 
+Where found?
+All over Kloofendal, older ones 
+usually are surrounded by 
+young ones, due to suckering, 
+growing in the midst of copses 
+of indigenous plants.
+Often on young 
+plants, the phyllodes 
+(leaf stalk) bear a 
+bipinnately compound 
+leaf that falls off later.
+                                                                        
+    
+(9)
+Not to be confused with
+                              (7) 
+Searsia (Rhus) lancea which has 
+a trifoliate leaf, with each leaflet 
+having a single longitudinal vein.
+Acacia longifolia. Also has 
+phyllodes, but flowers are 
+spikes, not pompoms.
+Treatment
+No sawing down of A. 
+melanoxylon, without trying to 
+ringbark or application of 
+herbicide. If just cutting down, 
+intense coppicing will result.
+34
+13
+Acacia podalyriifolia
+1b
+Family:  Fabaceae 
+Common names: Pearl acacia
+Tree
+Origin: East and south-east 
+Australia
+Phyllodes  - leaf-like petiole 
+(leaf stalk) with no leaf blade, 
+silvery grey to dull green, with a 
+single midrib and a tip sticking 
+out at the top of the phyllode.
+On young plants and coppices, 
+the phyllodes (leaf stalks) bear 
+a bipinnately compound (twice 
+divided), leaf. These fall off 
+later.
+Where found?
+On rocky hillside.
+Flowers in May – August 
+Bright yellow, globular flowers in 
+long showy sprays (3)
+Not to be confused with
+ Eucalyptus cinerea (Florist’s 
+gum (Penny gum)
+Leaves are silvery, coin shaped 
+and have the typical Eucalyptus 
+smell.
+Treatment
+Tree pop young trees. Bigger 
+ones, cut low and paint stump 
+with herbicide.
+35
+13
+Ailanthus altissima
+1b
+Family:  Simaroubaceae
+Common names: Tree of heaven
+Tree
+Origin: China
+    
+(11)
+A deciduous tree which can 
+grow into big dense stands, it 
+suckers profusely.
+This  invasive, odiferous tree is 
+toxic to other plants. 
+Allelopathic components 
+chemically restrict growth of 
+neighboring plants. 
+A thick mat of lateral roots that 
+particularly prevent native 
+plants from gaining ground.
+Where found?
+Next to dam – we have pulled 
+them out.
+    
+(11)
+Leaves of the Tree-of-heaven are 
+pinnately compound (once 
+divided), meaning they have a 
+central stem  (red in colour) onto 
+which leaflets are attached on 
+each side. The leaflets are 
+lance-shaped with smooth or 
+"entire" margins. 
+At the base of each leaflet are one 
+to two protruding bumps called 
+glandular teeth.
+36
+13
+Ailanthus altissima (cont.)
+1b
+Family:  Simaroubaceae
+Common names: Tree of heaven
+Tree
+                Flowers                  (12)
+\
+     Flowers –close-up            (12)
+             Winged seeds                 (12)
+A secretion from the shoots can 
+cause allergic skin reaction in 
+some people (1)
+Not to be confused with
+                                                              (13)
+Trema orientalis – indigenous 
+tree which occurs in the 
+Magaliesberg, not in Kloofendal.
+Simple leaves, alternately 
+arranged, leaf margins are finely 
+serrated, fruit are drupes, 
+turning black when mature.
+Treatment
+Young plants to be removed with 
+tree poppers – works well.  Big 
+plants should be cut down and 
+herbicide applied, or ringbarked. 
+Follow up to ensure that root 
+suckers are not formed.
+37
+69
+Callistemon / Melaleuca viminalis
+3
+Family:  Myrtaceae
+Common names: Weeping bottlebrush
+Tree
+Origin: New South Wales and 
+Queensland in Australia
+    
+(9)
+A shrub or small tree , often 
+occurring along watercourses. 
+It grows up to 8 meters in height 
+and has drooping branches with 
+leaves which are 3 to 7 cm long 
+and 3 to 7 mm in width.
+Where found?
+On embankment of the 
+Kloofendal dam.
+                             
+ flower
+The bright red flower spikes, 
+which are 4 to 10 cm in length 
+and about 3 to 6 cm in diameter, 
+occur between spring and 
+summer (3).
+Treatment
+Unwanted plants should be cut 
+down and removed (1).
+Tree popping if plants are small 
+enough.
+38
+79
+Celtis australis
+3
+Family: Cannabaceae
+Common names: Nettle tree, Mediterranean 
+hackberry
+Tree
+Origin: Southern Europe, North 
+Africa and Asia minor (Wiki) 
+Celtis australis is a deciduous 
+medium tree with a round, 
+spreading shape 15-20 m, 
+simple rough leaves.
+Leaf of Celtis australis has 
+coarse hairs and a  tapering tip.
+The bark is thin, grey or pale 
+brown, and smooth, with 
+horizontal wrinkles; sometimes 
+becoming more rugged with 
+warty excrescences in old age.  
+Where found?
+Kloofendal wetland – hybridised 
+with C. africana & C. sinensis
+Flowers yellowish, small, 
+axillary, flowering in spring.
+                                                 (3)                   
+Fruit – drupes, yellowish white 
+becoming purple or black,  
+globose berries in summer, on 
+short, strong stalks.
+Not to be confused with
+Celtis africana has a  more 
+rounded leaves, not a tapering 
+tip, is covered with soft hairs, 
+margin toothed over upper half 
+or two-thirds. C. africana is 
+indigenous.
+Treatment
+Tree pop young trees.
+Trees too big for tree popping, 
+cut stumps to less than 10cm 
+above the ground and 
+immediately after cutting, paint 
+with a recommended herbicide.
+39
+80
+Celtis occidentalis
+3
+Family: Cannabaceae
+Common names: Common hackberry
+Tree
+Origin: Canada, USA
+Deciduous tree to 20
+m high with a grey, furrowed 
+trunk, becoming warty with age 
+and spreadingcrown.
+Leaves: Bright green, slightly
+glossy and usually smooth 
+above; paler and hairless, or 
+hairy only on veins,
+beneath. (3)
+                                                         (3)
+Fruit, globose, yellow or orange, 
+turning purple or black, tipped 
+with a thick beak. (3)
+Not to be confused with
+Celtis africa, Celtis sinensis & C. 
+australis, all have smooth trunks 
+whereas C. occidentalis has a 
+furrowed and later on,  a warty 
+bark.(3)
+40
+ND
+Celtis sinensis & hybrids
+Family: Cannabaceae 
+Common names: Nettle tree, European hackberry
+Tree
+Origin: China, Korea, Japan
+                                                              (3)
+Leaf of Celtis sinensis – smooth 
+and shiny, quite long compared 
+to C. Africana.
+   
+(14)
+Fruit are drupes, green turning 
+dark orange, globose (3).
+Not to be confused with
+   
+(3)
+Celtis australis which has dark 
+green, glossy, rough and 
+hairless above and softly hairy 
+and greyish green below.
+Celtis africana, has more 
+rounded leaves, not a tapering 
+tip and is covered with soft 
+hairs, margin toothed over upper 
+half or two-thirds. C. africana is 
+indigenous.
+All Celtis species are 
+poisonous (3).
+C. australis, C. sinensis, C. 
+occidentalis & Celtis africana 
+hybrids
+ 
+ Celtis hybrid in Kloofendal
+Treatment
+As for C. australis.
+41
+ND
+Cinnamomum camphora
+Family:  Lauraceae
+Common names: Camphor tree
+Tree
+Origin: East Asia
+Evergreen tree 10-26m high, 
+canopy dense, rounded to 
+spreading; bark smooth, green 
+becoming rough, scaly and 
+brownish-grey; trunk becomes 
+massive and spreading at the 
+base.
+(9)
+ Leaves  bright green, shiny 
+above and blue-grey beneath, 
+reddish or coppery coloured 
+when young, camphor scented 
+when crushed. Leaves are 
+distinctly three-veined.
+Where found?
+In wetland
+Flowers yellowish or green-
+white, very small, in dainty 
+panicles,  appear from 
+September to November.
+Fruits are green berries turning 
+black at maturity.
+Treatment
+Hand-pull seedlings. Tree pop 
+young trees. Ringbark and strip 
+bark down to the roots for big 
+trees or cut down and paint 
+herbicide on the stump (1).
+42
+133
+Eucalyptus camaldulensis
+1b
+Family: Myrtaceae
+Common names: Red river gum, rooibloekom
+Tree
+Origin: Australia
+    
+(9)
+A tall evergreen tree 18-40m 
+high with a spreading crown and 
+smooth, mottled, white or grey 
+bark 
+  
+                                         
+Pale, dull green adult leaves, 
+12-22 cm long, narrow & 
+pendulous (3)
+Juvenile leaves shorter and 
+broader (3)
+Where found
+West side of reserve
+ 
+                                                                
+                                                             
+                                                           (9)    
+            Twigs and petioles  red (3)
+                                                                    
+                            (15)                               (84)
+Buds conical, bud lid 4-6mm 
+long. Flowers cream coloured 
+with long stamens sticking out. 
+Flowers September to January 
+(all year). (3)
+                                                       (3)
+Fruit – brown to reddish-brown 
+capsules.
+Treatment
+As  for E. grandis
+43
+ND
+Eucalyptus cinerea
+Family: Myrtaceae
+Common names: Florist’s Gum, Penny gum
+Tree
+Origin: Australia
+Juvenile leaves opposite each 
+other for many pairs, stem-
+clasping, stalkless, round in 
+shape.
+                            
+                                   (16)                                           
+Intermediate and Adult leaves
+Intermediate leaves still 
+opposite, but stalked,  leaves 
+become more elliptic shaped 
+and bigger.
+Adult leaves oval but longer, 
+have stalks and the  leaves are 
+alternating up the stem. Crown 
+of mature trees is composed of 
+all three.(15) 
+Where found?
+On west and east side of the 
+reserve.
+    
+(17)
+White flowers with no petals
+(83)                              (83)
+Flower Buds in groups of three 
+(left) and conical to bell shaped 
+fruits (right).
+Not to be confused with
+Acacia podalyriifolia, a declared 
+alien   invader, which does not 
+smell of Eucalyptus and has 
+sharp tip at end of leaf.
+Treatment
+Tree pop the young trees.
+Older ones to be cut low and 
+treated with herbicide (1). 
+44
+137
+Eucalyptus grandis
+1b
+Family:  Myrtaceae
+Common names: Bluegum; Rose gum; Saligna 
+(English); Salignabloekom (Afrikaans)
+Tree
+Origin: East Australia
+                                   (9)                                   (9)
+A tall evergreen tree upto 55m 
+high with smooth bark smooth 
+except for the part of the trunk 
+up to 4m from the ground. The 
+bark peels in long, thin strips to 
+expose a powdery, white, grey-
+white or blue-grey surface .(9)
+Dark green, glossy above, paler 
+below; adult leaves 13–20 cm 
+long,
+similar to juvenile leaves. 
+Leaves have oil glands and have 
+a distinctive Eucalyptus smell.
+Leaves have oil glands and have 
+a distinctive Eucalyptus smell.
+Cultivated for shelter, timber 
+and honey.
+Where found
+Mostly on western boundary of 
+reserve. On eastern boundary 
+big trees have successfully 
+been
+ ringbarked and young 
+regrowths have been pulled out.
+                                                         (18)
+Buds 8mm long, pear-shaped 
+with conical lids.(3)
+                                                             (85)
+                              (19)
+Flowers are  cream coloured 
+with long-exerted stamens, in 
+simple umbels. (9)
+The fruit is a woody capsule
+commonly referred to as a 
+"gumnut“. It has a bluish grey 
+bloom, is pear-shaped, 7–10 
+mm long, valves protrude and 
+arch inwards. 
+Treatment
+Seedlings can be removed by 
+hand (tree popper) and are 
+susceptible to fire (1). Cutting 
+down trees is no option as they 
+will quickly regrow. A suitable 
+herbicide is recommended, but 
+in the past  the huge Eucalyptus 
+trees in Kloofendal were 
+ringbarked successfully.
+45
+149
+Gleditsia triacanthos
+1b
+Family:  Fabaceae 
+Common names: Honey locust, Soetpeulboom
+Tree
+Origin: Eastern North America
+Deciduous, spreading tree 15-
+20m tall. 
+                                                                (9)
+                                                         
+The trunk and branches have 
+three-branched spines.
+                                                                  (9)
+Bright green bi-pinnate leaves 
+consist of small paired lance-
+shaped and minutely toothed 
+leaflets. 
+Where found?
+Not in Kloofendal.
+Parks, such as Len Rutter Park, 
+and parking lots such as 
+Northern Farms in 
+Johannesburg.
+                                                         (20)
+Yellowish-green, small flowers 
+in long, narrow sprays 3–6 cm 
+long, Oct–Nov. (3).
+                                (9)                                    (21) 
+Dark, reddish-brown flat pods 
+which are often twisted in 
+profile.(9)
+Not to be confused with
+Black locust/ Robinia 
+pseudoacacia, which has two 
+thorns, not three thorns coming 
+off at the base of opposite 
+leaves and elsewhere on the 
+stem. 
+Treatment
+Not  easily controlled physically 
+but cut-stump herbicide or 
+ringbarking knee-high down to 
+the roots can be used (1) .
+46
+180
+Jacaranda mimosifolia
+1b
+Family: Bignoniaceae
+Common names: Jacaranda
+Tree
+Origin: NW Argentina
+Deciduous or semi-deciduous 
+tree to 22 m high; crown 
+rounded, spreading.
+                                                               (3)
+             
+                                                       
+                                                        (3) 
+Bipinnately compound (twice 
+divided) leaf , dark green, 
+turning yellow in late autumn, 
+hairy, 20–40 cm long.
+        
+Where found? 
+In Kloofendal on rocky ridges.
+            
+                                                   
+                                                    (3)
+Flowers are mauvish blue, lilac 
+or rarely white, tubular, ± 3–5 cm 
+long, in loose, pyramidal sprays 
+at the ends of usually leafless 
+branchlets.
+           
+                                                     (3)
+Fruits are broadly oval, flattish,
+woody capsules, ± 6 cm long, 
+green turning brown, splitting 
+open after about a year to 
+release numerous
+flat, winged seeds.
+Not to be confused with
+Acacia caffra leaves, which, 
+when young, have hooked 
+thorns on the stems.
+Treatment
+Tree pop out young trees.
+Large trees ringbark or cut down 
+below ground level (1)
+47
+ND
+Leucaena leucocephala
+Family: Fabaceae
+Common names: Leucaena, Reuse wortel
+Tree
+Origin: Mexico, even 
+considered a weed there (1).
+A perennial shrub, introduced 
+from Mexico as a fodder crop, a 
+source of firewood and as a 
+sand-binder  (3).
+Unarmed (no thorns), evergreen 
+shrub or tree to 4 (–10) m high; 
+branchlets densely grey-hairy.
+                                                     (3)
+Leaves are bipinnately 
+compound , dark green, often 
+grey-hairy, 7–15 cm long, 
+drooping. 
+Fruits are brown pods, 11–18 
+cm long, ~ straight, flattened 
+but raised over seeds, in 
+distinctive clusters, splitting 
+into 2 non-recurving halves.
+                                                               
+Where found? 
+Not seen in Kloofendal but 
+found in disturbed areas in 
+Johannesburg. In Eastern 
+coastal regions in SA. It forms 
+monotonous thickets (1) .                   
+                                               
+                                                (9)
+Flowers are white or pale yellow, 
+in globose heads, singly or in 
+groups of 2 or 3 in leaf axils, 
+flowering Jul–March (3)
+Whole plant is  toxic to livestock 
+when consumed in quantity.
+Not to be confused with
+                                                
+                                                 (22)                    
+Thorny Acacias such as Acacia/ 
+Vachellia karroo which also has 
+pompom flowers and 
+bipinnately compound leaves 
+but has (straight) thorns.
+Treatment
+No experience on Leucaena in 
+Kloofendal  but suggest to 
+remove young plants with tree 
+popper. 
+Older ones, bag fruit, cut down, 
+paint-on herbicide on stump. 
+Check  for regrowth, which must 
+be removed every six weeks until 
+plant is dead. 
+48
+189
+Ligustrum japonicum
+3
+Family: Oleaceae
+Common names: Common privet, Nepal privet, 
+White wax tree, Japanese wax-leaved privet
+Tree
+Origin: Korea & Japan (9)
+An evergreen shrub or small 
+tree 3-6m high.
+Leaves are very dark green, 
+glossy, hairless, 3–8 x 2–5 cm 
+wide, ovate to ovate-oblong, 
+usually rounded at the base and 
+shortly tapering to rounded at 
+the apex.(3)
+                                                                    
+                                                         (3)
+Flowers are white, small, in 
+terminal, pyramidal panicles, 
+10–20 cm wide and high, heavily 
+scented, Oct–Feb. (3). 
+ Where found? 
+Near or in water
+                                                
+                                                       
+                                  (9)                                   (23) 
+Fruits, initially green, become 
+shiny, black berries up to 1 cm 
+long, fruiting in winter. 
+Leaves and fruits are poisonous 
+to many animals, but some birds 
+eat them. Pollen is a respiratory 
+tract irritant. (3)
+Cultivated for hedging and  
+ornamental in gardens.
+Not to be confused with
+L. lucidum  which is a taller tree 
+(over 10 meters tall) and has 
+leaves with tapering base and 
+apex, and flower panicles are 
+tighter than L. japonicum.
+Treatment
+Young ones take out with tree 
+popper. Older ones, bag fruit, 
+cut down. Since stumps can 
+easily regrow, regrowth to be 
+removed every six weeks until 
+plant is dead. Herbicide 
+application on freshly cut stump 
+if tree is away from water.
+49
+190
+Ligustrum lucidum
+3
+Family: Oleaceae
+Common names: Chinese wax-leaved privet
+Tree
+Origin: China, Korea (9)
+Evergreen shrub or small tree 3-
+10m high. 
+Leaves of young plant
+Leaves are opposite, margins 
+entire
+Leaves are elongated with 
+tapering bases and apices (3) – 
+compare with L. japonicum.
+Dark green, thick, leathery, 
+glossy leaves, sometimes 
+variegated in green and yellow. 
+(9)
+Leaves of tree
+Fruit and leaves are poisonous 
+to some animals and humans. 
+(9)
+     
+Where found? 
+Along the stream from Topaz 
+street to Wetland.                                  
+                                                       
+                                                    
+                                                                  
+                                (3)                                     (24) 
+Heavily, scented white flowers in 
+large terminal clusters 
+appearing from October to 
+February, tighter than L. 
+Japonicum                                                  
+Shiny black berries
+Some birds prefer the Privet fruit 
+to fruit from indigenous plants, 
+thereby dispersing the seeds. (9)
+Privets are used as hedges and 
+ornamentally in gardens (3)
+Not to be confused with
+Ligustrum japonicum.
+Treatment
+Young plants take out with tree 
+popper. Older ones, bag fruit, 
+cut down. Since stumps can 
+easily regrow, regrowth to be 
+removed every six weeks until 
+plant is dead. Herbicide 
+application on freshly cut stump 
+if tree is away from water.
+50
+210
+Melia azedarach
+3
+Family: Meliaceae 
+Common names:  Seringa
+Tree
+Origin: Asia, Australia, India
+A large spreading tree growing 
+up to 23m high with reddish-
+brown, smooth bark. It has 
+serrated dark glossy green 
+leaves which turn yellow in 
+autumn.
+                                                            
+The leaves are bipinnately 
+compound.
+                                                                          (9)
+ Young leaflets’ margins are 
+deeply serrated (left), older 
+leaflets are finely serrated 
+(right). 
+Where found? 
+In Kloofendal mostly in 
+disturbed areas near fencing.         
+                                                       
+                                                            (9) 
+Clusters of purple to lilac heavily 
+scented flowers appear from 
+September-November.
+                                      (3)                                  (9)
+Followed by berries, initially 
+green, turning yellow.
+The leaves, bark, flowers and 
+ripe fruits are poisonous.
+This tree invades savanna, 
+roadsides, urban open spaces, 
+waste areas and riverbanks. (9)
+Treatment
+Remove young plants with tree 
+popper. Ones too big, cut low 
+and paint on herbicide, or simply 
+girdle knee high and strip bark 
+off down to the roots.
+51
+215
+Morus alba
+3
+Family: Moraceae
+Common names: Common or White mulberry
+Tree
+Origin: Northern China
+                              (9)                                  (9)
+On young, vigorous shoots, the 
+leaves may be up to 30 cm long, 
+leaf margins scalloped and 
+often irregularly lobed (left 
+picture).
+On older trees, the leaves are 
+generally 5-15 cm long, 
+unlobed, cordate at the base, 
+rounded to acuminate at the tip, 
+and serrated margins (picture 
+right).
+Leaves turn yellow in autumn.
+Small greenish flowers forming 
+in cylindrical spikes appearing 
+in spring.
+Where found? 
+Near Kloofendal main entrance, 
+and west side of reserve on red 
+trail
+                                              
+                                                       
+                                                     (9)
+Mulberry fruit when unripe is 
+green but turns red and later 
+black when ripening.
+                                                     
+                                                       
+                                                     
+                                                     (9)
+Fruit can also be white.
+Introduced for its fruit and food 
+for silkworms. Fruit of M. alba is 
+very tasty, and silkworms mostly 
+eat the leaves of M. alba.
+Not to be confused with
+Celtis africana, Celtis hybrids, 
+when young, with Lantana 
+camara and Crofton Weed.
+Treatment
+Tree pop young trees, big trees 
+cut and apply  herbicide on 
+stump within ten minutes of 
+cutting.
+52
+277
+Pinus roxburghii/ Pinus longifolia
+2
+Family: Pinaceae
+Common names: Longifolia pine, Chir pine
+Tree
+Origin:   Himalayas (3)
+    
+(9)
+General description: Coniferous 
+tree up to 20m high or more; 
+with a conical or oval crown; 
+branches distinctly ascending, 
+secondary shoots absent from 
+trunk; bark very thick and 
+fissured. (9)
+                                                                    
+                                  
+                                   (9) 
+Leaves: Needles, light to bright 
+green, in bundles of three, 15-
+30 cm long.
+Where found? 
+Invades forest margins & 
+grassland.
+The pine tree does not produce 
+any flowers.
+Immature female cone (left).
+Mature female cones (right).
+Male cones are much smaller, 
+produced in clusters at the tip of 
+long shoots. The male cones are 
+produced in spring.
+In wintertime, P. roxburghii 
+produces female cones which 
+are light brown, woody, 
+cylindric-ovoid, large, 15-22 cm 
+long; cone scales elongated and 
+reflexed ( see picture above right 
+side)(3)
+                                              
+Treatment
+Tree pop the young ones; large 
+plants can be felled or 
+ringbarked.
+53
+287
+Populus x canescens
+2
+Family:  Salicaceae
+Common names: Grey poplar, Matchwood poplar
+Tree
+Origin: Europa & Asia
+                                                                     
+(3) Deciduous or semi-evergreen 
+tree 10–20 (–35) m high .
+Dense stands formed by 
+suckering from the roots can 
+narrow and block water 
+channels, causing flooding and 
+increased siltation. Extensive 
+stands are likely to cause a 
+significant reduction in stream 
+flow.
+ 
+                                                            (3)
+Dark green triangular leaves 
+with a broadly serrated profile 
+that are shiny above and white 
+or grey and woolly beneath.          
+                                                  
+Where found? 
+Not in Kloofendal, but plentiful 
+in streams in Magaliesberg.
+                         
+                         (3)                               (3)
+Leaves coming off sucker 
+shoots or long shoots are large, 
+up to 12 cm long, triangular, 
+evenly toothed or not toothed 
+and shallowly lobed, wooly 
+beneath (left picture) .
+Leaves of short shoots are much 
+smaller, 3-6cm long, ovate and 
+bluntly toothed, almost hairless 
+underneath (right picture). (3)
+                  (3)                                  (3)
+The bark is white or grey with 
+horizontal dark lines, becoming 
+rough and darker with age.(left 
+picture). Buds and young twigs 
+thinly downy. 
+Flowers are reddish catkins 
+(male only),± 6 cm long, in 
+spring. (right picture). No fruits.
+Treatment
+Young trees can be tree popped. 
+Large trees ringbarked or felled, 
+and entire root system removed 
+(1).
+ Not to use herbicides on plants 
+in water.
+54
+290
+Prunus serotina
+1b
+Family: Rosaceae
+Common names: Black cherry, Wild cherry
+Tree
+Origin: North America
+Black cherry is a deciduous tree, 
+growing up to 15-30 meters tall, 
+with a trunk diameter of up to 70-
+120cm.
+                                                             (9)
+Very broken, dark grey to black 
+bark .
+                                  
+Finely serrated leaf, red petiole.
+Leaf arrangement is alternate. 
+Black cherry is a leading cause of 
+livestock illness 
+                                         
+Where found? 
+In amongst other trees, often 
+sticking out above other trees.
+                                                     
+     
+(7)                   (3)
+The flowers are small (10-15 in 
+diameter), with five white petals 
+and about 20 stamens, and are 
+fragrant. There are around 40 
+flowers on each raceme.        
+     
+(7)                                          (9) 
+Fruit/seeds are drupes, 1cm in 
+diameter, green to red at first, 
+ripening to black. (9)
+Not to be confused with
+Prunus africana, leaves of which 
+have a smooth margin. 
+Treatment
+Young plants remove with tree 
+popper.
+Big trees ringbark or cut and 
+paint stump with herbicide.
+55
+304
+Robinia pseudoacacia
+1b
+Family: Fabaceae
+Common names: Black locust, False Acacia
+Tree
+Origin: North America
+In young Robinia pseudoacacia 
+the leaves are simple (left 
+picture below). Spines already 
+very vicious-looking, coming 
+out in pairs.
+                                    (25)                    (26)
+In older Robinia pseudoacacias 
+(right picture above) the leaves 
+are pinnately compound, 
+spines coming out at base of 
+leaf stalks and also elsewhere 
+on the stem. Simple and 
+compound leaves are found on 
+the same bush. It suckers freely 
+and often forms thickets. (9)
+Where found?
+Infestation found on northeastern 
+border of reserve, bordering on 
+neighbouring gardens.
+                                                     
+                                           (9)                          (27)
+Typical white Acacia flowers in 
+drooping sprays from 
+September to November
+Reddish-brown pods. 
+                                         (8) 
+Seeds, leaves and inner bark 
+are poisonous.(9)
+Not to be confused with
+Acacias – most African Acacias 
+have thorns, not spines (= stem 
+ending in a sharp point).
+Treatment
+Tree pop the young trees. 
+Cutting down tree and applying 
+herbicide partly works, it does 
+encourage more  suckering, but 
+repeated cutting away new 
+growth eventually does kill the 
+tree.
+56
+ND
+Salix babylonica
+Family: Salicaceae
+Common names: Weeping willow
+Tree
+Origin: Northern China
+One of the most prominent 
+invaders of the Grassland biome 
+of South Africa (3). They are a 
+threat to replace the indigenous 
+species. 
+                                                  (29) 
+Deciduous tree 5–18 m high; 
+branchlets slender, hanging 
+vertically, almost to the ground.
+ 
+ 
+                          (29)                     (30) 
+Leaves are bright green above, 
+pale or grey beneath, 16 X 1.5cm 
+with finely serrated margins, 
+ending in a long tapering point.
+Spring leaves are silky, summer 
+leaves are hairless. They turn a 
+gold-yellow in autumn.
+The flowers are greenish, tiny, 
+1mm long, arranged 
+in catkins, produced early in the 
+spring. Flowers are mostly 
+female and stalkless. Flowering 
+time is August & October.
+Fruit are greenish, stalkless
+capsules in catkins, shedding 
+sterile white hairs.
+It propagates by fragmented 
+branches rooting along  the  
+riverbanks.
+Originally from Northern China 
+but introduced into South Africa 
+from Europe to prevent erosion 
+of riverbanks (1).  It provides 
+shade, fodder, honey source 
+and helps to erosion control. (3)
+Not to be confused with:
+Indigenous Salix mucronata, 
+whose branches may droop but 
+not vertically, flowers and fruits 
+are stalked, leaves pale whitish-
+green beneath, without a whip-
+tip; branchlets often reddish.
+Where found?
+Along streams in parks in 
+Johannesburg.
+Treatment
+Unwanted plants should be cut 
+down and replaced with 
+indigenous species (1)
+57
+338
+Solanum mauritianum
+1b
+Family: Solanaceae
+Common names: Bugweed, Luisboom
+Tree
+Origin: South America
+A shrub or small tree up to 4m 
+high covered with whitish-felty 
+hairs. Big leaves with fine hairs, 
+distinctive strong, unpleasant 
+smell upon touching leaves and 
+branches.
+ 
+                                                  (9)
+Purple flowers in compact, 
+terminal clusters on densely 
+felty stalks up to 10cm long all 
+year round.
+                              (9)                                      (9)  
+Spherical berries which start off 
+green and turn yellow, growing in 
+compact terminal clusters.
+Where found?
+In disturbed ground.
+Hairy leaves and stems are a 
+respiratory tract and skin 
+irritant. Unripe fruits are 
+poisonous.
+Not to be confused with
+Vangueria infausta (Wild 
+Medlar) young plants look 
+similar, but Vangueria leaves 
+don’t have the strong, 
+unpleasant smell of the 
+Bugweed.
+Treatment
+Pull out with tree popper if plant 
+is young.
+Bag fruit & seed.  Cut down to 
+ground level, then paint on 
+herbicide or, if single stemmed, 
+debark with axe or garden fork. 
+The bark peels off easily.
+58
+360
+Tipuana tipu
+3
+Family: Fabaceae
+Common names: Tipu tree
+Tree
+Origin: Brazil, Bolivia and 
+Argentina in South America.
+  
+                                                                (9)    
+Large, massively branched, 
+wide-spreading deciduous tree 
+up to 23m high.
+                                                   
+                                                              (9)
+Large sprays of golden-yellow 
+flowers in late spring and 
+summer
+                                                   (9)
+Where found?
+Widespread, roadside and urban 
+open spaces.
+Pinnately compound leaves 
+with bright green, smooth 
+leaflets. 
+Yellowish-brown, seeded, 
+winged pods 50-60mm long.
+Propagation by freely seeding 
+itself – the tree has many seeds.
+Treatment
+Tree pop or dig out all 
+unintended plants. For adult 
+trees,  cut and paint tree stump 
+with herbicide, or ringbark and 
+strip bark down to the roots – 
+not tried out in Kloofendal.
+59
+ND
+Ulmus parviflora
+Family: Ulmaceae
+Common names: Chinese elm
+Tree
+Origin: China, Korea, and Japan
+Leaf margins are bluntly serrated
+Where found?
+Southern part of reserve. 
+Common garden plant escaped 
+into the reserve, and into other 
+reserves and open areas.
+This tree has the potential to be 
+weedy through self-seeding in 
+surrounding landscapes .
+It has escaped intended 
+plantings to invade native plant 
+communities. The aggressive 
+root system absorbs water, 
+nutrients and space (Wiki) .
+Ulmus parvifolia (Chinese Elm) 
+is listed in the Invasive Plant 
+Atlas of the United States 
+(Gardenia.net).
+Not to be confused with
+Combretums, they also have 
+winged seeds, but Combretum 
+seeds are 4 winged, not two-
+winged.
+Treatment 
+It can be effectively controlled 
+using any of several readily 
+available general use 
+herbicides such as triclopyr or 
+imazapyr (Wiki). No work has 
+been done on these plants in 
+Kloofendal yet, as there are only 
+few there.
+60
+86
+Cestrum aurantiacum
+1b
+Family: Solanaceae
+Common names: Orange cestrum
+Shrub
+Origin: Mexico to Costa Rica
+Much-branched, mostly 
+hairless, evergreen shrub 1–2 (–
+6) m high, producing suckers; 
+stems and
+leaves bruise easily, emitting an 
+unpleasant smell (3).
+Light green, ovate leaves up to 
+13 x 7 cm. 
+Orange (rarely yellow), tubular 
+flowers, in axillary and terminal,
+clusters, flowering Oct–May.
+White, spongy berries as fruit, ± 
+1 cm long.  (3) 
+Where found?
+Western side of reserve amongst 
+cut down Eucalyptus trees.
+Whole plant poisonous to 
+mammals  (3)
+Treatment
+We have not worked on C. 
+aurantiacum as we have only 
+seen a few in K&D but would 
+treat it as for C. parqui.
+61
+87
+Cestrum elegans
+1b
+Family: Solanaceae 
+Common names: Crimson cestrum 
+Shrub
+Origin:  Mexico
+Much-branched, evergreen 
+shrub up to 4m high; stems and 
+leaves softly hairy and bruise 
+easily, emitting an unpleasant 
+smell. (3)
+Light green, ovate-lanceolate, up 
+to 12 cm, evergreen leaves. (9) 
+Where found?
+In streambed at broken bridge 
+on yellow (Rocky Ridge) route 
+along west side of reserve. 
+Stems and leaves bruise 
+easily, emitting an unpleasant 
+smell. 
+Whole plant is poisonous.
+Crimson, reddish-purple or 
+pink, tubular flowers, 2-2.5 cm 
+long, in axillary and terminal 
+bunches. Flowers October to 
+May.
+The fruits are small red, 
+globose, sponge berries.(9)
+Treatment
+We have not worked on C. 
+elegans, no big infestations in 
+K&D, but would treat it as for C. 
+parqui.
+62
+89
+Cestrum parqui
+1b
+Family:  Solanaceae
+Common names: Chilean cestrum
+Shrub
+Origin:  Brazil, Argentina, 
+Paraguay
+Evergreen, mostly hairless, 
+shrub 1– 3) m high, producing 
+suckers; bruised stems and 
+leaves emit an unpleasant 
+smell. It has a deep and 
+persistent taproot (3). it invades 
+gardens, rural lands and bush 
+land. (9)
+All parts of the plant are reported 
+to be highly toxic. It is described 
+as significant hazard to livestock 
+(especially cattle) which may eat 
+green Cestrum inadvertently or 
+during shortages of other foods, 
+often resulting in death (Wiki). 
+Death is usually rapid and 
+painful. (Wiki)
+                                                                         (9)
+Yellowish to dark green leaves, 
+alternate, mainly towards ends 
+of branches, narrowly elongated 
+lanceolate, to 15 x 1.5–2.5 cm. 
+Leaves can become broad if 
+shade grown, however leaves 
+are much longer than wide (3). 
+Where found?
+All over the reserve, mostly 
+along fences of neighbouring 
+gardens.
+                                                 (31)
+Greenish-yellow or brownish 
+tubular flowers found in axillary 
+and terminal clusters (31). 
+                                                   (31)       
+Flowering October to May. (3).
+                                                  (3)
+The fruits are clusters of small, 
+black egg-shaped berries 
+formed during summer to 
+autumn.
+63
+89
+Cestrum parqui (cont.)
+1b
+Family:  Solanaceae
+Common names: Chilean cestrum
+Shrub
+Not to be confused with
+Cestrum laevigatum (Orange 
+Cestrum)
+                                                              (31)
+C. Laevigatum has bigger leaves, 
+and flowers and fruit in axillary 
+clusters towards ends of 
+branches, not in terminal 
+clusters. (31)
+                                                                           (31)
+C. laevigatum is found along 
+the South African coast. (31)
+                                                                        (31)
+C. parqui is better adapted to 
+the cold highveld where it 
+has been known along the 
+Vaal River for many years 
+although misidentified as 
+inkberry (C. laevigatum)   
+Beware of Chilean inkberry 
+(C. parqui)! (31)
+64
+89
+Cestrum parqui (cont.)
+1b
+Family:  Solanaceae
+Common names: Chilean cestrum
+Shrub
+Treatment
+We use tree poppers 
+successfully to remove single 
+woody-stemmed  young plants. 
+It is important to get plants out 
+before the intense suckering 
+root system develops. Bromilow 
+recommends chemical control, 
+such as triclopyr and imazapyr 
+painting onto stems or cut 
+stumps (1). We were partially 
+successful with  painting Kaput 
+100 Gel on cut, woody, bigger 
+branches of older plants using 
+Kaput which contains the 
+ingredient triclopyr. Cutting and 
+poisoning young growth has not 
+worked at all. The plants’ toxic 
+smell made some workers sick.
+Biocontrol for Cestrum parqui in 
+South Africa has been 
+researched by the Weeds 
+Research Division of the 
+Agricultural Research Council 
+(ARC)  in Pretoria and is due to 
+be released  as I was informed 
+by ARC students in this field the 
+2024 Yebo Gogga, Amablomma 
+exhibition at the University of the 
+Witwatersrand, May 2024.
+65
+99
+Cotoneaster franchetii 
+1b
+Family:  Rosaceae
+Common names: Orange cotoneaster 
+Shrub
+Origin: W. China
+Unarmed, gracefully arching 
+semi  ever green shrub upto 3 m 
+high. (3)
+                                                         (3)   
+The leaves are oval-acute, 2–3.5 
+cm long and 1–1.5 cm broad, 
+shiny green above, downy below 
+with dense whitish to yellowish 
+hairs. (Wiki). Veins deeply 
+impressed on upper surface. (3)
+                                                         (32)
+Flowers pinkish, about 1 cm 
+across, in clusters of 5-15. (3)
+                                                                                        
+                                                                         (33)       
+Fruits are red-orange pomes, 
+usually with 3 seeds.
+The fruit is eaten by fruit-eating 
+birds who disperse the seeds in 
+their droppings.
+Fruits are poisonous when 
+eaten in quantity.(3)
+Where found
+In gardens as hedging, 
+ornamental and cultivated for 
+honey. In Kloofendal amongst 
+copses of indigenous plants.
+Not to be confused with
+C. Pannosus which has smaller 
+and more plentiful berries, 
+smaller leaves
+Flower petals are white with 
+spreading petals
+Fruits of dull, deep red colour. 
+(9)
+C. franchetii, which has: 
+Bigger leaves, with yellow, gray 
+or white felty undersurface.
+Pinkish, not white flowers. 
+Orange-red, not dull,  deep red 
+fruit, with 3 not 2 seeds. (3)
+Treatment
+Bagging fruit is really not 
+possible, there are simply too 
+many! Seedlings we dig/ pull 
+out, young trees we remove 
+with the tree popper, trees we 
+cut low and paint the stumps 
+with herbicide (Kaput gel)  
+which has been successful.
+66
+101
+Cotoneaster pannosus
+1b
+Family:  Rosaceae
+Common names: Silverleaf cotoneaster
+Shrub
+Origin: S/W China 
+Shrub upto 3 metres high with 
+arching branches and in autumn 
+with showy, berry-like fruits
+Leaves 1-3cm long (smaller than 
+C. franchetii), stalks 2-7mm long 
+(C. franchetii has very short leaf 
+stalk)
+Leaves lower surface densely 
+felty white, flower stalks and 
+calyces too.
+Upper surface initially dull 
+greyish green, sparsely hairy, 
+becoming hairless and shiny. 
+Midvein on upper surface deeply 
+impressed, side veins 
+inconspicuous (3)
+                                                   (9)
+Flowers are white, 1 cm across, 
+in clusters of 6-12. Flowers 
+from August to January. (3)
+Fruits are dull, deep red pomes 
+with 2 seeds. (3)
+Fruits are poisonous when 
+eaten in quantity. (3)
+Not to be confused with
+C. Franchetii – see previous 
+page.
+Pyracantha which has sharp 
+spines and in autumn has bright 
+orange berries.
+Treatment
+As with C. franchetii.
+67
+104
+Crotalaria agatiflora 
+1b
+Family:  Fabaceae
+Common names: Bird flower
+Shrub
+Origin: Tanzania and Kenya 
+Canary bird bush is an evergreen 
+shrub characterized by flowers 
+that look like a family of canaries 
+perching on a branch, hence the 
+common name “Bird flower”. 
+             
+                                                      (9)
+Flowers are lemon-yellow or 
+greenish-yellow, with a 
+projecting greenish or purple 
+beak. Flowering is from spring to 
+autumn.
+                                                                          
+                                                                 (9)              
+Leaves are greyish-green, 3-
+foliolate; leaflets on a short stalk 
+(petiole), petiole mostly longer 
+than leaflets, glabrous to 
+densely hairy.
+Where found?
+Streambed above dam, and 
+sewerage leak area on top of 
+Rocky Ridge Trail 
+                                            (3)
+Fruits greenish-purple pods, 
+inflated, to 100mm long, seeds 
+loose in dry pod and rattle when 
+the pod is shaken.
+Treatment
+Remove pods and remove plant 
+with tree popper.
+68
+185
+Lantana camara
+1b
+Family:  Verbenaceae
+Common names: Lantana
+Shrub
+Origin: Central & South America
+A spreading shrub or untidy 
+scrambler growing up to 2m or 
+higher. Stems usually covered 
+with short, stiff hairs and 
+recurved thorns.(9)
+ 
+Dark green, rough, hairy leaves 
+which are paler below, have 
+serrated margins and smell 
+strongly when crushed. (9) 
+                                                      (9)
+Pink, red, crimson, orange, 
+yellow or white flowers in 
+compact, flat-topped heads, 
+often with several colours in one 
+head, appear from September to 
+April. (9). 
+Glossy green fruits which turn 
+purplish-black.
+Poisonous to humans and 
+animals and responsible for 
+livestock mortalities. (9)
+Not to be confused with
+Lippia javanica and Lantana 
+rugosa, both indigenous 
+Verbenas with no thorns on the 
+stems.
+Lippia javanica   Lantana rugosa
+                      (34)                                     (35)
+Treatment
+Bag flowers & seeds.
+Dig out small plants. For 
+medium size plants use tree 
+popper, which works well. Use 
+secateurs to cut way branches 
+in the way of taking plants out, 
+then use tree popper to pull 
+them out. Big ones cut down 
+and paint herbicide on stump. 
+No slashing as it will just 
+coppice prolifically. Wear elbow 
+length leather gloves for thorn 
+protection.
+Biocontrol is available, but only 
+slightly reduces the rate of 
+control.  (36)
+69
+189
+Ligustrum japonicum
+3
+Family: Oleaceae
+Common names: Common privet, Japanese wax-
+leaved privet
+Shrub
+Origin: Korea & China
+An evergreen shrub or small tree 
+3-6m high. Dark, almost black-
+green, thick, leathery, glossy 
+leaves sometimes variegated in 
+green and yellow.
+                                                            (9)
+Leaves ovate to ovate-oblong,
+3-8cm long (smaller than L. 
+lucidum), usually rounded at the 
+base and shortly tapering to 
+rounded at the apex.
+                                                   (3)
+Sprays of heavily scented white 
+flowers, flowering October to 
+February (summer).
+Where found?
+Near or in water.
+                                                    (9)
+Fruit, initially green, turning into 
+blue-black berries, fruiting in 
+winter. Leaves and fruits are 
+poisonous to many animals, 
+but some  birds eat the fruit.
+Not to be confused with
+L. lucidum, which is a taller tree 
+(over 10 meters tall), has leaves 
+that have elongated base and 
+apex and L. lucidum’s leaves 
+are bigger (6-12cm). Flowers are 
+more tightly packed in L. 
+lucidum.
+Treatment
+Young ones take out with tree 
+popper. Older ones, bag fruit, 
+cut down. Since stumps can 
+easily regrow, regrowth to be 
+removed every six weeks until 
+plant is dead. Herbicide 
+application on freshly cut 
+stump if tree is away from 
+water.
+70
+190
+Ligustrum lucidum
+3
+Family:  Oleaceae
+Common names: Chinese wax-leaved privet
+Shrub
+Origin: China, Korea (9)
+Evergreen shrub or small tree 3-
+10m high. Used hedges and 
+ornamentally.
+                                                            (9)
+                                (9)                                 (3)
+Leaves dark green, glossy, thick 
+and leathery, large (6–12 cm long), 
+tapered at the base, long-tapering 
+at the apex (3),  sometimes 
+variegated in green and yellow (9)    
+Leaves are opposite, margins 
+entire.
+Fruit and leaves are poisonous.
+ and the pollen can be an irritant 
+to the respiratory tract in 
+humans .
+Where found?
+Along the stream from Topaz 
+street to Wetland.
+                            (3)                                    (3)
+Heavily, scented small white 
+flowers appear in large 
+terminal, pyramidal panicles, 
+15–20 cm wide and high, 
+flowering from October to 
+February. 
+Shiny black berries.
+Indigenous birds could neglect 
+the dispersal of indigenous 
+plants as a consequence of 
+their preference for the fruits of 
+this alien.
+Not to be confused with
+Ligustrum japonicum where the 
+leaves are different and flowers 
+less tightly packed, looser.
+ 
+Treatment
+As the Privets often occur along 
+the water ways, we do not use 
+herbicide. Tree-pop the young 
+plants, bigger trees, saw down 
+low, strip bark (ringbark) to the 
+base where possible. Cut away 
+regrowth to eventually starve 
+the plants. Follow up.
+71
+191
+Ligustrum ovalifolium
+3
+Family: Oleaceae
+Common names: Californian privet
+Shrub
+Origin: Japan, Korea.
+Semi-evergreen or deciduous 
+shrub 3–5 m high. All parts 
+hairless. (3)
+                                                             (9)
+                            (9)                                      (9)
+Dark green and glossy above, 
+yellowish green below, 
+sometimes variegated with 
+cream or yellow, hairless, ovate-
+elliptic, 2.5–8 x
+1.5–3 cm wide.
+Where found?
+In stream bed in Kloofendal. It 
+invades water courses, forest 
+and woodland.
+                                                                  (9)
+Flowers are white, small, nearly 
+stalkless, corolla tube 2–3 
+times longer than spreading 
+lobes;
+in terminal panicles 5–10 cm 
+wide and high, heavily scented 
+(unpleasant or sweet), flowers 
+October to February.
+The pollen is a respiratory tract 
+irritant (3)
+Fruits are shiny, black berries ± 
+6 mm long.
+Fruits and leaves are 
+poisonous. (3)
+Not to be confused with
+Ligustrum japonicum or L. 
+lucidum, both of which have 
+much larger leaves. 
+L. ovalifolium  is hairless, 
+whereas L. sinense has hairy 
+shoots, flower and fruiting 
+panicles.
+Treatment
+As for L. japonicum
+72
+192
+Ligustrum sinense
+3
+Family: Oleaceae
+Common names: Chinese privet
+Shrub
+Origin: China, Vietnam
+Semi-evergreen or deciduous 
+shrub 3–6 m high. 
+                                                                (3)
+                                                               
+                                                               (9)
+The shoots are densely downy.
+Leaves are mid green, downy
+on midrib beneath, ovate-
+elliptic, small compared to other 
+Ligustrums, 2–6cm long x 1–3cm 
+wide. (3).
+                                                            (3)
+Where found?
+In stream bed.
+                                    (3)
+Flowers are white, small, 
+stalked, the  corolla tube is  as 
+long as the spreading lobes; in 
+terminal, open, narrow, shortly 
+hairy panicles heavily scented, 
+flowers Oct–Jan. 
+The pollen is a respiratory tract 
+irritant. (3)
+The fruits are shiny, black 
+berries up to 1 cm long.
+Fruits and leaves are 
+poisonous. (3)
+Not to be confused with
+Ligustrum japonicum or L. 
+lucidum, both of which have 
+much larger leaves. 
+L. ovalifolium  is hairless, 
+whereas L. sinense has hairy 
+shoots, flower and fruiting 
+panicles.
+73
+ND
+Mahonia oiwakensis (= M. lomariifolia)
+Family: Berberidaceae
+Common names: Chinese holly grape, Burmese 
+mahonia
+Shrub
+Origin: China, Taiwan
+Evergreen Spiky bush, 1 to 7 
+meters high,  growing in the 
+shade in the forest.
+The tall long leaves cluster near 
+the stem ends.
+Leaves are fiercely spiky (Wiki). 
+Dark green above, yellowish 
+green below, up to 45 cm long, 
+with 12–20 pairs of leaflets and
+one terminal leaflet; leaflets 
+leathery, ovate-lanceolate to 
+lanceolate, with 2–9 spiny 
+marginal teeth. (3)
+Where found? 
+In Wetland area next to the 
+stream, but neither berries nor 
+flowers have been observed yet, 
+perhaps it is too shady. Also 
+found in Magaliesberg forested 
+areas near water, escapees from 
+neighbouring gardens.
+                                                        
+                                                       (3)
+Fragrant yellow flowers in 
+racemes, blooming in autumn 
+and winter.
+Fleshy berries, blue or bluish 
+black, covered with a powdery 
+bloom, conical-ovoid, up to 8 
+mm long, in spring (3)
+Treatment
+Remove with tree popper. If not 
+possible, cut and follow up, 
+check for regrowth.
+74
+ND
+Nandina domestica
+Family: Nandina domestica
+Common names: Family: Berberidaceae
+Common names: Heavenly bamboo, Sacred 
+bamboo
+Shrub
+Origin: Japan, China
+An erect evergreen shrub up to 
+2 m tall by 1.5 m wide, with 
+numerous, usually unbranched 
+stems growing from ground level 
+(Wiki).
+The glossy leaves are 50–100 cm 
+long, bi- or tri-pinnately 
+compound, with the individual 
+leaflets 4–11 cm long and 1.5–
+3 cm broad, with entire margins 
+(Wiki). 
+                                                                           (37)
+The young leaves in spring are 
+brightly coloured pink to red 
+before turning green; old leaves 
+turn red or purple again before 
+falling (Wiki).
+Where found?
+Kloofendal Wetland
+                                  (38)
+                                                            (82)
+Tiny flowers with white petals, 
+pinky-white sepals, flowering in 
+early summer, in clusters above 
+the leaves (Wiki).
+The fruit is a bright red berry, 5–
+10 mm diameter, ripening in 
+late autumn and often 
+persisting through the winter. 
+(Wiki)
+The plant is generally 
+considered non-toxic to 
+humans, but the berries are 
+considered toxic to cats and 
+grazing animals.
+Berries are used in research as 
+an anti-dote for Ecstasy 
+(addictive dangerous drug). 
+(Wiki).
+Treatment
+Not a problem in Kloofendal so 
+far, so no work done on it, but 
+my recommendation is bagging 
+the fruit and digging it out.
+ 
+75
+ND
+Protasparagus laricinus
+Family:Asparagaceae, previously Liliaceae 
+Common names: Wild asparagus, Katbos
+Shrub
+Origin:  Indigenous (Wiki)
+Dense, impenetrable, multi-
+stemmed  bush up to 2 meters 
+high. The leaf function is taken 
+over by dense clusters of 
+cylindrical, unbranched, needle-
+like stems, called “cladodes”.(8) 
+The leaves are modified curved 
+thorns.
+                                                             (41)
+Flowers are axillary, white, sweet 
+scented.
+Where found?
+Klipriviersberg Nature Reserve 
+and the Magaliesberg, not in 
+Kloofendal.
+                                                                  ( 
+                                                            (40)     
+                                    
+                                     (39)
+The fruits are globose, bright 
+red with 1-3 black seeds. (8)
+                                                            (42) 
+The root system is 
+a crown with numerous fleshy  
+tuber-like roots coming off it. 
+Not to be confused with
+Protoasparagus setaceus 
+which is a perennial climber 
+with soft feathery appearance, 
+no spines except on old, main 
+branches. “Leaves” (cladodes) 
+are short – less than 10mm 
+long, and very fine.
+Treatment: Wear good leather 
+gloves. With secateurs cut away 
+the prickly branches, cut into 
+smaller pieces and move away 
+from site. With pinch bar 
+(gwala) dig out the big root 
+system, hard work but works 
+well!
+76
+296
+Pyracantha angustifolia
+1b
+Family: Rosaceae
+Common names: Yellow fire thorn
+Shrub
+Origin: South-western China
+Evergreen shrub 2-4m high with 
+stiff, spiny branches. Young 
+shoots are covered in thick, 
+yellowish down and woody 
+spines which bear leaves. (9)
+                                                             (3)
+                       (3)
+                                   downy calyx
+P. angustifolia leaves are dull 
+dark green above, densely grey-
+downy beneath, narrowly 
+elongate, margins entire, rolled 
+under, apex rounded, often 
+notched. (3)
+Flowers are white with a downy 
+calyx. (3)
+Spines are woody, sharp-
+pointed and bear leaves.
+Where found?
+Next to path to dam and in the 
+wetland                                               
+Orange-red or orange-yellow 
+berries. Fruits are poisonous.
+Not to be confused with 
+Pyracantha crenulata
+                                                     
+                                                       (3)
+                   (3)         calyx hairless
+Leaves of P. crenulata are 
+bright, glossy green above, 
+duller beneath, hairless, 
+margins shallowly toothed. The 
+apex is acute, bristle-tipped or 
+rounded (rounded in 
+illustration). (3)
+Treatment
+Wear thick, long leather gloves 
+(our ones are blue, up to the 
+elbow). Dig out small plants, 
+tree pop young trees.
+Adult trees: cut and paint 
+herbicide onto stump.
+77
+306
+Rubus cuneifolius & hybrids
+1b
+Family: Rosaceae
+Common names: American bramble and hybrid 
+brambles
+Shrub
+Origin:  North America
+Erect to sprawling, thorny shrub 
+growing up to 2 m high with 
+deeply ridged stems. Spreads 
+through seeds and suckering
+It competes with and replaces 
+indigenous woody and grassland 
+species. Dense stands are 
+impenetrable and restrict 
+access to forestry plantations; 
+they also restrict access to 
+grazing and water by domestic 
+and wild animals.
+                                                              (3)
+Leaves are green, sometimes 
+densely grey-downy beneath; 
+usually 3-foliolate, sometimes 
+also 5-foliolate (lateral leaves re-
+divided) on new season’s 
+growth.(3)
+                        (9)                                     (3)
+Flowers are white, rarely pink, 
+petals much longer than sepals; 
+few,2–5(–10) at the end of short 
+leafy shoots. Flowers Sep–Jan. 
+(3)
+Fruits are red turning black, 
+fleshy, shiny, aggregated 
+berries. Fruits are edible.(3)
+Not to be confused with
+                                                 (45)
+The indigenous Rubus rigidus, 
+which has whitish colour on 
+lower leaf surfaces and stems 
+and is 3-folialate. (5)
+There is much confusion about 
+Rubus species in South Africa, 
+Rubus cuneifolius may not 
+occur in Gauteng or the 
+Magaliesberg but its hybrids 
+do.(44). There are six declared 
+Rubus species in South Africa.
+78
+306
+Rubus cuneifolius & hybrids (cont.)
+1b
+Family: Rosaceae
+Common names: American bramble and hybrid 
+brambles
+Shrub
+Treatment
+Cut prickly branches wearing 
+thick leather welding gloves, 
+elbow high,  for protection and 
+pull, dig out, where possible 
+removing the underground 
+runners.
+Mechanical control alone might 
+help to suppress Rubus species 
+but will not eradicate the plants. 
+Parts of stems and roots have 
+the potential to grow into new 
+plants and therefore a single 
+mechanical operation might 
+actually promote spread. (43) 
+Several herbicides have been 
+registered for use against Rubus 
+species,  mainly as foliar 
+applications to actively growing 
+plants. (43)
+There are no biological control 
+agents (insects or pathogens) 
+available for any of the Rubus 
+species in South Africa. (43)
+79
+321
+Sambucus canadensis
+1b
+Family: Caprifoliaceae
+Common names: Canadian elder, American (or 
+sweet) elder
+Shrub
+Origin: Eastern and Midwestern 
+United States of America
+                                                                (9)
+The Canada elderberry is a large 
+flowering shrub with multiple 
+stems.
+The roots, stems, leaves and 
+bark are very toxic.
+Compound leaf with finely 
+serrated leaflets. The upper 
+surface of the leaflet is a darker 
+green and the underside is a 
+paler green with fine white hairs 
+on the veins. (9)
+Where found?
+In wetland.
+The creamy-white flowers are 
+small. 
+                                                        (9)
+The fruit is a small berry-like 
+drupe, which begins green, then 
+turns reddish and eventually 
+purplish-black. 
+Treatment
+Tree pop small plants, bigger 
+trees, cut low and damage 
+stump, strip bark to the roots 
+with a panga - we are trying out 
+that method as Sambucus is 
+growing in the wetland, so we 
+do not use herbicide there.
+80
+333
+Senna septemtrionalis
+1b
+Family: Fabaceae
+Common names: Arsenic bush, Smooth senna
+Shrub
+Origin: Mexico and Central 
+America
+The arsenic bush is a poisonous 
+shrub that can grow up to 2-3m 
+tall. (9)
+The leaves are arranged in pairs 
+opposite each other, consisting 
+of three or four pairs of ovate, 
+shiny leaflets. 
+Where found?
+Not in Kloofendal but in 
+Magaliesberg.
+Yellow flowers, which flower 
+from October to March. (9)
+The pods are cylindrical, 7-
+10cm long, containing shiny 
+seeds. (9)
+Treatment
+Pull out young plants with a tree 
+popper.
+81
+ND
+Seriphium plumosum/ Stoebe vulgaris
+Family: Asteraceae
+Common names: Bankrupt bush, Slangbos
+Shrub
+Origin: An indigenous bush 
+encroacher. It is not an invasive 
+species. (46)
+                                                                           (47)
+A sprawling, much-branched, 
+grey shrub. Looking closer, one 
+notices that the slender, wiry 
+branches are softly woody and 
+at right angles to the stem. The 
+short shoots are covered with 
+whitish, woolly, clustered 
+leaves, which are minute, tufted 
+and pressed to the stem, giving 
+the plant a granular appearance 
+(SANBI)
+It invades arid and semi-arid 
+grasslands. As it is unpalatable, 
+it reduces the carrying capacity 
+there.
+Where found?
+Throughout reserve, part of 
+biodiversity, not considered a 
+problematic encroacher plant in 
+the reserve.
+                                                                       
+                              Galls, not flowers
+                               (47)
+Small brown flowers
+Not to be confused with
+Athrixia elata/ Daisy tea
+                                                          (7)
+Treatment
+Salt can be sprinkled at the 
+base of each stem; it alters the 
+salinity enough to inhibit 
+growth.
+Thick infestations can be 
+burned, regrowth sprayed and 
+slashed. Follow-up treatments 
+and the adoption of proper land 
+management practices are 
+critical factors for long-term 
+control. (1)
+82
+334
+Sesbania punicea
+1b
+Family: Fabaceae
+Common names: Red sesbania, Brazilian glory pea, 
+Coffee weed, Rattlepod, Rooisesbania
+Shrub
+Origin: South America
+A deciduous shrub or small tree 
+up to 4m high with many slender 
+branches. Drooping, dark green 
+pinnately compound  leaves with 
+oblong leaflets that end in tiny, 
+pointed tips. (9)
+ 
+                              (9)
+                                                          (3)
+Showy red or orange flowers in 
+dense sprays up to 25cm long 
+flowering from September to 
+March. (9)
+Where found?
+Wetland stream.
+                                 (9)                                     (9)
+ Four-winged pods 6-8cm long 
+and 10mm wide, initially green, 
+turning brown with growing 
+mature.
+Seeds, leaves and flowers are 
+poisonous. (9)
+Treatment
+Biological control by means of a 
+beetle from Argentina is proving 
+to be very effective, which is 
+fortunate as chemical methods 
+have failed and slashing it 
+causes vigorous regrowth, so 
+treatment, if no biological 
+control is used, is physically 
+removing the plants, best done 
+after the spring flush when the 
+plants have  exhausted their 
+root reserves (1). Problem in 
+Kloofendal is small, so pulling 
+out with tree popper works well.
+83
+357
+Tecoma stans
+1b
+Family: Bignoniaceae
+Common names: Yellow bells, Yellow trumpet bush, 
+Yellow elder, Geelklokkies
+Shrub
+Origin: Mexico and Texas, 
+Arizona and New Mexico in the 
+United States
+                                                                         (97)
+Ornamental densely leafy 
+evergreen shrub or small tree up 
+to 4 meters high. Leaves are 
+bright green above, paler below 
+with distinctly serrated margins.
+                                                                   (9)
+Bright yellow, showy trumpet 
+shaped flowers in terminal 
+sprays, flowering from October 
+to May. 
+Where found?
+In lower parts of the reserve 
+along neighbouring fence and 
+along eastern boundary fence.
+                                   (97)                                (9)
+Seedpods, initially green, 
+turning brown, splitting open to 
+release papery winged seeds. (9)
+Treatment
+Remove seed pods and bag 
+them. Cutting down the multi-
+stemmed bush with loppers, 
+secateurs and saw, trying tree 
+popping and digging out has not 
+worked for us.
+Bromilow, (1) does state that T. 
+stans is very difficult to control 
+with herbicides. We will 
+probably experiment  painting 
+herbicide on freshly cut stems, 
+see if it works. 
+84
+ND
+Achyranthes aspera
+Family: Amaranthaceae
+Common names: Chaff flower, haak-en-steek-
+bossie
+Herb
+Origin: Pantropical – no clear 
+origin, found everywhere.
+            
+                                                                      (3)
+Achyranthes aspera is an erect, 
+sometimes sprawling, long-lived 
+herb which can grow up to 2 m 
+tall, with stems becoming woody 
+at the base. Its short-stalked 
+leaves are opposite, simple and 
+egg-shaped; they can be densely 
+to sparsely hairy and are dark 
+green above and paler below, 
+with young leaves often 
+silvery.(49) 
+Where found?
+Next to paths, particularly in the 
+Wetland area, in shady places.
+                                                    (48)
+The small greenish-white 
+flowers, often tinged with 
+purple-red, form terminal 
+spikes, dense at first but 
+elongating up to 60 cm long. As 
+the flowers age, they bend 
+downwards and become 
+pressed closely against the 
+stem. (49)
+The fruits are small one-seeded 
+capsules, orange to reddish 
+purple or straw-brown; with 
+their pointed tips, they readily 
+adhere to animals and clothing. 
+(48). 
+Treatment
+Easily controlled by cultivation 
+i.e. just pull/ dig out and leave 
+to dry out, plant will eventually 
+become compost. Preferably 
+pull out before seeding as the 
+seeds are sharp and penetrate 
+the skin if handled carelessly. 
+(1)
+85
+21
+Ageratina adenophora (Eupatorium 
+adenophorum)
+1b
+Family: Asteraceae
+Common names: Crofton weed, Mexican devil, 
+Snake root 
+Herb
+Origin: Central America 
+(Mexico). 
+Perennial herb or soft shrub up 
+to 2 meters high,  stems  and 
+petioles purplish red, stems 
+hairy. Stems may be galled. 
+Broken branches have a strong, 
+unpleasant smell.
+Grows in or near water, stems 
+creep in lower parts of the 
+plants, rooting at the nodes.
+This plant is poisonous, causes 
+chronic pulmonary disease in 
+horses (3).
+Where found?
+In Kloofendal stream near Topaz 
+street, where stream enters 
+Kloofendal Reserve. Abundant in 
+Wilgespruit stream along 
+Christiaan de Wet Road and in 
+Magaliesberg streams
+                                           (9)
+Leaves tapering at the base 
+towards an ovate tip, with 
+serrated margins along the 
+distal 2/3rds.
+Flowers are white in terminal 
+clusters flowering from August 
+to December. Not to be 
+confused with Plectranthus, 
+broken branches of which have 
+a pleasant smell.
+Treatment
+Try to eradicate before 
+flowering. Uproot plant by 
+grabbing hold of base & pulling. 
+If it does not come out easily, 
+cut off roots close to the plant 
+base & use tool to lever it out. 
+Roots left behind will not grow 
+again, but buried stems will. 
+Discard on dry rock away far 
+enough from the stream so that 
+the plant cannot be swept back 
+into stream.(5)
+86
+43
+Argemone ochroleuca
+1b
+Family: Papaveraceae
+Common names: White flowered Mexican poppy
+Herb
+Origin: Mexico
+A very spiny annual herb growing 
+up to 90cm high with stems that 
+exude a yellow sap when cut. (9)
+Grey prickly leaves, which have a 
+distinctive odour when crushed. 
+(9)
+Where found?
+Inlet of dam and wetland area.
+Partially controlled (2023).
+Pale yellow or creamy white 
+flowers appear from September 
+to January. Spiny, oblong green 
+fruit capsules which turn brown 
+and release numerous small 
+black seeds. (9)
+                                                          (9)
+Can cause poisoning, even 
+fatalities in humans and stock. 
+(1)
+Treatment
+Bag seeds & flowers, and pull-
+out the plants, using hand 
+trowel or tree popper, first 
+cutting the thorny leaves away 
+from where one is working. 
+Wear thick, elbow-high leather 
+gloves for protection against 
+the prickles. No slashing.
+87
+ND
+Bidens Pilosa
+Family: Asteraceae
+Common names: Blackjacks
+Herb
+Origin: South America
+A common, widespread and 
+exceedingly  troublesome 
+pioneer. found in most crops 
+and disturbed areas. (1)
+Pinnately (once divided) 
+compound leaf with usually 3 , 
+rarely 5 leaflets, with sharply 
+toothed margins. Yellow flower 
+heads with or without white ray 
+flowers. (8)
+                                                                          
+                                                                        (50)        
+Blackjack flower     Seedhead            
+                            
+                         Barbed awns (51)
+Fruits/ seeds are about 1 cm 
+long, with two to three stiff, 
+heavily barbed awns at their 
+distal ends  allowing the seed to 
+burrow into clothing and hair – 
+extremely efficient method of 
+dispersal. (52)(1).
+Where found?
+Any disturbed areas in 
+Kloofendal.
+A prolific seeder, often 
+producing several thousand per 
+plant, it can complete a life 
+cycle (germination to shedding 
+of seeds) in as little as 50 days. 
+Viable seeds may be produced 
+when the plant is a few cm high. 
+Uses  from the internet:
+(i)Treatment for stinging nettle 
+and other skin inflammation, 
+rub the plant onto the affected 
+area.
+(ii) Young leaves are eaten as a 
+spinach by some people (1). To 
+me it tastes bland.
+Treatment
+Ruderal weed, pioneer. 
+Indigenous plants will take over 
+in natural succession but in 
+disturbed areas the Blackjack 
+can spread effusively and grow 
+high. We suggest slashing the 
+plants  about 15cm high before 
+they seed. This will keep the 
+ground covered with vegetation 
+preventing seeds lying around 
+to germinate.
+Pulling out plants will promote 
+unwanted new growth in the 
+loosened soil. Pulling out the 
+odd plant amongst indigenous 
+vegetation is good, as that 
+allows the indigenous 
+vegetation to replace the 
+Blackjacks.
+88
+71
+Campuloclinium macrocephalum
+1b
+Family: Asteraceae
+Common names: Pompom weed
+Herb
+Origin: Central and South 
+America.
+A tall erect perennial herb plant.
+Leaves are concentrated at the 
+base of the plant with a single 
+flower stem growing upwards. (9) 
+Leaves and branches have 
+rough, bristly hairs. Leaves are 
+light green, are lance shaped 
+and have serrated margins.
+Where found?
+All over Kloofendal amongst 
+grasses in sunny areas in rocky 
+ground.
+The crown at the base of the 
+stem has roots and succulent 
+tubers (storage organs)  growing 
+from it  (46).
+                                                          (3)
+Pink flowerheads surrounded 
+by purple bracts in compact 
+heads flowering December to 
+March. (3)
+89
+71
+Campuloclinium macrocephalum 
+(cont.)
+1b
+Family: Campuloclinium macrocephalum
+Common names: Pompom weed
+Herb
+Tall stems up to 1.3 meters high.
+                                                                    (9)
+Seeds become brown when ripe, 
+fall off the flower very easily.
+                                                                          (54)
+Lack of control will result in 
+grassland being totally replaced 
+by Pompoms.
+Treatment
+Bag seeds & flowers & dig out 
+plants, make sure that the root 
+crown is removed, as the roots 
+without the crown will not grow 
+again. 
+Bags of Pompom seeds to be 
+knotted closed and left to rot. 
+They decompose well. 
+Crown and roots must be dug 
+out and hung upside down on 
+other vegetation to dry out and 
+die. 
+No slashing.
+Ongoing follow-up during the 
+flowering season is essential.(5)
+Leather gloves are 
+recommended as leaves and 
+stems have coarse hairs.
+Biocontrol is available (36)
+90
+72
+Canna indica
+1b
+Hybrids 
+not listed
+Family: Cannaceae
+Common names: Garden canna, Wild canna, Indian 
+shot, Tuinkanna
+Herb
+Origin: Central and South 
+America and the West Indies.
+Perennial, rhizomatous herb with 
+erect, unbranched, leafy shoots 
+1–2 m high. The rhizomatous 
+roots are strong and difficult to 
+eradicate.
+Leaves large, narrowly ovate to 
+elliptic, tapering to a point. 
+sheathing the stem (3).
+Where found?
+In flower bed in Kloofendal 
+amphitheatre area. Many are 
+found in Johannesburg parks 
+such as Len Rutter Park, Florida,  
+and other public open spaces.
+                              (9)                                (9)
+Narrow flowers, red or orange, 
+usually yellow below, no 
+fragrance. Flowers September 
+to April, to all year (3).
+                                                                (9 )              
+                 Green, spiny fruits
+Found on stream banks where 
+it competes with and replaces 
+indigenous species, it is also 
+recorded as a host for a 
+number of crop pests. (1)
+Treatment
+Dig out & remove rhizomes (1).
+91
+94
+Cirsium vulgare
+1b
+Family: Asteraceae
+Common names: Scotch thistle, Spear thistle
+Herb
+Origin: Europe, Asia and North 
+Africa. (9)
+Spiny, herbaceous biennial 
+which forms a large, flat rosette 
+of leaves and a deep tap root in 
+the first year and numerous 
+branched stems up to 1,5m high 
+in the second year
+                                                                (3)
+Leaves are dark green with stiff 
+hairs above, white woolly 
+beneath, deeply lobed, the lobes 
+ending in strong
+spines (3).
+Stems have spiny wings (9)
+It causes heavy infestations that 
+reduce the carrying capacity of 
+the veld and can cause injury to 
+man and animals. (9) The sap is 
+an irritant to skin, causes 
+dermatitis in humans (3)
+Where found?
+Wetland and area adjacent to 
+neighbours on N/E side of 
+wetland.
+                                                                          (9)
+Pink to mauve thistle-like 
+flowers surrounded by spiny 
+bracts appearing  from 
+September to April. 
+Each small fluffy unit (A) is an 
+unopened tiny fruit (Achenes) 
+within a tuft of silky hairs of 2cm 
+long.  Fruits will open up once 
+on the ground, releasing its 
+seeds.
+Treatment: Remove plants 
+before flowering. Once seeded, 
+it is recommended to bag the 
+seed heads, cut away spiny 
+leaves, then dig the plant out of 
+the ground. One needs to wear 
+thick leather gloves for 
+protection against the spines.
+92
+ND
+Conyza sumatrensis var. sumatrensis/
+Conyza albida
+Family: Asteraceae
+Common names: Tall fleabane
+Herb
+Origin: America
+Annual major weed over 2 
+meters high. Growing in gardens, 
+along the roadside, fallow land, 
+forests and can infest perennial 
+crops and is known to host the 
+tomato spotted wilt virus, known 
+as  “Kromnek” in tomatoes, 
+potatoes, tobacco  and peas (1).
+Where found?
+Wetland and in grassy areas,  
+replacing grasses.
+                                                           (98)
+Lots of fluffy seeds. 
+Treatment
+Conyza sumatrensis is a 
+pioneer, a ruderal weed, which 
+should get overtaken by 
+indigenous vegetation. In 
+Kloofendal, however, it is 
+overtaking the grasses, so 
+pulling them out gives grasses 
+more chance to come back. We 
+have not tried this yet.
+Bromilow suggests the use of 
+herbicides if Conyza  becomes 
+a problem (1).
+93
+ND
+Cyathula cylindrica var..cylindrica
+Family: Amaranthaceae
+Common names: Burr weed
+Herb
+Origin:  Tropical & S. Africa, 
+Madagascar 
+Widely scrambling perennial, 
+often covering surrounding 
+vegetation. Its many tiny seeds  
+are surrounded by burrs which 
+cling to any animal brushing 
+past it. 
+                                                                    (55)
+Small undulating, round leaves 
+with reddish stalks and 
+branches. 
+                                  
+                                                              (55)
+Where found?
+Around Dassie Rock on Dassie 
+Trail (red route). Burrs stick onto 
+dassie fur, so seeds are easily 
+spread.                                                  
+                                                    (55)
+Many very small flowers in a 
+spike-like inflorescence, 
+surrounded by dry, chaffy, 
+spinescent bracts (which form 
+the burrs).
+ 
+                                                                 (7)
+                                                          (55)
+Sepals 5, free, dry and 
+membranous,  no petals, 5 
+stamens opposite the sepals, 
+filaments united at the base.
+Ovary superior, 1-chambered. 
+Fruit dry, seeds shiny (8).
+Treatment
+Bag seeds, dig out the plants. 
+No slashing as it will just come 
+up again.
+94
+ND
+Cyathula uncinulata
+Family: Amaranthaceae
+Common names: Ronde klits, Burr weed
+Herb
+Origin: Tropical Africa and 
+South Africa, excluding Gauteng 
+& Northwest province. (Wiki)
+A perennial weed with burrs that 
+contaminate hair & wool of 
+animals with consequent 
+downgrading (53) 
+Burrs on these plants often 
+obstruct removing  the declared 
+Alien Invasive Plants, hence the 
+need to remove them in order to 
+gain access.
+Where found?
+In the wetland, below Dassie 
+Rock, in the forest under trees.
+The leaves are furry and soft, 
+they come out opposite,  a 
+single burry seed ball is situated 
+at the end of the stem, it comes 
+off easily when mature. This 
+plant is very invasive in 
+Kloofendal, due to the seeds 
+sticking onto anything that 
+brushes past them.
+Treatment
+Preferably take the plant out 
+before it seeds. If seeds are 
+present, bag the seeds and dig 
+out the plants.
+No slashing as the plants will 
+just come up again.
+95
+ND
+Cyathula – species unknown
+Family: Amaranthaceae
+Common names: Ronde klits, Burrweed
+Herb
+Origin: Indigenous
+A perennial weed with burrs that 
+contaminate hair & wool of 
+animals with consequent 
+downgrading. (53)
+The seeds are smallish  burrs 
+that stick onto anything 
+brushing past.
+Where found?
+In Magaliesberg around 
+Hamerkop cottage. Tends to 
+grow along rocky paths.
+Treatment
+Cut off the seeds and put into a 
+bag.
+Leave to rot inside the bag.
+Pull or dig out the plant.
+96
+ND
+Cynoglossum lanceolatum
+Family: Boraginaceae
+Common names: Forget-me-not
+Herb
+Origin:  Yemen, Pakistan, India, 
+Mediterranean, Asia and 
+Madagascar, growing in 
+disturbed habitats throughout 
+parts of Africa widely in all S. 
+African  provinces (Wiki). 
+Many little blue flowers which 
+become green fruits which dry 
+out to become burr seeds which 
+stick onto anything that comes 
+past. They grow in the same 
+disturbed areas where the 
+declared AIPs grow, 
+obstructing the  removal of these 
+plants.
+Leaves bluish–green with 
+distinct central and lateral veins.
+Where found?
+Wetland, disturbed areas such 
+as along neighbouring fencing, 
+along paths.
+Taproot, which
+ can get pretty 
+ big!
+Not to be confused with
+                                                               (7)
+Nidorella hottentotica , an 
+Asteraceae, which, unlike 
+C.lanceolatum has furry, grey 
+leaves and yellow, daisy disc 
+flowers. 
+Treatment
+Bag seeds & flowers & pull out 
+the plants. No slashing. Cut off 
+flowers before seeds/ burrs 
+appear.
+97
+118
+Datura stramonium 
+1b
+Family: Solanaceae (Tomato family)
+Common names: Common thorn apple, Malpitte, 
+Olieboom 
+Herb
+Origin: Tropical America 
+Erect annual herb, grows up to 
+1,5m high with sparsely hairy to 
+smooth, green, brown or purple 
+stems.
+Leaves are dentate,
+dark green or purple on the 
+upper surface and paler 
+underneath. they are sparsely 
+hairy and bad smelling.
+Stems often purple, reddish.
+Where found?
+Found in sewerage spills 
+together with Mirabilis japala 
+(Four o’clock), Cestrum parqui 
+and Leonotis intermedia (Wild 
+dagga).
+Solitary white, mauve or 
+purplish funnel-shaped flowers 
+appear from October to March.
+Flowers open up untwisting 
+themselves like the 
+Convolvulaceae (Morning glory) 
+family) family flowers.
+                                         (9)                     (3)  
+Seed pods spiky, old pods 
+become brown and hard. The 
+mature pod will open and 
+release black seeds.
+The seeds are poisonous and  
+hallucinogenic. The whole plant 
+is poisonous. (9).
+The flowers, fruit and leaves 
+can be an irritant to skin. (3)
+Treatment
+Bag seeds, pull out and dig out 
+plants. They come out quite 
+easily as they have shallow 
+roots.                                   
+98
+ND
+Euphorbia heterophylla
+Euphorbia geniculata, Pointsettia 
+geniculata
+Family: Euphorbiaceae
+Common names: Wild pointsettia
+Herb
+Origin: North America and 
+Mexico.
+Wild pointsettia can be more 
+than three feet tall, with a thin 
+stem. Leaves can vary in shape 
+and are clustered at the top, 
+along with the flower parts. The 
+flowers themselves aren't much 
+to look at, but they are 
+surrounded by bright reddish 
+orange bracts.
+Where found?
+Not in Kloofendal. Found in
+Magaliesberg in disturbed areas.
+Wild pointsettia has a 
+poisonous milky sap that can 
+irritate the skin.
+Treatment:
+Remove by hand. They come 
+out easily.
+99
+ND
+Galinsoga parviflora
+Family: Asteraceae
+Common names: Gallant soldier, Knopkruid
+Herb
+Origin: South America
+Troublesome in wide range of 
+crops in South Africa, but also in 
+gardens. (1) 
+Small white and yellow flowers.
+Flowers in summer
+Where found?
+Not really noticed in Kloofendal, 
+but common in Johannesburg 
+gardens.
+Host to some nematode 
+(roundworm) species, as well as 
+tobacco and cucumber virus (1).
+Treatment
+Easy to control, particularly after 
+rain when the ground is wet, by 
+pulling out.
+100
+ND
+Heliotropium amplexicaule
+Family: Boraginaceae
+Common names: No common name
+Herb
+Origin: South America, 
+especially Argentina.
+Flat-growing perennial herb, 
+hairy throughout. Stems lying 
+horizontal with tips curving 
+upwards. 
+                                                                             (7)
+An umbel of small purple flowers 
+with orange centre, flowering in 
+summer.
+Slightly undulating pointed 
+leaves with deep central and 
+lateral veins.
+Heliotropes are toxic (1)
+Where found?
+In Kloofendal amphitheatre 
+flowerbeds, also on southern 
+upper slopes of Kloofendal 
+amongst grasses and on 
+disturbed ground, next to paths, 
+mostly on dry, gravelly ground.
+Taproots, and other roots 
+branching from the taproots 
+and suckering.
+Suckering – many plants 
+coming off horizontal roots.
+Treatment
+Pull, dig out, not easy because 
+of deep taproot, long roots 
+coming off the tap roots and the 
+suckering. Preferably done after 
+rain when the ground is not so 
+hard. 
+101
+213
+Mirabilis jalapa
+1b
+Family: Nyctaginaceae
+Common names: Four o’clock, Vieruurtjies
+Herb
+Origin:  Tropical America
+Four o' clock is a bushy, tender 
+perennial with tuberous roots 
+that typically grows tall on erect, 
+branching stems. It is an old 
+garden favorite that features 
+fragrant, funnel-shaped, tubular 
+flowers with five flaring petal-like 
+lobes. Flowers bloom from 
+early/mid-summer to autumn. 
+Flowers open in the late 
+afternoon (around four o'clock) 
+and stay open only until the 
+following morning. (9)
+It is capable of withstanding 
+extended droughts due to the 
+tuberous roots. The seeds and 
+plant are poisonous if ingested 
+(9)
+It competes with indigenous 
+vegetation (1)
+Slightly pointed oval leaves 
+which are situated opposite 
+each other coming off multi-
+branching stems.
+Where found?
+In area south of the reserve near 
+the top, below a big drain from 
+the adjacent road, amongst 
+dried out litter and in the 
+Wetland area.
+Flowers come in pink, red, 
+yellow, white and some bi-
+coloured. They have a slight 
+vanilla scent. (9)
+Treatment
+Unsuitable to remove with the 
+tree popper as the stems are 
+fleshy and break when trying to 
+remove with the tree popper.
+Digging out is an endless task 
+as the tubers are big and deep, 
+and stems break off easily, we 
+have not succeeded, so 
+spraying with a systemic 
+herbicide, as recommended by 
+Bromilow hopefully would work 
+(1).
+I recommend digging out young 
+plants when they appear, 
+thereby not allowing them to 
+spread. We have tried  brush 
+cutting the plants before the 
+flowers produce seeds, but 
+follow-up brush cutting with 
+lack of workers is a problem.
+     
+102
+227
+Nephrolepis cordifolia
+3
+Family:  Nephrolepidaceae
+Common names: Sword fern, Boston sword fern
+Herb
+Origin:Tropical forests all over 
+the world, especially Central 
+America & the West Indies.
+Evergreen fern with ~ erect, stiff 
+fronds (leaves) up to 1 m high; 
+terrestrial or epiphytic (grows on 
+other plants). (3)
+It forms extensive colonies by 
+means of stolons and produces 
+tubers (3). 
+                                                                       (3)
+                                   Tuber
+Where found?
+Kloofendal amphitheatre area
+ in flowerbed.
+Fronds tend to be dull green in 
+shaded areas and lighter green 
+or yellowish-green when 
+growing in a sunny position. 
+Both fertile and sterile fronds 
+are pinnately compound (once 
+divided) and 7cm wide. 
+Numerous spore containing 
+structures are produced 
+between the leaflet midvein and 
+margin on the undersurface of 
+the leaflets. (9)
+Thousands of spores can be 
+produced by one plant, which, 
+enables this fern to spread 
+aggressively, making it a threat 
+to indigenous plant species. (9) 
+Not to be confused with
+Nephrolepis exaltata, which 
+has no tubers, and longer 
+leaflets, 3 -7cm, compared to 
+N.cordifolia’s leaflets of  2 -
+4.5cm (3). 
+N. exaltata is also alien, from N. 
+and C. America, most 
+Nephrolepis cultivars have 
+been derived from N. exaltata.
+Treatment
+Hand pulling, making sure all 
+parts of the plant are removed 
+(1).
+   
+103
+ND
+Physalis peruviana
+Family: Solanaceae, Nightshade family
+Common names: Cape gooseberry
+Herb
+Origin: Peru.
+Cape Gooseberry was cultivated 
+in the Cape for its fruit, but with 
+the potential of it becoming 
+weedy (1), which it is in 
+Kloofendal.
+ 
+                                                                           (56)
+                                                                          (57)
+Where found?
+Wetland.
+                                                                         (58)
+Fruit, initially green, turning 
+orange when ripe, has a 
+characteristic pointed balloon 
+enclosing it. Ripe fruit is nice to 
+eat.
+                                                                         (58)
+Treatment
+Pull out and enjoy eating the rip 
+fruit.
+104
+270
+Phytolacca octandra
+1b
+Family:  Phytolaccaceae
+Common names: Inkberry
+Herb
+Origin:  Mexico, Central and 
+South America, West Indies. 
+(3)
+This is an erect, short-lived 
+perennial (living more than 1 
+growing season) herb with 
+woody base, growing up to 2m 
+tall. Stems are green with a 
+reddish tinge, smooth and 
+hairless. (9)
+Flowers -white, to pinkish, small  
+with 5 petal-like sepals, stalks 
+0.25 to 2 mm long in an erect 
+spike up  to 30 cm long (3)
+Where found?
+In disturbed ground.
+Leaves: Green, elliptic to 
+lanceolate, 
+30 x 15 cm long, stalk up to 6 
+cm long, margins entire, 
+hairless, unpleasant smelling.
+Fruits are shiny, purple-black 
+berries, when mature, 7–8 mm 
+across. ± 8 ribbed (tightly fused 
+carpels), on flower stalks which 
+are shorter than the berries. 
+Fruit is on an erect raceme. 
+Fruit said to be poisonous and 
+causing skin irritations, even 
+though in some areas baboons 
+and some birds eat the fruit and 
+spread the plant this way . (9)
+105
+270
+Phytolacca octandra (cont.)
+1b
+Family: Phytolacca octandra
+Common names: Inkberry
+Herb
+A fat taproot, which grows down 
+deeply, difficult to dig or pull out!
+Treatment
+Dig out when plants are young. 
+Tree popper to pull plants out 
+does not work as the plants have 
+fleshy stems, the popper just 
+slips off. We try hacking it with a 
+panga, also repeated cutting 
+away new growth to eventually 
+starve the plant.
+106
+ND
+Plantago lanceolata
+Family:Plantaginaceae
+Common names: Buckhorn plantain
+Herb
+Origin: Europe
+Pioneer following human 
+disturbance (1)
+Perennial herb with leaves in a 
+basal rosette.
+                                                                           (60)
+Flowers in terminal spikes, 
+several per plant. (1)
+Where found?
+In disturbed places. Plentiful in 
+Kloofendal lawn
+                                                     (61)
+Leaves are narrow with distinct 
+parallel veins.
+                                                                      (62)
+Flowers on a terminal spike i.e. 
+flowers arranged along the end 
+of the stalk. Anthers are  
+protruding on long filaments.
+Treatment
+Bag flowers and seeds. Dig out.
+107
+ND
+Polygonum lapathifolium/ Persicaria 
+lapathifolia
+Family:  Polygonum lapathifolium/ Persicaria 
+lapathifolia
+Common names: Spotted knotweed
+Herb
+Origin:  Europe
+Widespread naturalized weed in 
+South Africa, common on 
+riverbanks, dam walls, ditches, 
+even in water. (1)
+Where found?
+Grows in water in the dam and 
+wetland,  growing from the 
+edges inwards into the water.
+                                                                          (7)
+Treatment
+In ditches and watercourses P. 
+lapathifolium should be 
+removed manually, before 
+infestation becomes severe. (1). 
+Simply pull out.
+108
+ND
+Pseudognaphalium luteo-album
+Family: Asteraceae
+Common names: Cudweed, Roerkruid
+Herb
+Origin:  Europe, common, 
+widespread
+                                                         (7)
+Leaves long and narrow, folded 
+along the midriff longitudinally.
+Grows in dense stands.
+Flowers in summer.
+Where found?
+Southern upper rocky part of the 
+reserve, in Wetland and 
+amphitheatre lawn.
+Not to be confused with
+                                                                         
+                                                                       
+Helichrysum rugulosum         (7)
+Helichrysum rugulosum flowers 
+in spring, whereas 
+Pseudognaphalium flowers in 
+summer. 
+Pseudognaphalium’s leaves are 
+longer than H. rugulosum.
+Pseudognaphalium is much 
+taller than H. rugulosum and 
+grows in dense stands.
+Treatment
+Shallow cultivation (1) 
+109
+ND
+Pteridium aquilinum
+Family: Dennstaedtiaceae 
+Common names: Bracken, Adelaars varing
+Herb
+Origin:  Indigenous to South 
+Africa
+A perennial, deciduous fern, 
+growing into dense stands. (1)
+Bracken has large, roughly 
+triangular fronds (large, divided 
+leaf) produced singly from an 
+underground rhizome,  and 
+grows to 0,3 to 1 meter tall. The 
+plant dies back to ground level in 
+autumn. The rhizome grows up 
+to 3.5 meters deep, 5 cm in 
+diameter, and up to 15 meters 
+long (63)
+Where found?
+In Kloofendal Wetland area, and 
+on western, lower part of 
+reserve. In Magaliesberg near 
+streams, also in open veld – 
+walking up to Tonquani 
+(Magaliesberg), on both sides of 
+the higher section of the path.
+It regrows in the spring from an 
+underground rhizome, new 
+growth presents as vertical 
+stalks, coiled and covered with 
+silver grey hairs, unfurling into 
+fronds. (63) It also reproduces 
+from its copious spores.
+Not to be confused with
+Microlepia spelucae
+                                                                 (7)
+Treatment
+Difficult to control. Can be 
+removed mechanically, by 
+cutting stands repeatedly over 
+six weeks cycles during active 
+growing periods (1). Pulling and 
+digging the plants out does not 
+work, they simply break off  
+from the rhizomes. 
+Bromilow recommends 
+systemic herbicides such as 
+Imazapyr and Metsulfuron-
+methyl sprayed towards the end 
+of the growing season (1).
+110
+318
+Salvia tiliifolia
+1b
+Family:  Lamiaceae
+Common names: Lindenleaf sage
+Herb
+Origin: Central America 
+Erect, shortly hairy, annual
+herb to 1.2 m high. 
+                                                               (7)
+Leaves are simple, heart 
+shaped, have finely serrated 
+margins, in opposite pairs, each 
+pair at right angles to the last (3). 
+Leaves are used to kill lice.
+                                        (9)                                (9)
+Blue flowers, corolla 5–10 mm 
+long, calyx 4–7 mm long, in 
+whorled clusters along a 
+terminal spike up to 25 cm long 
+(3). 
+Where found?
+Spreading fast in Northern lower 
+border of reserve and on western 
+lower part of reserve next to 
+paths. Mostly grows in shade.
+Seeds are tiny and  many, sown 
+in spring.
+Not to be confused with
+                                                              (7)
+Plectranthus hereroensis, 
+which has far more coarsely 
+serrated leaf margins and grows 
+as a higher herb.
+Treatment
+Pulling out plants loosens the 
+soil facilitating germination of 
+the many seeds. We are 
+experimenting by cutting the 
+plants preferably before they 
+seed, preventing seeding, and 
+keeping ground “occupied”. 
+Another suggestion is, as the 
+Salvias appear to like to grow in 
+the shade under trees, is, to see 
+if they survive when trees and 
+shrubs they are growing under, 
+are removed as part of Bush 
+encroachment strategy.
+111
+337
+Solanum elaeagnifolium
+1b
+Family: Solanaceae
+Common names: Silverleaf-bitter apple, Satansbos
+Herb
+Origin: North America and 
+South America
+A troublesome Weed. (8) 
+An herbaceous shrub growing to 
+up 60cm high with felty stems 
+and deep, spreading roots. The 
+stems and undersurfaces of the 
+leaves are covered with white or 
+silvery, felt-like hairs. Orange or 
+reddish prickles on the stems 
+and undersides of the leaves. 
+                                                                           (64)
+Greyish or silvery-green leaves, 
+often wavy and folded upwards 
+along their midribs. (9) 
+  
+Where found?
+In disturbed areas
+                                                                     (9)
+Mauve, blue or white flowers. 
+Stamens stick out, petals 
+reflexed, typical of Solanum 
+family. Flowers in spring.
+                                                                         (65)
+Fruits are shiny green berries 
+with white patches turning 
+yellow. 
+Young fruit and leaves are 
+poisonous.(3)
+Treatment
+Pull, dig out.
+112
+339
+Solanum pseudocapsicum
+1b
+Family: Solanaceae
+Common names: Jerusalem cherry
+Herb
+Origin: Mediterranean Europe, 
+Madeira
+Perennial, evergreen up to 2 
+meters high shrub.
+                                                       (66)
+Tiny white flowers, petals 
+recurved, with yellow stamens 
+protruding forwards. Flowers in 
+summer.
+Where found?
+All over lower parts of the 
+reserve, in wetland and under 
+trees.
+Leaves, when crushed, have an 
+unpleasant smell.
+Berries initially green, ripening 
+to bright orange, mildly 
+poisonous to humans, but 
+highly poisonous to domestic 
+animals and some birds . 
+Palatable to some birds who 
+feed on the fruit and disperse 
+the seeds. (5)
+Treatment
+Pull or dig out plants before 
+they fruit, using a tree popper. If 
+fruit is present, remove fruit 
+before cultivation.
+113
+341
+Solanum sisymbriifolium
+1b
+Family: Solanaceae
+Common names: Wild tomato, Dense-thorned bitter 
+apple
+Herb
+Origin: S. America (Brazil, 
+Argentina, Uruguay & Paraguay)
+Much-branched, very spiny, low 
+shrub 0.5–1.5 m high, with
+extensive root system. (3)
+                                                                   (9)
+Leaves deeply, pinnately  lobed, 
+covered with star- shaped hairs 
+and the midrib and stalk have 
+straight reddish-brown spines. 
+(9)
+                                                       
+                                                                       (9)
+Stems are densely covered with 
+slender, reddish brown straight 
+spines up to 30 mm long. 
+Where found?
+On rocky quarzitic, disturbed 
+ground, on firebreak path 
+between yellow and red trails
+Flowers
+      White form         Blue form    (7)
+Flowers all year round (3)
+                                                             (9)
+Fruit is a bright red berry with its 
+calyx  being enlarged and spiny.
+Treatment
+Pull out, dig out, use thick 
+leather, elbow length gloves for 
+protection against thorns. Tree 
+popper works well.
+114
+ND
+Tagetes minuta
+Family: Asteraceae
+Common names: Tall khaki weed, Langkakiebos
+Herb
+Origin: South America
+Leaves, flowers and branches 
+have a strong, distinctive smell.
+Where found?
+Any disturbed area, usually 
+together with Black jacks.
+Treatment
+If few, bag seeds & flowers & 
+pull-out plants. If lots, see 
+treatment for Black Jacks.
+                                                           
+115
+ND
+Triumfetta Pilosa
+Family: Amaranthaceae
+Common names: Burr weed
+Herb
+Origin:  India
+An alien perennial weed with 
+burrs that contaminate hair & 
+wool of animals .
+Small yellow tubular flowers
+Serrated leaf margins, rough 
+hairy leaves with raised venation 
+below.
+Where found?
+Not in Kloofendal, but very 
+invasive burr weed along 
+streams in Magaliesberg.
+The seeds are burrs stick to 
+anything brushing past it.
+Burrs initially green, turning 
+black when old, seeding in 
+autumn.
+Treatment
+Bag seeds, remove plants with 
+the tree popper, it works well! 
+116
+371
+Verbena bonariensis
+1b
+Family: Verbenaceae
+Common names: Tall verbena
+Herb
+Origin: South America
+                                                                         (3)
+Tall verbena is a flowering herb 
+with erect stems up to 2m 
+tall which are noticeably square 
+in cross-section and rough. (9)
+                                                                          (9)
+Leaves are stalkless and clasp 
+the stem at the base (i.e. do not 
+narrow at point of attachment), 
+thick textured, strongly veined 
+beneath and the margins are 
+sharply toothed. Stiff hairs on 
+the stem and leaves make them 
+rough to touch.
+Where found?
+In the wetland.
+                                                       (3)
+Flowers are purple, 40mm long, 
+in congested terminal spikes. 
+The flowers stand out above the 
+inflorescence and appear 
+during summer. 
+                                                               (7)
+The small fruits separate into 
+four brown, elongated seeds 
+when mature.
+It is poisonous to livestock and 
+invades roadsides, disturbed 
+places, moist areas and 
+grasslands. (9)
+Treatment
+Pull, dig out. Wear leather 
+gloves as stems are rough like 
+coarse sandpaper.
+117
+372
+Verbena brasiliensis
+1b
+Family: Verbenaceae 
+Common names: Brazilian verbena
+Herb
+Origin:  South America
+Annual or perennial herb, 
+sparsely branching, with erect, 
+4-angled stems to 2 m high.
+                                                                           (3)
+Stems and leaves have minute, 
+stiff, appressed hairs, becoming 
+hairless and smooth. 
+                                                              (3)
+               (3)
+Leaves are narrow-ovate, 4–5 x 1
+cm, they are stalkless and leaves 
+narrow at the point of attachment 
+to the stem, not clasping the stem. 
+The margins are coarsely toothed.
+Where found?
+Kloofendal Wetland.
+                                                                        (7)
+Flowers of V. brasiliensis
+Inflorescence, consisting of 
+small purplish-blue flowers with 
+a long, slender corolla tube, the 
+flowers are crowded at the tip of 
+the inflorescence. It flowers all 
+year. Not to confuse with:
+Verbena bonariensis, which is 
+more common, 
+a stronger and  stiffer plant. 
+with rough hairs on stem and 
+leaves .
+Leaves clasp the stem.
+The inflorescence of V. 
+bonariensis is denser and more 
+robust than that of V. 
+brasiliensis.
+Treatment
+Pull, dig out. Wear leather 
+gloves as stems are rough like 
+coarse sandpaper.
+118
+379
+Xanthium strumarium
+1b
+Family: Asteraceae
+Common names: Large cocklebur, Kankerroos
+Herb
+Origin: South America
+This herbaceous shrub grows up 
+to 1,2m high. The erect stems 
+are brownish or reddish-brown, 
+often with red spots, ribbed and 
+roughly downy
+Leaves are blue-green, sparsely 
+hairy above and densely white-
+woolly below, entire or three-
+lobed, ± lanceolate, up to 60 mm 
+long x 20 mm wide. 
+                                                       
+                                                                  
+                                                                   (3)
+Three-lobed leaf and very prickly 
+burrs.
+The large cocklebur is a 
+common, poisonous and 
+serious weed in land used for 
+growing crops, it is competitive, 
+and the burs contaminate 
+sheep’s wool. It is a major pest 
+to various annual crops (1).
+Where found?
+Not in Kloofendal Nature 
+Reserve.
+Plentiful in Klipriviersberg along 
+stream edge.
+Flowers are greenish, 
+inconspicuous in axils of 
+leaves, flowering from October 
+to April (3).
+                                                                          (9)
+Green burrs which will turn 
+brown. Brownish burrs up to 
+2cm long crowned with two 
+stout horns and covered with 
+hooked spines up to 4mm long 
+(3).The burrs are an irritant to the 
+skin, the prickles are sore.
+Treatment
+Hard to control but can be 
+controlled by shallow 
+cultivation during the seedling 
+stage or with post emergence 
+herbicides, however there are 
+usually late germinators who 
+escape the treatment and will 
+form seeds. Cultivation needs 
+thick leather gloves and boots – 
+the spines are serious. (1) 
+119
+ND
+Zinnia peruviana
+Family: Asteraceae
+Common names: Redstar zinnia
+Herb
+Origin:  South America
+Annual weed of waste places, 
+roadsides, next to paths.
+Flower heads solitary, terminal 
+on stalks. Ray flowers red or pale 
+orange, persistent, drying out to 
+brown.
+Flowers in summer.
+Where found?
+Disturbed areas. In Kloofendal it 
+is found next to path yellow trail 
+on the west side, also on the 
+north side.
+Treatment
+Cultivation during the seedling 
+stage
+120
+ND
+Alternanthera pungens (A. repens)
+Family:  Amaranthaceae
+Common names: Paperthorn, 
+Khakiweed 
+Flat-growing herb
+Origin: South America
+A prickly, creeping perennial 
+herb with a taproot that can 
+become large and woody. It can 
+form large mats which are 
+difficult to remove.
+                                                                           (67)
+Paperthorn has large taproots 
+and roots at the nodes, forming 
+large mats – it is a weed of many 
+different crops. (1)
+Where found?
+In Kloofendal lawn. Plentiful in 
+Pilanesberg campsite.
+                                                                       (67) 
+Burr/ seed
+A very unpleasant weed as the 
+seeds can penetrate bare feet, 
+even stick to rubber-sole shoes 
+(1)
+Treatment
+This weed should be removed 
+when   small.
+Bromilow recommends pre-
+emergence herbicides. (1)
+121
+ND
+Dicerocaryum eriocarpum 
+Family: Pedaliaceae
+Common names: Devil’s thorn
+Flat-growing herb
+Origin: DRC, Botswana, 
+Namibia, Zambia, Zimbabwe, 
+South Africa
+                                                                           (86)
+Mat-forming perennial herb with 
+long trailing shoots from a 
+woody rootstock. 
+                                                             (86)
+Leaves opposite, deeply lobed, 
+upper surface grey green, under 
+surface white. (8)
+Leaves opposite, deeply lobed, 
+upper surface grey green, under 
+surface white. (8)
+Where found?
+At entrance of Kloofendal 
+Wetland.
+Found in grassland, particularly 
+in trampled areas and 
+abandoned fields.
+                                                         (86)
+Pink flowers with five petals 
+which are united, slightly two-
+lipped and irregular.
+Fruit is a flat, elliptic very hard 
+disc lying on the ground with 
+two vertical spines sticking out 
+from the near centre of the 
+upper side. (8)
+Not to be confused with
+Graderia subintegra which also 
+has a trailing  shoots from a 
+woody root stock, but leaves 
+come  alternately. 
+                                                                    (7)
+Leaf shape is trilobed. The pink 
+flowers are similar, but the 
+lower surface is whitish.
+Treatment
+As D. eriocarpum is not 
+invasive, there is no need to 
+remove it, but it can be  
+problematic as its thorny seeds 
+in a lawn can cause harm to 
+barefooted people, people 
+should be warned to be careful.
+122
+121
+Duchesnea indica
+1b
+Family: Duchesnea indica
+Common names: Wild strawberry
+Flat-growing herb
+Origin: India, Sri Lanka
+Creeping perennial herb 
+spreading by slender stolons, 
+grows in damp, shady places. It 
+tends to  spread rampantly, 
+blocking drainage lines and 
+replacing other species (1)
+                                                                  
+                                                                       (68)
+Leaves trifoliate, fruit red small 
+strawberry, which is edible but 
+has hardly any taste. 
+                                                                   (69)
+The flowers are yellow.
+Where found?
+Wetland.
+Treatment
+Pull, dig out
+123
+267
+Persicaria capitata
+1b
+Family: Polygonaceae
+Common names: Pink knotweed
+Flat-growing herb
+Origin: Asia
+Knotweed is a mat-like, 
+perennial, herbaceous plant 
+with a slender, woody rootstock 
+and long, creeping, rooting 
+stems. It also spreads with 
+seeds. 
+It is found growing on roadsides, 
+dry banks, slopes and in open 
+areas, preferring full sun. It 
+negatively impacts on the 
+environment by forming a dense 
+carpet, replacing most 
+indigenous vegetation.  (9)
+The hairy leaves are 1-6cm long 
+and 0.7-3cm wide with a reddish 
+midrib and a distinctive dark red 
+V pattern. The leaves turn red 
+when the plant is under stress. 
+(9)
+Where found?
+Stream crossing on north-east 
+side of reserve. 
+                                                             (9)
+The tiny pink flowers are 
+clustered in ball-shaped flower 
+spikes above the foliage. These 
+ball-like inflorescences are 7-
+20mm across with numerous 
+pink flowers 2.5mm long. 
+Flowering occurs from October 
+to March. (9)
+This plant was brought in as an 
+ornamental groundcover and is 
+one of the many garden 
+escapees found in Kloofendal.
+Treatment
+Pull/ dig out
+124
+ND
+Richardia brasiliensis
+Family: Rubiaceae
+Common names: Tropical Richardia, 
+Paper thorn
+Flat-growing herb
+Origin: South America
+                                                              (70)
+Leaves come off opposite, have 
+parallel venation and many tiny 
+white flowers.
+Where found?
+Kloofendal lawn has been taken 
+over in large parts by 
+R. brasiliensis, also spreading on 
+paths leading away from the 
+amphitheatre.
+Richardia grows very low on the 
+ground, creeping under the 
+grass and replacing it. It grows 
+in very dense clumps and
+can survive the effects of 
+continuous mowing.
+Not to be confused with
+Other ground covers in the 
+Kloofendal lawn.
+Treatment
+Mechanically. Pull out, dig out
+For long-term management of 
+lawns:
+(i) Fertilise lawn to give grass 
+strength to compete against 
+weed. 
+(ii) Water when needed.
+(iii) Set lawnmower higher to 
+allow grass to grow and seed. 
+(iv) Apply a broadleaf herbicide. 
+(71)
+125
+365
+Tradescantia fluminensis
+1b
+Family: Commelinaceae
+Common names: Wandering Jew
+Flat-growing herb
+Origin: Mexico
+Wandering jew is a trailing 
+perennial. It forms a mat which 
+smothers low growing plants 
+and prevents the natural 
+regeneration of taller forest 
+species.
+                                                        (74)
+Grows in shade, under trees, 
+forming extensive mats, that 
+smother all other vegetation and 
+eventually replace it .
+(Bromilow, c. 2018. p 346)
+It’s stems break easily at the 
+nodes and establishes itself 
+again. 
+Where found?
+Wetland.
+                                                        (73)
+Flowers bloom intermittently 
+throughout the year.
+                                                         (72)
+It often causes skin irritations in 
+humans, and dogs kept in yards 
+containing Wandering jew have 
+developed rashes. (9)
+Treatment
+Foliage is easy to remove, but 
+this  must be done repeatedly, 
+and care taken that all stem 
+fragments and roots are 
+removed.  (1)
+126
+374
+Vinca major 
+1b
+Family: Apocynaceae
+Common names: Greater periwinkle
+Flat-growing herb
+Origin: Western Mediterranean
+Perennial, evergreen herb with 
+erect flowering stems to 450 mm 
+high. This species prefers 
+shaded habitats and is a weed of 
+urban bushland, open 
+woodlands, watercourses (i.e. 
+riparian areas), roadsides, 
+gardens, disturbed sites and 
+waste areas
+                                                          (3)
+Leaves are green, sometimes 
+with creamy margins, glossy, 
+ovate, 25-60 mm wide.
+Spreads vegetative by its 
+creeping underground and 
+above ground stems
+Poisonous
+Where found?
+In streambed above the dam and 
+in the wetland.
+                                                        (9)
+Flowers are blue- violet, 
+sometimes white, 30- 50 mm 
+wide with five spreading lobes, 
+solitary in leaf axils. Flowers 
+appear during summer.
+Longer distance dispersal can 
+occur when stem segments and 
+seeds are spread by water, in 
+contaminated soil, or in 
+dumped garden waste.
+Treatment
+Pull out.
+127
+ND
+Amphilophium buccinatoria
+Family: Bignoniaceae
+Common names: Mrs River’s hybrid 
+Mexican blood trumpet
+Creeper
+Origin: Mexico
+A large alien creeper, creeping 
+high up in tall  trees, with 
+rhizomes and stolons creeping 
+over the ground, shooting down 
+roots all over into the compost 
+ground. The old plants have 
+thick stolons and rhizomes 
+running along the ground and 
+high up into the trees, growing 
+over indigenous  vegetation, 
+smothering it.
+Where found?
+Not in Kloofendal.  On a forest 
+floor area near a stream in 
+Magaliesberg, climbing right up 
+the highest trees.
+A pair of leaves comes off the 
+branch opposite each other. In 
+young branches often a tendril 
+comes off at that intersection 
+which winds itself onto its host 
+plant.
+Pink tubular flowers, flowering 
+in autumn.
+Not to be confused with
+Mexican Blood Trumpet 
+(Amphilophium buccinatorium), 
+also alien,  which has the same 
+flowers but red and orange in 
+colour.
+                                                         
+Treatment
+Remove by pulling up rhizomes 
+& stolons from the ground, cut 
+into pieces, stack up in piles to 
+reduce chance of roots growing 
+into the soil again. Saw/ cut 
+creeper stems going up into the 
+tree.
+128
+39
+Araujia sericifera
+1b
+Family: Apocynaceae (Asclepiadaceae
+Common names: Moth Catcher
+Creeper
+Origin: South America
+A vigorous climber growing to 
+5m or higher, overtopping and 
+smothering other species. 
+Leaves are dark green and 
+smooth above and pale green or 
+whitish below with short, dense 
+hairs.
+                                                        (9)
+White, cream or pale pink 
+flowers appear from November 
+to April
+The seeds and milky latex are 
+poisonous, the latex can cause 
+skin irritation.
+Where found?
+In forest, where it can climb up 
+into the trees. Also, near tall 
+fences, such tennis courts.
+Big green seed pods, which turn 
+brown and woody and split to 
+release with numerous fluffy 
+seeds
+Not to be confused with
+Pentarrhinum insipidum which 
+also has a milky latex and 
+similar, but a smaller seedpod 
+with fluffy seeds but the leaves 
+are heart shaped.
+                                                         
+Treatment
+Dig and pull out. Remove seed 
+pods before they ripen. If you 
+can’t get the roots out, simply 
+cut base of creeper stem, to 
+stop it producing seed.
+129
+107
+Cuscuta campestris
+1b
+Family: Convolvulaceae
+Common names: Common dodder
+Creeper
+Origin: North America
+Slender, leafless, parasitic herb 
+with yellow or whitish, twining 
+stems up to 2m high and forming 
+dense patches up to 6m across.
+It smothers and parasitizes other 
+plants of economic importance 
+in agricultural crop lands. 
+Dodder has no leaves and no 
+chlorophyll in its stems either, 
+so is totally parasitic on its host 
+plant. 
+Where found?
+Along northern and western 
+border of Kloofendal.
+Leafless annual herb, looks like 
+entwined yellow string creeping 
+plentifully over other vegetation 
+from which it parasitizes by 
+suckers (hausteria). 
+                                                         (9)
+Tiny white flowers in compact, 
+globose clusters
+                                                       (9)
+The flowers produce greenish-
+yellow fruits approximately 
+3mm long
+                                                         
+Treatment
+Cut out and burn infected 
+plants before Dodder can 
+produce seeds .
+130
+120
+Dolichandra unguis-cati / 
+Macfadyena unguis-cati
+1b
+Family: Bignoniaceae
+Common names: Cat’s claw creeper
+Creeper
+Origin: South America
+A fast growing, frost and drought 
+tolerant creeper climbing as high 
+as 9m with claw-like tendrils 
+between the bright green oblong 
+to lance-shaped leaves.
+                                                                             (9)
+Masses of yellow trumpet-
+shaped  flowers appearing in 
+spring.
+It develops resilient tuberous 
+roots from which new plants can 
+grow.(1)
+Where found?
+Not in Kloofendal but in 
+numerous Johannesburg 
+gardens and on roads verges, 
+open areas overgrowing big 
+trees.
+                                                                     
+                                  (87)                                (3)      
+Long, slender pod-like seed 
+capsules (C) that split open to 
+release papery winged seeds 
+(D).
+Not to be confused with
+Yellow Jasmine (Jasminum 
+mesnyi) also an invasive alien 
+creeper, but not declared. 
+Flowers are flat, not tubular.
+                                                                  
+                                                                  (7)         
+Treatment
+Cut older plant at ground level. 
+Dig out the  tubers – difficult as 
+they break easily. (1)
+131
+162
+Hedera canariensis
+3
+Family: Araliaceae
+Common names: Canary ivy
+Creeper
+Origin: Europe
+This evergreen perennial can 
+climb up to 10m high by means 
+of rootlets on the stems, or it 
+can spread over the ground to 
+form a carpet.
+                                                                             (9)
+All parts of the plant are 
+poisonous and the sap an 
+irritant to the skin. (3) 
+Cultivated as an ornamental and 
+as a ground cover. (9)
+Where found?
+Not in Kloofendal but all over in 
+Johannesburg in gardens, on 
+pavements, on roadsides.
+                                                  (9)
+Leaves are bright to dark green, 
+sometimes with broad silvery-
+grey or white edges,  glossy 
+when new, becoming leathery 
+with age. They are mostly wider 
+than they are long, unlobed to 
+shallowly three-lobed. 
+                                                  (9)
+The flowers are green in 
+terminal, globular umbels 
+flowering from March to July, 
+but seldom appear. Fruits are 
+drupes, which are black when 
+ripe. (9)    
+                               
+Treatment
+Stems of Ivy climbing on trees 
+can be cut and above the cut, 
+be pulled away from the tree or 
+wall for a few meters. The Ivy 
+above the cut can be left to rot, 
+it will die if not rooted in the 
+ground. The remaining base 
+should be treated with 
+herbicide (1)
+132
+178
+Ipomoea purpurea 
+1b
+Family: Convolvulaceae
+Common names:  Morning glory
+Creeper
+Origin: Tropical America
+Sterile cultivars or hybrids are 
+not listed. 
+A slender creeper, it climbs up 
+on trees, not along the ground, 
+twining to 3 meters and more, 
+competing with other species. It 
+is an annual plant, has less 
+impact than the similar Ipomoea 
+indica which is perennial. (9)
+                                                              (7)
+Bright green, sparsely hairy, 
+heart-shaped leaves.
+Purplish-blue, reddish, magenta 
+or white flowers, sometimes 
+with contrasting stripes, funnel-
+shaped, to 85mm long. (9)
+Where found?
+In disturbed ground, creeping 
+over or on other vegetation.
+Flowers usually appear 
+November  to May.
+The flowers produce globose 
+seeds, capsules of 10mm 
+measured across.
+The seed is said to contain a 
+powerful hallucinogen. (1)
+Not to be confused with
+Not to be confused with
+other Ipomoeas such as the 
+indigenous Ipomoea ommaney, 
+which has thick, hairy leaves 
+and  crawls over the ground.
+                                                         
+Treatment
+Pull plants out.
+133
+ND
+Jasminum mesnyi 
+Family: Oleaceae
+Common names: Yellow jasmin, 
+Primrose jasmin
+Creeper
+Origin: Southwestern China.
+Primrose jasmine is a rambling, 
+open evergreen shrub with long, 
+slender, arching stems that will 
+climb like a sprawling vine if 
+given support. The stems are 
+square in cross section, and 
+green, becoming woody with age 
+(Wiki). 
+                                                                            (7)
+The glossy dark green leaves are 
+opposite and divided into three 
+leaflets. 
+Where found?
+Primrose jasmine is found 
+growing profusely between the 
+neighbouring fence bordering 
+houses on Galena Street and the 
+path leading from the wetland 
+east wards.
+                                                                         (7)
+The fragrant, yellow trumpet 
+shaped flowers are borne in 
+early spring and sporadically 
+into summer. They are semi-
+double with 6-10 petals,  and 
+sweetly fragrant. 
+Not to be confused with
+Dolichandra unguis (Cat’s claw)
+Treatment
+Pulling and digging out the 
+entire plant & root system, a big 
+task, we have not managed to 
+do so in Kloofendal. It has been 
+cut back as part of the firebreak 
+management between 
+neighbouring properties and 
+Kloofendal.
+134
+ND
+Jasminum polyanthum
+Family: Oleaceae (olive)
+Common names: Jasmin
+Creeper
+Origin: West China
+An evergreen vigorous climbing 
+vine that grows up to mid-
+canopy height. 
+It has very long, non-woody, 
+round, tough, stems that root at 
+the nodes. 
+Smooth edged leaves are 
+arranged in opposite pairs on 
+stems and are divided along the 
+midvein into usually 7 leaflets 
+with the terminal leaflet (up to 7 
+x 2.5 cm) the largest. Leaves are 
+dark green when mature, new 
+growth is tinged with red. 
+Where found?
+Northern border along 
+neighbouring fence and creeping 
+over trees and bushes.
+It has masses of highly scented, 
+small white tubular flowers,  
+flowering mainly in spring 
+followed by occasional glossy 
+black fruit. 
+Treatment
+Vines must be pruned as close 
+to original stem as possible, 
+and then the  cut stem 
+immediately treated  with paint-
+on herbicide – see website link. 
+We would try Kaput as that is 
+the only herbicide we use at 
+present.
+Vines can be progressively 
+rolled up and disposed off at a 
+refuse transfer station or by 
+drying thoroughly and 
+composting, or drying and 
+burning, or burying deeply. 
+Stem fragments must be 
+removed as they, left in soil 
+after rolling, will re-sprout. If so, 
+these resprouted plants need to 
+be pulled out manually. (88)
+135
+199
+Lonicera japonica 
+3
+Family: Caprifoliaceae
+Common names:  Honeysuckle 
+(Japanese)
+Creeper
+Origin: Eastern Asia including 
+China, Japan and Korea.
+An aggressive climber which 
+develops a mass of extensive 
+underground runners and stems 
+that spreads over the ground 
+and climbs up trees for many 
+meters smothering plants 
+underneath it. It invades 
+woodland and riverbanks, 
+usually close to urban areas. (1)
+It blocks sunlight with their 
+dense canopy and eventually 
+pulling down their dead hosts 
+with the weight of the vine. (9)
+                                                               
+                                                            (9)        
+Flowers and fruit are prolific.
+Uses:
+It is an effective groundcover, 
+and has pleasant, strong-
+smelling flowers. (9)
+Where found?
+On and around boundary fencing 
+in the reserve on the north side
+                                                                      
+                                                                       (3)
+Flowers of Japanese 
+honeysuckle are in axillary pairs 
+with corolla 1.5-5 cm long.
+                                                             
+                                                              (3)
+Opposite, simple oval leaves 3-
+8 cm long.
+Not to be confused with
+Other garden plant creepers. 
+Without flowers it can be easily 
+confused.
+Treatment
+For small infestations, repeated 
+pulling and digging out the 
+entire plant & root system. 
+Herbicides are moderately 
+effective (1)
+136
+ND
+Parthenocissus quinquefolia 
+Family: Vitaceae 
+Common names: Virginia creeper
+Creeper
+Origin: USA
+A vigorous large deciduous 
+climber, invasive, overrunning 
+indigenous vegetation.
+Leaves in summer – green, five 
+ovate fingers.
+P. quinquefolia is a Greek  name.
+“Parthenocissus” from Greek 
+means "virgin ivy" – “inquefolia” 
+means  five-leaved.
+Where found?
+Virginia creeper was smothering 
+the big indigenous Leucosidea 
+sericeas on the northern border 
+of  the reserve, below the 
+wetland.
+In Johannesburg it is found 
+growing over trees, hanging 
+down obscuring pathways next 
+to the road, growing onto the 
+road, making it hazardous for 
+pedestrians to walk there.
+Leaves in autumn turn red, 
+flowers inconspicuous; berries 
+blue-black.
+Treatment
+Cut and pull out, follow up by 
+pulling out new growth. 
+137
+ND
+Podranea ricosaliana
+Family: Bignoniaceae
+Common names: Zimbabwe creeper, 
+Port St Johns creeper
+Creeper
+Origin: Tropical regions South 
+America - difficult to find its real 
+origin.
+A vigorous, woody, rambling, 
+evergreen It sends up many tall 
+strong stems — 3 to 5 m up to 
+10+ m high if left  unchecked. It 
+has many underground stems 
+with newly sprouting plants 
+coming up (89), like in 
+Kloofendal, from gardens of 
+neighbouring houses. The roots 
+grow into the cement between 
+bricks of brick walls, seriously 
+damaging these walls.
+Where found?
+Creeper on northern side of 
+wetland and eastern side of 
+reserve coming from 
+neighbouring gardens.
+Podranea ricasoliana has 
+glossy foliage and large 
+bunches of fragrant lilac-pink, 
+trumpet-shaped flowers.
+The fruit is a long, narrow, 
+straight, flattened capsule.
+Moderately poisonous.
+                                                    
+Treatment
+With a large infestation from a 
+neighbouring property, we are 
+experimenting cutting basal 
+stems of the creeper, pulling 
+the branches away from the 
+wall, then leaving cut branches 
+to dry out on top of the stem 
+remains and roots, and when 
+dry burn them and hopefully the 
+numerous sucker plants will 
+burn too. 
+If unsuccessful, use foliar spray 
+on the suckering plants. 
+The suckering plants have 
+impressive roots of their own 
+but can be dug out, but this 
+takes a lot of manpower.
+138
+ND
+Rumex saggitatus/ Acetosa saggitata
+Family: Polyganaceae
+Common names: Red sorrel, Arrow-
+head vine
+Creeper
+Origin: Indigenous to South 
+Africa.
+Rumex sagittatus is a soft-
+stemmed herbaceous 
+scrambling and climbing herb 
+which scrambles quickly over 
+plants smothering them. It has 
+prominent triangular arrow-
+shaped leaves. The grooved 
+green stem may be distinctly 
+tinted red at times (Wiki). 
+                                                                           
+                                                                           (78)
+The small pinkish flowers grow 
+on panicles up to 15 cm long. 
+These are followed by a 3-sided 
+greenish 1 cm diameter pod. 
+The leaves and young stems can 
+be cooked and eaten and are 
+sometimes cultivated as a 
+vegetable in Java (Wiki).
+Where found?
+Disturbed areas, next to path 
+western, lower part of reserve 
+near little cottage.
+It has a tuberous woody 
+rootstock with extensive 
+rhizomes.
+It spreads by seed and by 
+resprouting from the tuber.
+Not to be confused with
+             
+Pentarrhinum insipidum 
+(Donkieperske), which also has 
+heart shaped leaves, it has 
+milky latex, and a seed pod with 
+fluffy seeds. 
+Treatment
+Bag seed and dig out tubers.
+139
+337
+Solanum seaforthianum
+1b
+Family: Solanaceae
+Common names: Potato creeper
+Creeper
+Origin: Tropical America
+A slender herbaceous or woody 
+climber growing 2-3m high It 
+creeps over indigenous bush 
+and smothers them. (9)
+                                                          (3)
+Bright green leaves that are 
+thinly textured and deeply lobed 
+into leaflets. (9)
+Where found?
+Not seen in Kloofendal, but 
+occurs in forested areas of 
+Magaliesberg, in disturbed 
+ground.
+                                                                   (9)
+Sprays of nice smelling lilac 
+flower with yellow stamens 
+sticking out, flowering from 
+December to March.
+                             (9)                                 (3)
+Small, shiny berries that go 
+from green to bright red as they 
+mature. Plant reproduces only 
+by these berries. Fruit, leaves 
+and stems are toxic to 
+mammals, exception of some 
+birds, who  enjoy the berries. (9)
+Treatment
+Follow stem down until roots 
+have been located, then pull or 
+dig out.
+Remove berries and bag them. 
+Leave to rot in bag in the sun. 
+(5). 
+140
+19
+Agave americana
+3
+Family: Agavaceae 
+Common names: American agave, Spreading 
+century plant
+Succulent
+Origin: Mexico
+Succulent shrub with basal 
+rosette of thick heavy leaves up 
+to 2 meters high. Leaves often 
+reflexed. Flowers on an upright 
+stem  5-9 meters tall . (9)
+                                                                             (9)
+This plant spreads laterally via 
+suckers and can form very large 
+and dense colonies over time. 
+The seeds are also dispersed by 
+both wind and water.(9)
+Where found?
+Upper southern border of 
+reserve on rocky ground.
+Succulent light grey leaf with 
+toothed margins and a terminal 
+spine.
+The variegated forms have grey 
+to dark green leaves with yellow 
+or white margins or a central 
+stripe. (9)
+                                    (9)                                  (9)
+Upright flowers 
+(7-10.5 cm long), yellow or 
+greenish-yellow in colour, each 
+have six very prominent 
+stamens.
+Seeds are in a capsule, which 
+is 40 mm long.    
+                                                  
+Treatment
+Injection of concentrated 
+MSMA into Sisal bole. When 
+dead and dried, it can be 
+burned (1).In Kloofendal we dig 
+out small plants, and use panga 
+to hack off leaves and damage 
+the core of big plants.
+141
+ND
+Agave angustifolia
+Family:  Agavaceae
+Common names:  Caribbean agave, Century 
+plant, Narrow-leaved century plant.
+Succulent
+Origin: Native to Mexico and 
+Central America
+A long-lived shrubby plant  
+forming large rosettes of leaves 
+up to 1 m tall and 1.5 m across.
+                                                                         
+                                     
+                                          (79)               (80) 
+Rigid leaves with prickly margins 
+and a pointed tip with a large 
+dark brown spine (1.5-3.5 cm 
+long) (90). 
+Where found?
+Rocky section on northern 
+border of reserve near 
+neighbouring fence.
+Mature plants produce a 
+massive flower cluster (1-2 m 
+long) on a robust flowering stem 
+3-5 m tall (90).
+Greenish-yellow flowers, 5-6.5 
+cm long, borne in upright 
+position and have 6 very large 
+protruding stamens. (80)
+The fruit are capsules which 
+turn from green to dark brown 
+or blackish in colour as they 
+mature and eventually split 
+open to release their seeds.
+A. angustifolia reproduces by 
+seed, but most of the 
+reproduction is probably 
+vegetative. It produces 
+numerous suckers and often 
+also develops plantlets (i.e. 
+bulbils) on the branches of its 
+flower clusters (90)
+                                                  
+                                                    (81)             
+Treatment
+For small infestation, we have 
+dug out the small Agaves and 
+used a panga to hack off leaves 
+and damage the core of the adult 
+plant.
+142
+58
+Bryophyllum delagoense/ Kalanchoe 
+delagoensis
+1b
+Family: Crassulaceae
+Common names: Chandeliers plant, 
+Mother of thousands
+Succulent
+Origin: Madagscar
+A very distinctive succulent herb 
+growing up to 1,2m with toothed 
+grey-green leaves with dark-
+green to reddish spots. (9)       
+It reproduces rapidly from small 
+plantlets which are produced at 
+the tips of leaves. Care must be 
+taken not to knock these 
+plantlets off when clearing 
+plants. (3) 
+It competes with indigenous 
+species and is very poisonous to 
+humans and animals. (9) 
+Where found?
+Rocky area upstream from the 
+dam.
+                                                                      (9)
+Tomato-red flowers pendant at 
+the top of an erect stalk, 
+flowering during June and July.
+                                                              (9)
+It produces small fruits with 
+numerous seeds. 
+                                                  
+Treatment
+Unwanted plants should be 
+uprooted and totally removed. 
+(1) 
+143
+85
+Cereus jamacaru 
+1b
+Family: Cactaceae
+Common names: Queen of the night
+Succulent
+Origin: Brazil
+C. jamacaru is widely invasive 
+across the savanna biome in 
+South Africa and is 
+taxonomically similar to, and 
+difficult to distinguish from, 
+other tree cacti in the Cereus 
+hexagonus complex. (9)
+Tree-like cactus with sharp, little 
+thorns, no leaves, only many 
+stems. These stems are green to 
+blue-green, often powdery when 
+young, with 4–12 prominent ribs, 
+sometimes broken and wavy in 
+monstrous forms. (3)
+Where found?
+Southern border of the reserve, 
+adjacent and in neighbouring 
+garden
+Spines are in groups of 5–10 
+                                                               (3)    
+                                   (9)               
+Flower buds – the flowers open 
+at night into white flowers. (9)
+Fruits are yellowish, Orange, 
+pink or red, succulent berries, ± 
+6 cm long, white inside with 
+small, black seeds. Its fruits 
+can be eaten dried or made into 
+a juice. (9)
+             
+New plants grow from the 
+thorns on each cladode .       
+144
+85
+Cereus jamacaru (cont.)
+1b
+Family: Cactaceae
+Common names: Queen of the night
+Succulent
+Not to be confused with
+Euphorbia ingens (Naboom), 
+whose cut stems, unlike C. 
+jamacaru,  exude a milky latex.
+                                                       (93)
+                                                        (93) 
+                                                                  
+Treatment
+Small plants – squash with boot 
+or rock, or uproot (handle by 
+roots) and hang up securely to 
+dry out in fork of tree. Large 
+plants – infest with mealybug, 
+Hypogeococcus festerianus. 
+Once infested a large plant may 
+take up to 3 years to die, but will 
+no longer produce viable seed, 
+and will remain a source of the 
+biocontrol agent in the infested 
+area. (5)
+Option 2. Chop down, but  the 
+stem base must be dug up and 
+the broken stems must all be 
+checked for regrowth. It should 
+then be buried deeply or burnt. 
+Or sprayed or injected with 
+MSMA. (1)
+145
+238
+Opuntia ficus-indica 
+1b
+Family: Cactaceae
+Common names: Prickly pear (sweet)
+Succulent
+Origin: Mexico
+Flattened leaf-like stems 
+(cladodes) are grey to grey-green 
+and are much longer than broad, 
+varying from heavily spined to 
+spineless. 
+The leaves are minute. (9)
+                                                         (9)
+Bright yellow or orange showy 
+flowers appear from October to 
+December. (9)
+Where found?
+Southern top part of reserve
+                          (9)
+The yellowish, turning into 
+reddish, edible fruit is covered 
+with minute spines (glochids) 
+which are highly irritating to the 
+skin (4). 
+Dense infestations reduce the 
+grazing potential of the land, 
+causing drastic devaluation of 
+agricultural land conservation 
+land. The spiny cladodes can 
+cause injuries to animals and 
+during the fruiting season the 
+minute spines (glochids) on the 
+fruits can be highly irritative and 
+can result in animals being 
+unable to feed. (9)
+146
+238
+Opuntia ficus-indica (cont.)
+1b
+Family: Cactaceae
+Common names: Prickly pear (sweet)
+Succulent
+Treatment
+(i) Biocontrol with cochineal is 
+successful in Kloofendal but 
+needs to be spread over more 
+cacti.
+(ii) Small plant – squash with 
+boot or rock
+(iii) Large plant – cut roots with a 
+knife, kick out with boot, pick up 
+with stick and wedge into tree or 
+crack in rock (it will root if left in 
+the soil) (5).
+147
+240
+Opuntia leucotricha
+1b
+Family: Cactaceae
+Common names: Prickly pear (Aaron’s beard)
+Succulent
+Origin: Mexico
+Spiny, succulent shrub 3–4m 
+high. The stem sections are 
+flattened (cladodes) with a 
+velvety surface, up to 25 x 12 cm 
+in size. There are 1–6 spines per 
+group, the radiate outer spines 
+are yellow, 1–2 cm long, the 
+central spine is white, flexible, 
+deflexed, up to 7.5 cm long, 
+giving older cladodes a white, 
+bearded appearance. (3)
+Cladodes densely covered with 
+spines.
+Rambling growth.
+Where found?
+Southern upper border of 
+reserve, adjacent to 
+neighbouring fences
+This cactus propagates easily 
+from the leaf pads or cladodes. 
+Even a small piece lying on the 
+ground can grow roots and 
+flourish.
+Flower buds sprouting out of 
+each cladode.
+Flowers are yellow, ± 5 cm 
+across.
+Fruits are yellowish green, 4–6 
+cm long, spineless or with 
+wispy, threadlike spines.
+Spines and glochids (minute 
+spines) are an irritant to the skin 
+(3)
+Not to be confused with
+Other Prickly pears
+Treatment
+As for Opuntia ficus indica
+148
+225
+Nasturtium officinale
+2
+Family: Brassicaceae
+Common names: Watercress, Bronkhorstslaai 
+Waterweed
+Origin: Europe
+Perennial, aquatic herb with 
+erect, creeping or floating, 
+hollow stems up to 1 m long, 
+rooting at the nodes, and mat-
+forming.
+                                                                             (3)
+Bright green, pinnate with 3–11 
+leaflets, terminal leaflet often 
+larger than the laterals; margins 
+entire, somewhat fleshy. (3)
+Cultivated for food
+i.e. salads and garnishing
+Where found?
+Not in Kloofendal as there is not 
+much perennial water, but there 
+is plenty in the Walter Sisulu 
+National Botanical Gardens’ 
+stream
+                                                             (3)
+Flowers are white
+(A), 5 mm long, in terminal, 
+elongated racemes, flowering 
+September to March.
+Fruits are brown, linear-
+cylindrical, 2-valved (B), curved 
+upwards. (3)
+Not to be confused with
+The indigenous species which 
+has leaves that have toothed or  
+deeply divided leaves and 
+yellow, not white flowers. 
+Treatment
+To be removed by hand (1)
+149
+179
+Iris pseudacorus
+1a
+Family: Iridaceae
+Common names: Yellow flag, Geel iris
+Waterweed
+Origin: Europe, North Africa, 
+Asia.
+                                                                          (9)
+Perennial, rhizomatous, clump-
+forming, aquatic herb up to 1m 
+high, sometimes forming 
+floating mats. (3)
+Brought in as an ornamental 
+plant.
+                                                                             (9)
+Leaves blue-green, flattened 
+with a raised midrib, lanceolate, 
+up to 1 m long, 3cm wide. (3)
+Where found?
+Where found?
+In the Kloofendal wetland at a 
+freshwater perennial spring.
+                                                                      (9)
+Yellow, showy, large, flowers 
+with 3 narrow and 3 broad, 
+petal-like lobes up to 7.5 x 4 
+cm, flowering October to 
+November. (3)
+All parts are poisonous, 
+especially the rhizomes. 
+The sap can be an irritant to 
+people’s skin (3)
+Fruits are glossy green, 3-
+angled capsules, 4–8 cm long 
+(3).
+Treatment
+Pull and dig out but beware that 
+the sap may irritate the skin.
+150
+Glossary
+Androecium
+Stamens in a flower together form the androecium
+Apex
+Referring to a leaf – Apex is the top, base is bottom 
+part of a leaf.
+Axillary
+Referring to leaf or flower or thorn coming off 
+between leaf and stem (axil).
+Basal stem 
+Treatment
+Refers to application of herbicide to root crown, 
+exposed root and stem up to 25cm high of growing 
+tree or shrub (1).
+Biennial
+A plant that requires two summers for development, 
+with a winter in between. The vegetative phase in 
+the first year and the reproductive phase in the 
+second year (1).
+Bisexual
+In bisexual plants, the flower contains both the 
+male and female parts.
+Calyx
+Sepals of a flower together form the outer ring, 
+called a calyx.
+Carpel
+Flower ovary.
+Carrying capacity
+Of an environment is the maximum population size 
+of a biological species that can be sustained by that 
+specific environment given the food, habitat, water 
+and other resources available (Wiki).
+Coppicing
+Regrowth from a stump or stem that has been cut.
+Corolla
+Ring of petals of a flower together form the corolla, 
+forming the inner ring of leaflike appendages of a 
+flower.
+151
+Glossary (cont.)
+Culm
+Referring to grass – parts which bear the leaves and 
+inflorescences (7).
+Cultivation
+Turning or disturbing the soil to destroy weeds (1).
+Cut-stump
+Referring to herbicide application to the surface of 
+a freshly cut tree stump.
+Dioecious
+Male and female flowers of a species growing on 
+separate plants.
+Epiphyte
+An epiphyte is a plant or plant-like organism that 
+grows on the surface of another plant and derives 
+its moisture and nutrients from the air, rain, water 
+or from debris accumulating around it. The plants 
+on which epiphytes grow are called phorophytes. 
+(Wikipedia)
+Forb
+A herbaceous flowering plant other than a grass, a 
+broad-leaved, non-woody plant.
+Glochids
+Hair-like spines or short prickles, generally barbed, 
+found on the areoles of cacti in the sub-family 
+Opuntioideae. Cactus glochids easily detach from the 
+plant and lodge in the skin, causing irritation upon 
+contact.
+Gynoecium
+Ovaries of a flower, whether one or multiple, are 
+called a “gynoecium”.
+Herb
+Plant not woody, but soft and leafy.
+152
+Glossary (cont.)
+Herbicide
+A substance for controlling weeds.
+Hermaphroditic
+In plants, hermaphrodites are known as complete 
+(or bisexual) flowers. Complete flowers have 
+stamens, pistil, petals and sepals.
+Indigenous
+Native or originating from a place.
+Invader
+A species that is not indigenous to a particular area 
+and encroaches on or replaces the natural 
+vegetation. (96)
+Latex
+Milky juice in some plants.
+Monoecious
+Male and female flowers of a species growing on 
+the same plant. 
+Odiferous
+Having an odour or fragrance (Wiki).
+Ovate
+Referring to leaf shape – leaf shape looks egg-
+shaped.
+Petal
+Colourful leaflike appendages of a flower.
+Petiole
+Leaf stalk.
+Pistil
+Female organ of a flower which will produce the 
+fruit and seeds, comprising of the ovary, style and 
+stigma.
+Pinnately 
+compound
+A compound leaf once divided.
+Pod
+A type of fruit that splits longitudinally in two 
+halves.
+153
+Glossary (cont.)
+Raceme
+Referring to grass: Part of an inflorescence in which 
+the spikelets are borne  on stalks (8).
+Rhizome
+A creeping underground stem which sends up new 
+leaves and stems each season (8).
+Ringbarking
+The removal of the bark of a shrub or tree in a 
+complete circle around the trunk.
+Rootstock
+Erect short underground stem, but term is also 
+used for perennial, underground roots or other 
+organs (1).
+Ruderal
+Weeds growing where the natural vegetational 
+cover has been disturbed by humans. ruderal 
+weeds of old fields and roadsides (Wiki)
+Runner
+An elongated stem growing horizontally above the 
+ground and rooting at the nodes to form new 
+plants.
+Sepals
+Green leaf like appendage of a flower forming 
+outer ring of flower appendages.
+Shrub
+A perennial plant with usually two or more stems 
+arising from or near the ground.
+Spaced digitate
+Referring to grass inflorescence – three or more 
+racemes coming off at top or near top of grass 
+culm.
+Spikelet
+Small structures of the inflorescence of a grass in 
+which seeds are formed (6)
+154
+Glossary (cont.)
+Stamen
+Male part of the flower, consisting of a filament 
+and two anthers. The anthers carry the pollen.
+Stolon
+An elongated stem growing horizontally above the 
+ground and rooting at the nodes to form new 
+plants.
+Succulent
+A plant with fleshy and juicy stems and leaves 
+that contain reserves of moisture (1) 
+Sucker
+A shoot arising from the roots of a woody plant, 
+often some distance away from the main stem. (1)
+Taproot
+An unbranched, vertically descending root.
+Tuber
+Underground swollen part of stem or root which 
+stores food; capable of producing new shoots 
+from buds on its surface (8)
+Tree
+A large perennial woody plant with a single stem 
+or trunk.
+Umbel
+An inflorescence that consists of a number of 
+short flower stalks (called pedicels) that spread 
+from a common point, somewhat like umbrella 
+ribs (Wiki).
+Unisexual
+In unisexual plants, male and female flowers of a 
+species are on separate plants
+Whorl
+Referring to an inflorescence: a ring of similar 
+branches that spread from a common point (6).
+155
+REFERENCES
+(1) Bromilow, C. 2018. Problem plants and Alien Weeds of South 
+Africa. Briza Publications, Pretoria
+(2) Bromilow, C. 2010. Problem plants and Alien Weeds of South 
+Africa. Briza Publications, Pretoria 
+(3) Henderson, L. 2020. Invasive Alien Plants in South Africa. 
+Agricultural Research Council. Pretoria
+(4) Henderson, L. 2001. Alien Weeds and Invasive Plants in South 
+Africa. Agricultural Research Council. Pretoria
+(5) Klein, H. & Neser, O. 2018.  A Field Guide to the Invasive Alien 
+Plants of the Magaliesberg. The Mountain Club of South Africa, 
+Magaliesberg section.
+(6) van Oudtshoorn, F. 2012. Guide to Grasses of Southern Africa. 
+2012. Briza. Pretoria.
+(7) Van Wyk, J. 2018. Imaged list of Wild  Flowers of Kloofendal 
+Nature Reserve. Friends of Kloofendal. Johannesburg
+(8) Van Wyk, B. & Malan,  S. 2018.  Field guide to the Wild Flowers 
+of the Highveld, Struik. Cape Town.
+(9) www.invasives.org.za 
+(10) Josh Jackson, Wikimedia Commons 2.0, Acacia longifolia
+(11) Karduelis, Wikimedia Commons , Ailanthus- branches on 
+tree
+(12) H. Zell, Wikimedia Commons 3.0, Ailanthus leaves on 
+branches
+(13) Vengolis, Wikimedia Commons 3.0, Trema orientalis
+(14) JMK, Wikimedia Commons 3.0, Celtis sinensis – leaves & 
+fruits 
+156
+(15) Betty Wood, Wikimedia Commons 3.0, Eucalyptus 
+camaldulensis 
+(16) Murray Fagg, Wikimedia Commons 3.0, Eucalyptus cinerea - 
+leaves
+(17) Jackie Miles, Wikimedia Commons 3.0, Eucalyptus cinerea - 
+flowers
+(18) Neville Walsh, Wikimedia Commons 3.0, Eucalyptus cinerea 
+(19) Neville Walsh, Wikimedia Commons 3.0, Eucalyptus 
+(20) Krzysztof Ziarnek, Wikimedia Commons 4.0., Gleditsia 
+triacanthos
+(21) Georg Slickers, Wikimedia Commons 3.0., Gleditsia 
+triacanthos
+(22) Alexey Yakovlev, Wikimedia Commons 4.0., Vachellia karroo 
+/Acacia karroo
+(23) José Luis Gálvez, Wikimedia Commons 2.5., Ligustrum 
+japonicum
+(24) Bidgee, Wikimedia Commons 3.0., Ligustrum lucidum
+(25) HoHey22, Wikimedia Commons 4.0., Robinia pseudoacacia
+(26) Kenraiz, Wikimedia Commons 3.0., 2.5., 2.0., 1.0., Robinia 
+pseudoacacia
+(27) Andrey Butko, Wikimedia Commons 3.0., Robinia 
+pseudoacacia
+(28) Simon A. Eugster, Wikimedia Commons 3.0., Robinia 
+pseudoacacia
+(29) Jdforrester, Wikimedia Commons 1.0., Salix babylonica
+(30) Alvesgaspar, Wikimedia Commons 3.0., Salix babylonica
+(31) SAPIA News July 2011, no. 20, p. 2, Cestrum parqui – leaves & 
+flowers
+157
+(32) Pere Igor, Wikimedia Commons 3.0., Cotoneaster franchetii - 
+flowers
+(33) A Bara, Wikimedia Commons 3.0., Cotoneaster franchetii - 
+fruit
+(34) Geoff Nichols, https://pza.sanbi.org/lippia-javanica, Lippia 
+javanica
+(35) Geoff Nichols, https://pza.sanbi.org/lantana-rugosa, Lantana 
+rugosa
+(36) infoweeds@arc.agric.za, Lantana camara
+(37) Kenpei, Wikimedia Commons 2.1., Nandina domestica
+(38) Sten Porse, Wikimedia Commons 3.0., Nandina domestica
+(39) Duncan McKenzie, Wikimedia Commons CC BY-NC, 
+Protasparagus laricinus
+(40) Bernard Dupont, Wikimedia Commons 2.0., Protasparagus 
+laricinus
+(41) Cillas, Wikimedia Commons 4.0., Protasparagus laricinus
+(42) Forest & Kim Starr, Wikimedia Commons 3.0., Protasparagus 
+setaceus
+(43) SAPIA News 19 April 2011, no. 19, Rubus cuneifolius
+(44) Henderson, L. 2024. , Pers. Comm., Rubus cuneifolius
+(45) Ottilie Neser, Rubus rigidus
+(46) Henderson, L. 2023. , Pers. comm, Seriphium plumosum
+(47) SANBI, Seriphium plumosum
+(48) Jee& Rani Nature Photography, Wikimedia Commons 4.0., 
+Achyranthus aspera
+(49) Pl@ntnet, Achyranthus aspera
+158
+(50) Jon Richfield, Wikimedia Commons 3.0., Bidens pilosa
+(51) Kokeyama, Wikimedia Commons 4.0., Bidens Pilosa
+(52) W.C., WikimediaCommons 4.0., Bidens pilosa
+(53) Bromilow, C. 1995., Cyathula - species unknown
+(54) Candice Harvard, Facebook, Campuloclinium 
+macrocephalum
+(55) Bart Wursten   https://www.zambiaflora.com , Cyathula 
+cylindrica,   Cyathula cylindrica
+(56) Forest & Kim Starr, Wikimedia Commons 3.0, Physalis 
+peruviana
+(57) MW, Wikimedia Commons 4.0., Physalis peruviana
+(58) Félicien Mushagalusa Kasali, Wikipedia photo, Physalis 
+peruviana
+(59) Peter Firus,, Wikimedia Commons 4.0., Physalis peruviana
+(60) Petr Harant, Wikimedia Commons 4.0., Plantago lanceolata
+(61) Valeria Olivas, Wikimedia Commons 4.0., Plantago 
+lanceolata
+(62) Robert Flogaus, Wikimedia Commons 4.0., Plantago 
+lanceolata
+(63) text, Wikimedia Commons 4.0, Pteridiumaquilinum
+(64) Hildegard Klein, , Solanum elaeagnifolium
+(65) Eugene Sturla, Credit photo courtesy of Eugene Sturla, 
+Southwest Desert Flora, April 2024, Solanum elaeagnifolium
+(66) Zygmunt Put, Wikimedia Commons 4.0., Solanum 
+pseudocapsicum
+(67) Forest & Kim Starr, Wikimedia Commons 3.0. , Alternanthera 
+pungens
+159
+(68) Wouter Hagens, Wikimedia Commons CC0, Duchesnea 
+indica
+(69) Kurt Stüber, Wikimedia Commons 3.0, Duchesnea indica
+(70), Tonrulkens, Wikimedia Commons 2.0, Richardia brasiliensis
+(71) D. Kirkby, Pers. Comm., Richardia brasiliensis
+(72) Alvesgaspar, Wikimedia Commons 3.0, Tradescantia 
+fluminensis
+(73) Enrique Dans, Wikimedia Commons 2.0 generic, 
+Tradescantia fluminensis
+(74) Ixitixel, Wikimedia Commons CC0, Tradescantia fluminensis
+(75) Dick Culbert, Wikimedia Commons 2.0, Amphilophium 
+buccinatoria
+(76) Forest & Kim Starr, Wikimedia Commons 3.0, Dolichandra 
+unguis-cati
+(77) Didier Descouens, Wikimedia Commons CC0, Jasminum 
+polyanthum
+(78) Jeremy R. Rolfe, Wikimedia Commons CC BY, Rumex 
+saggitatus
+(79) J.M.Garg, Wikimedia Commons CC0 1.0, Agave angustifolia
+(80) J.M.Garg, Wikimedia Commons CC0 1.0 , Agave angustifolia
+(81) J.M.Garg. Wikimedia Commons CC0 1.0, Agave angustifolia
+(82) Famartin, Wikimedia Commons 4.0., Nandina domestica - 
+fruit
+(83) Ruth Kerriush, Wikimedia Commons 3.0, Eucalyptus cinerea 
+– buds & fruit
+(84) Thomas N., Wikimedia Commons 2.5, Eucalyptus 
+camaldulensis – flower
+160
+(85) W. Hill ex Maiden, Casabio.org/taxa/eucalyptus-grandis , 
+Eucalyptus grandis – flower
+(86) Ina Dinter, http://www.africanplants.senckenberg.de/  
+Dicerocaryum eriocarpum
+(87) Carolyn Lewis, Dolichandra unguis-cati
+(88) https://weedaction.org.nz › jasmine, Jasminum polyanthum
+(89)  https://pza.sanbi.org/podranea-ricasoliana, Podranea 
+ricosaliana
+(90) Lucidcentral, Agave angustifolia
+(91) J.M. Garg, Wikimedia Commons 3.0 Agave sisalana, flower. 
+(92) Forest Starr & Kim Starr, 
+https://www.llifle.com/Encyclopedia/SUCCULENTS/Family/Agav
+aceae/27921/Agave_sisalana, Agave sisalana, bulbils
+(93) Thabo Maphisa, https://operationwildflower.org.za/ Ephorbia 
+ingens
+(94) Wikipedia, Glochid
+(95) JMK, Wikimedia Commons 3.0. Lopholaena coriifolia
+(96) Henderson, L. 2024. Pers. Comm. Glossary
+161
+Index
+Acacia baileyana 27
+Bankrupt bush 82
+Acacia dealbata 28,29
+Bidens pilosa 88
+Acacia elata 30
+Bird flower 68
+Acacia longifolia 31
+Black cherry 55
+Acacia mearnsii  32,33
+Black cherry 77
+Acacia melanoxylon 34
+Black locust 56
+Acacia podalyriifolia 35
+Black wattle 32,33
+Achyranthus aspera 85
+Blackjacks 88
+Adelaars varing 110
+Blackwood (Australian) 34
+Agave (American) 141
+Bracken 110
+Agave americana 141
+Bramble (American) 78,79
+Agave angustifolia 142
+Bronkhorst-slaai 149
+Ageratina adenophora 86
+Bryophyllum delagoense 143
+Ailanthus altissima 36,37
+Bugweed 58
+Alternanthera pungens (A. repens) 121 Burmese mahonia 74
+American (or sweet) elder 80
+Burr weed 116
+Amphilophium buccinatoria 128
+Burr weed 94
+Araujia serricifera 129
+Burr weed 95
+Argemone ochroleuca 87
+Burr weed 96
+Arrow-head vine 139
+Californian privet 72
+Arsenic bush 81
+Callistemon viminalis 38
+Arundo donax 22
+Camphor tree 42
+Bahia grass 24
+Campuloclinium macrocephalum 89,90
+Bailey’s wattle 27
+Canadian elder 80
+162
+Index
+Canna (wild) 91
+Common privet 49
+Canna indica 91
+Common privet 70
+Caribbean agave 142
+Common thorn apple 98
+Cat’s claw creeper 131
+Conyza sumatrensis var. sumatrensis 
+93
+Celtis australis 39
+Cortaderia jubata 23
+Celtis occildentalis 40
+Cotoneaster franchetii  66
+Celtis sinensis & hybrids 41
+Cotoneaster pannosus 67
+Century plant 142
+Crimson cestrum  62
+Cereus jamacaru  144,145
+Crofton weed 86
+Cestrum aurantiacum 61
+Crotalaria agatiflora  68
+Cestrum elegans 62
+Cudweed 109
+Cestrum parqui 63,64,65
+Cuscuta campestris 130
+Chaff flower 85
+Cyathula – species unknown 96
+Chandelier plant 143
+Cyathula cylindrica var. cylindrica 94
+Chilean cestrum 63,64,65
+Cyathula uncinulata 95
+Chinese elm 60
+Cynoglossum lanceolatum 97
+Chinese holly grape 74
+Datura stramonium  98
+Chinese privet 73
+Dense-thorned bitter apple 114
+Chinese wax-leaved privet 50
+Devil’s thorn 122
+Chinese wax-leaved privet 71
+Dicerocaryum eriocarpum 122
+Cinnamomum camphora 42
+Dodder (common) 130
+Cirsium vulgare 92
+Dolichandra unguis-cati 131
+Cocklespur (large) 119
+Duchesnea indica 123
+Common hackberry 40
+Elandsdoring 122
+163
+Index
+Eucalyptus camaldulensis 43
+Ipomoea purpera  133
+Eucalyptus cinerea 44
+Iris pseudacorus 150
+Eucalyptus grandis 45
+Iris pseudacorus 150
+Euphorbia heterophylla 99
+Ivy (Canary ) 132
+European hackberry 41
+Jacaranda 47
+False acacia 56
+Jacaranda mimosifolia 47
+Florist’s gum 44
+Japanese wax-leaved privet 70
+Forget-me-not 97
+Jasmin (yellow) 134
+Fountain grass 26
+Jasmin 135
+Four O'clock 102
+Jasminium polyanthum 135
+Galinsoga parviflora 100
+Jasminum mesnyi  134
+Gallant soldier 100
+Jerusalem cherry 113
+Geel iris 150
+Kankerroos 119
+Geelklokkies 84
+Katbos 76
+Giant Spanish reed 22
+Khaki weed (tall) 115
+Gleditsia triacanthos 46
+Kikuyu grass 25
+Gooseberry (Cape) 104
+Knopkruid 100
+Heavenly bamboo, Sacred bamboo 75 Knotweed (pink) 124
+Hedera canariensis 132
+Knotweed (Spotted) 108
+Heliotropium amplexicaule 101
+Langkakiebos 115
+Honey locust 46
+Lantana 69
+Honeysuckle (Japanse) 136
+Lantana camara 69
+Indian shot 91
+Leucaena leucocephala 48
+Inkberry 105,106
+Knopkruid 100
+164
+Index
+Knotweed (pink) 124
+Morus alba 52
+Knotweed (Spotted) 108
+Moth catcher 129
+Langkakiebos 115
+Mother of thousands 143
+Lantana 69
+Mrs River’s bloodtrumpet 128
+Lantana camara 69
+Nandina domestica 75
+Leucaena leucocephala 48
+Nasturtium officinale 149
+Leucaena, reuse wattel 48
+Nasturtium officinale 149
+Ligustrum japonicum 49
+Nephrolepis cordifolia 103
+Ligustrum japonicum 70
+Nettle tree 39
+Ligustrum lucidum 50
+Nettle tree 41
+Ligustrum lucidum 71
+Opuntia ficus-indica 146,147
+Ligustrum ovalifolium 72
+Opuntia leucotricha 148
+Ligustrum sinense 73
+Opuntia leucotricha 148
+Lindenleaf sage 111
+Orange cestrum 61
+Longifolia pine 53
+Pampasgras 23
+Long-leaved wattle 31
+Paper thorn 125
+Lonicera japonica  136
+Paperthorn 121
+Mahonia oiwakensis 74
+Parthenocissus quinquefolia  137
+Malpitte 98
+Paspalum notatum 24
+Matchwood poplar 54
+Pearl acacia 35
+Melia azedarach 51
+Pennisetum clandestinum 25
+Mexican poppy (white flowered) 87
+Pennisetum setaceum 26
+Mirabilis jalapa 102
+Penny gum 44
+Morning glory 133
+Pepper wattle tree 30
+165
+Index
+Periwinkle (greater) 127
+Red sesbania  83
+Persicaria capitata 124
+Red sorrel 139
+Physalis peruviana 104
+Redstar zinnia 120
+Phytolacca octandra 105,106
+Richardia (tropical) 125
+Pine 53
+Richardia brasiliensis 125
+Pinus roxburghii 53
+Robinia pseudoacacia 56
+Plantago lanceolata 107
+Roerkruid 109
+Plantain (Buckhorn) 107
+Ronde klits 95
+Podranea ricasoliana  138
+Ronde klits 96
+Pointsettia (wild) 99
+Rooibloekom 43
+Polygonum lapathifolium 108
+Rooibloekom 45
+Pompom weed 89,90
+Rubus cuneifolius& hybrids 78,79
+Populus x canescens 54
+Rumex saggitatus 139
+Potato creeper 140
+Salix babylonica 57
+Prickly pear (Aaron's-beard)  148
+Salvia tiliifolia 111
+Prickly pear (Sweet)  146,147
+Sambucus canadensis 80
+Protasparagus laricinus 76
+Satansbos 112
+Prunus serotina 55
+Scotch thistle 92
+Pseudognaphalium luteo-album 109
+Senna septemtrionalis 81
+Pteridium aquilinum 110
+Seringa 51
+Pyracantha angustifolia 77
+Seriphium plumosum 82
+Queen of the night 144,145
+Sesbanis punicea 83
+Red river gum 43
+Silver wattle 28,29
+Red river gum 45
+Silverleaf cotoneaster 66
+166
+Index
+Silverleaf cotoneaster 67
+Verbena (Brazilian) 118
+Silverleaf-bitter apple 112
+Verbena (tall) 117
+Slangbos 82
+Verbena bonariensis 117
+Smooth senna 81
+Verbena brasiliensis 118
+Solanum elaeagnifolium 112
+Vier uurtjies 102
+Solanum mauritianum 58
+Vinca major  127
+Solanum pseudocapsicum 113
+Virginia creeper 137
+Solanum seaforthianum 140
+Wandering Jew 126
+Solanum sisymbriifolium 114
+Water cress 149
+Solanum wattle 57
+Weeping bottlebrush 38
+Spear thistle 92
+Weeping willow 57
+Spreading century plant 141
+White mulberry 52
+Sword fern (Boston) 103
+Wild asparagus 76
+Tagetes minuta 115
+Wild cherry 55
+Tall fleabane 93
+Wild strawberry 123
+Tecoma stans 84
+Wild tomato 114
+Tipu tree 59
+Xanthium strumarium 119
+Tipuana tipu 59
+Yellow bells 84
+Tradescantia fluminensis 126
+Yellow fire thorn 77
+Tree of heaven 36,37
+Yellow flag 150
+Triumfetta pilosa 116
+Zimbabwe creeper 138
+Ulmus parviflora 60
+Zinnia peruviana 120
+167
+About the Author
+Karin Spottiswoode qualified as a FGASA 1 Field Guide in 2002, has 
+been involved in field guiding ever since, obtained her FGASA 3 
+qualification in 2012. She assisted in training of field guides 2006 – 2009 
+with Bushveld Training Adventures.
+She was one of the founder members of the Friends of Kloofendal and 
+started an Environmental Education Program in the Kloofendal Nature 
+Reserve over weekends for family groups, people of varied interests in 
+the natural environment in the form of two-hour guided nature walks 
+with different topics such as birding, wildflowers, trees & shrubs, 
+grasses, geology, insects, reptiles, frogs and a “hands-on” program for 
+school groups during the week. Her passion has always been plants 
+and over the years she developed a growing concern in the increase in 
+Alien Invasive Plants in the reserve, all over Johannesburg and in the 
+Magaliesberg. The Environmental Education program in Kloofendal has 
+for the last eight years in part become focused on  identification of 
+AIPs, distinguishing them from the indigenous similar-looking plants, 
+and  trying out methods of controlling these invasive problem plants 
+without using herbicides, to help the workers and students working in 
+Kloofendal in AIP control.
+The aim is now to extend this work over the city of Johannesburg where 
+AIPs have become a huge and growing problem.
+168
