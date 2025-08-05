@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Recognition AI</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="css/style.css?v=20240805_5" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span>BotanicaVision</span>
+            </div>
+            
+            <div class="nav-controls">
+                <!-- Toggle Switch -->
+                <div class="nav-toggle">
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="mode-toggle" class="toggle-input">
+                        <label for="mode-toggle" class="toggle-label">
+                            <span class="toggle-text-left">Classify</span>
+                            <span class="toggle-text-right">Admin</span>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Auth Buttons -->
+                <div class="auth-buttons" id="auth-buttons">
+                    <button class="auth-btn login-btn" id="login-btn">Login</button>
+                    <button class="auth-btn signup-btn" id="signup-btn">Sign Up</button>
+                </div>
+                
+                <!-- User Info (hidden when not logged in) -->
+                <div class="user-info" id="user-info" style="display: none;">
+                    <span class="user-name" id="user-name">Admin</span>
+                    <button class="logout-btn" id="logout-btn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Login</h3>
+                <button class="modal-close" id="login-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="auth-form" id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" required>
+                </div>
+                <button type="submit" class="auth-submit-btn">Login</button>
+            </form>
+            <div class="auth-error" id="login-error"></div>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal-overlay" id="signup-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Create Account</h3>
+                <button class="modal-close" id="signup-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="auth-form" id="signup-form">
+                <div class="form-group">
+                    <label for="signup-username">Username</label>
+                    <input type="text" id="signup-username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm-password">Confirm Password</label>
+                    <input type="password" id="signup-confirm-password" name="confirmPassword" required>
+                </div>
+                <button type="submit" class="auth-submit-btn">Create Account</button>
+            </form>
+            <div class="auth-error" id="signup-error"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Classify Section -->
+        <div class="content-section" id="classify-section">
+            <div class="split-layout">
+                <!-- Left Panel - LLM Analysis -->
+                <div class="left-panel">
+                    <div class="llm-container">
+                        <h3 class="llm-title">AI Analysis</h3>
+                        <div class="llm-status" id="llm-status">
+                            <span>Ready for analysis</span>
+                        </div>
+                        
+                        <div class="detection-history" id="detection-history">
+                            <!-- Detection entries will be added here dynamically -->
+                        </div>
+                        
+                        <div class="llm-controls">
+                            <button id="clear-history-btn" class="llm-btn">
+                                <i class="fas fa-trash"></i> Clear History
+                            </button>
+                            <button id="export-analysis-btn" class="llm-btn">
+                                <i class="fas fa-download"></i> Export Analysis
+                            </button>
+                            <button id="test-llm-btn" class="llm-btn">
+                                <i class="fas fa-flask"></i> Test LLM
+                            </button>
+                            <button id="clear-processed-btn" class="llm-btn">
+                                <i class="fas fa-eraser"></i> Clear Processed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Panel - Upload/Video -->
+                <div class="right-panel">
+                    <div class="unified-container">
+                        <!-- Video Mode Content -->
+                        <div class="mode-content active" id="video-content">
+                            <div class="stream-container">
+                                <h2 class="section-title">Live Plant Recognition</h2>
+                                
+                                <div class="camera-preview" id="camera-preview">
+                                    <video id="video-stream" autoplay muted playsinline></video>
+                                    <canvas id="canvas-capture" style="display: none;"></canvas>
+                                    <div class="camera-overlay">
+                                        <div class="camera-placeholder">
+                                            <p>Camera not active</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stream-controls">
+                                    <button class="stream-btn primary" id="start-camera-btn">
+                                        <i class="fas fa-play"></i> Start Camera
+                                    </button>
+                                    <button class="stream-btn secondary" id="stop-camera-btn" disabled>
+                                        <i class="fas fa-stop"></i> Stop Camera
+                                    </button>
+                                </div>
+                                
+                                <div class="stream-status">
+                                    <div class="status-indicator" id="status-indicator">
+                                        <span class="status-text">Ready to start</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Mode Content -->
+                        <div class="mode-content" id="upload-content">
+                            <div class="upload-container">
+                                <h2 class="section-title">Upload Plant Image</h2>
+                                
+                                <form method="post" enctype="multipart/form-data" id="upload-form">
+                                    <input type="file" name="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.tiff,.mp4,.avi,.mov,.mkv" style="display:none;">
+                                    
+                                    <div class="upload-area" id="upload-area">
+                                        <div class="drop-zone" id="drop-zone">
+                                            <div class="upload-text">Drop your plant image or video here</div>
+                        <div class="upload-subtext">
+                                                or <span class="browse-link" id="browse-link">browse files</span>
+                                            </div>
+                                            <div class="upload-subtext file-types">Supports JPG, PNG, BMP, TIFF, MP4, AVI, MOV, MKV</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="upload-actions">
+                                        <div class="form-group">
+                                            <label for="description-input">Description (Optional):</label>
+                                            <textarea id="description-input" name="description" placeholder="Add any additional notes about the plant or location..." rows="3"></textarea>
+                                        </div>
+                                        <button type="submit" class="upload-button" id="submit-btn">
+                                            <i class="fas fa-search"></i> Analyze Plant
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <!-- Mode Toggle Button -->
+                        <button class="mode-toggle-btn" id="mode-toggle-btn">
+                            <i class="fas fa-upload" id="mode-icon"></i>
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Portal Section -->
+        <div class="content-section" id="admin-section" style="display: none;">
+            <div class="admin-container">
+                <!-- Admin Header -->
+                <div class="admin-header">
+                    <h1 class="admin-title">Admin Dashboard</h1>
+                    <div class="admin-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="total-sightings">0</span>
+                            <span class="stat-label">Total Sightings</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="active-infestations">0</span>
+                            <span class="stat-label">Pending Analysis</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="removal-success">0%</span>
+                            <span class="stat-label">Removal Success</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="high-risk-detections">0</span>
+                            <span class="stat-label">High Risk Detections</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Admin Navigation -->
+                <div class="admin-nav">
+                    <div class="admin-tabs">
+                        <button class="admin-tab active" data-tab="map">
+                            <i class="fas fa-map"></i> Interactive Map
+                        </button>
+                        <button class="admin-tab" data-tab="analytics">
+                            <i class="fas fa-chart-line"></i> Analytics
+                        </button>
+                        <button class="admin-tab" data-tab="species">
+                            <i class="fas fa-seedling"></i> Species Encyclopedia
+                        </button>
+                        <button class="admin-tab" data-tab="reports">
+                            <i class="fas fa-file-alt"></i> Reports
+                        </button>
+                        <button class="admin-tab" data-tab="notifications">
+                            <i class="fas fa-bell"></i> Notifications
+                            <span class="notification-indicator" id="notification-indicator" style="display: none;">
+                                <i class="fas fa-exclamation"></i>
+                            </span>
+                        </button>
+                        <button class="admin-tab" data-tab="video-review">
+                            <i class="fas fa-video"></i> Video Review
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Admin Content -->
+                <div class="admin-content">
+                        <!-- Map Panel -->
+                        <div class="admin-panel active" id="map-panel">
+                            <div class="map-container">
+                                <div class="map-header">
+                                    <h3><i class="fas fa-map-marked-alt"></i> Interactive Detection Map</h3>
+                                    <div class="map-controls">
+                                        <button id="center-map-btn" class="map-btn">
+                                            <i class="fas fa-crosshairs"></i> Center on Me
+                                        </button>
+                                        <button id="clear-pins-btn" class="map-btn">
+                                            <i class="fas fa-trash"></i> Clear Pins
+                                        </button>
+                                        <button id="test-pin-btn" class="map-btn">
+                                            <i class="fas fa-plus"></i> Add Test Pin
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="map" class="map-view"></div>
+                                <div class="map-legend" id="map-legend">
+                                    <!-- Legend will be dynamically updated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Analytics Panel -->
+                        <div class="admin-panel" id="analytics-panel">
+                            <div class="analytics-container">
+                                <div class="analytics-grid">
+                                    <div class="analytics-card">
+                                        <h3><i class="fas fa-chart-pie"></i> Species Breakdown</h3>
+                                        <div class="chart-container">
+                                            <canvas id="species-breakdown-chart" width="300" height="200"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="analytics-card">
+                                        <h3><i class="fas fa-chart-line"></i> Spread Rate Trends</h3>
+                                        <div class="chart-container">
+                                            <canvas id="spread-trends-chart" width="300" height="200"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="analytics-card">
+                                        <h3><i class="fas fa-fire"></i> Detection Frequency</h3>
+                                        <div class="chart-container">
+                                            <canvas id="detection-frequency-chart" width="300" height="200"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="analytics-card large">
+                                        <h3><i class="fas fa-trending-up"></i> Monthly Growth</h3>
+                                        <div class="chart-container">
+                                            <canvas id="monthly-growth-chart" width="600" height="400"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Species Panel -->
+                        <div class="admin-panel" id="species-panel">
+                            <div class="species-container">
+                                <div class="species-search">
+                                    <input type="text" id="species-search-input" placeholder="Search species by name, scientific name, or characteristics...">
+                                </div>
+                                <div class="species-grid" id="species-grid">
+                                    <!-- Species cards will be dynamically loaded here -->
+                                    <div class="species-loading">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <p>Loading species data...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Reports Panel -->
+                        <div class="admin-panel" id="reports-panel">
+                            <div class="reports-container">
+                                <div class="reports-filters">
+                                    <h3>Report Filters</h3>
+                                    <div class="filter-row">
+                                        <div class="filter-group">
+                                            <label>Date</label>
+                                            <input type="date" id="report-end-date">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label>Species</label>
+                                            <select id="report-species-filter">
+                                                <option value="">All Species</option>
+                                            </select>
+                                        </div>
+                                        <div class="filter-group">
+                                            <label>Status</label>
+                                            <select id="report-status-filter">
+                                                <option value="">All Statuses</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="in_progress">In Progress</option>
+                                                <option value="completed">Completed</option>
+                                            </select>
+                                        </div>
+                                        <div class="filter-group">
+                                            <label>Priority</label>
+                                            <select id="report-priority-filter">
+                                                <option value="">All Priorities</option>
+                                                <option value="low">Low</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="high">High</option>
+                                                <option value="critical">Critical</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="reports-actions">
+                                        <button class="report-btn primary" id="generate-report-btn">
+                                            <i class="fas fa-chart-bar"></i> Generate Report
+                                        </button>
+                                        <button class="report-btn secondary" id="export-csv-btn">
+                                            <i class="fas fa-file-csv"></i> Export CSV
+                                        </button>
+                                        <button class="report-btn secondary" id="export-json-btn">
+                                            <i class="fas fa-file-code"></i> Export JSON
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="reports-results" id="reports-results">
+                                    <!-- Report results will be displayed here -->
+                                    <div class="reports-placeholder">
+                                        <i class="fas fa-chart-line"></i>
+                                        <h3>Generate a Report</h3>
+                                        <p>Select filters and click "Generate Report" to view detailed analytics</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notifications Panel -->
+                        <div class="admin-panel" id="notifications-panel">
+                            <div class="notifications-container">
+                                <div class="notifications-header">
+                                    <h3>System Notifications</h3>
+                                    <button id="mark-all-read-btn" class="notification-btn">
+                                        <i class="fas fa-check-double"></i> Mark All Read
+                                    </button>
+                                </div>
+                                <div class="notifications-list" id="notifications-list">
+                                    <!-- Notifications will be dynamically loaded here -->
+                                    <div class="notifications-loading">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <p>Loading notifications...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Video Review Panel -->
+                        <div class="admin-panel" id="video-review-panel">
+                            <div class="video-review-container">
+                                <div class="video-grid" id="video-grid">
+                                    <!-- Video previews will be dynamically loaded here -->
+                                    <div class="video-empty">
+                                        <i class="fas fa-video"></i>
+                                        <h3>No Videos Available</h3>
+                                        <p>Upload video files or use camera streaming to see videos here</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="results-container" style="display: none;"></div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html> 
