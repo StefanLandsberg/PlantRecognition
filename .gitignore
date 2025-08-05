@@ -1,23 +1,57 @@
 # PlantRecognition .gitignore file
-# Ignore checkpoints and models (large binary files)
-checkpoints/
-.descriptor_cache/
-# Ignore logs and stats
-logs/
-stats/
-data/plant_images/
-descriptormodel/data/plant_images/
-temp/
 
-# Ignore checkpoint files
-download_checkpoint.json
-*.checkpoint
+# ===== ENVIRONMENT & CONFIGURATION =====
+# Environment variables and secrets
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+*.env
+config.json
+secrets.json
+credentials.json
 
-# Python cache files
+# ===== NODE.JS & FRONTEND =====
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.vercel/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# ===== PYTHON =====
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -31,11 +65,204 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# OS specific files
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ===== MACHINE LEARNING & MODELS =====
+# Model files and checkpoints
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.hdf5
+*.pb
+*.onnx
+*.tflite
+*.model
+*.weights
+checkpoints/
+models/saved/
+models/checkpoints/
+models/weights/
+models/trained/
+models/exported/
+
+# Training data and datasets
+data/raw/
+data/processed/
+data/temp/
+data/cache/
+*.csv
+*.json
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+
+# ===== PLANT RECOGNITION SPECIFIC =====
+# Uploaded images and videos
+plant_recognition/frontend/uploads/
+plant_recognition/database/storage/
+plant_recognition/data/plant_images/
+data/plant_images/
+uploads/
+storage/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+plant_recognition/database/*.db
+plant_recognition/database/*.sqlite
+plant_recognition/database/*.sqlite3
+
+# Vector database files
+plant_recognition/LLM/vector_db/
+plant_recognition/backend/vector_db/
+*.faiss
+*.index
+
+# LLM chunks and extracted text
+plant_recognition/LLM/chunks/
+plant_recognition/LLM/extracted_text/
+
+# ===== LOGS & TEMPORARY FILES =====
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+temp/
+tmp/
+.tmp/
+*.tmp
+*.temp
+
+# ===== OS SPECIFIC =====
+# macOS
 .DS_Store
 .DS_Store?
 ._*
@@ -44,8 +271,95 @@ wheels/
 ehthumbs.db
 Thumbs.db
 
-# IDE specific files
-.idea/
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== IDE & EDITOR =====
+# Visual Studio Code
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
 *.swp
 *.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===== VERSION CONTROL =====
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# ===== DOCKER =====
+# Docker
+.dockerignore
+Dockerfile.dev
+docker-compose.override.yml
+
+# ===== MONITORING & ANALYTICS =====
+# Application monitoring
+newrelic.ini
+.newrelic.yml
+
+# ===== SECURITY =====
+# Private keys and certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# ===== BACKUP FILES =====
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# ===== CUSTOM EXCLUSIONS =====
+# Project specific exclusions
+download_checkpoint.json
+descriptor_cache/
+stats/

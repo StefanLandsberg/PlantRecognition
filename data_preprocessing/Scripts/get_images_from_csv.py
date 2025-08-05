@@ -26,8 +26,8 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "data", "plant_images")
 PARQUET_FILE = os.path.join(BASE_DIR, "cc0_photos.parquet")
 METADATA_DIR = os.path.join(BASE_DIR, "data", "inaturalist_metadata")
 # =========================
-MAX_IMAGES_PER_OBSERVATION = 100        # Maximum images per observation
-MAX_OBSERVATIONS = 100         # Maximum number of observations to download
+MAX_IMAGES_PER_OBSERVATION = 20        # Maximum images per observation
+MAX_OBSERVATIONS = 20         # Maximum number of observations to download
 IMAGE_QUALITY = "medium"                # Options: "original", "large", "medium", "small"
 BATCH_SIZE = 5000                       # INCREASED chunk size for processing (was 2000)
 DOWNLOAD_THREADS = 400                  # INCREASED concurrent downloads (was 300)
@@ -591,8 +591,8 @@ def download_from_csv(csv_file_path):
         print(f"{Colors.GREEN}Found {len(species_groups)} species{Colors.ENDC}")
         
         # Filter species with too few images and enforce absolute max images per species
-        MIN_IMAGES_PER_SPECIES = 100  # Only this min is used
-        ABSOLUTE_MAX_IMAGES_PER_SPECIES = 100  # Use this as the only max
+        MIN_IMAGES_PER_SPECIES = 20  # Only this min is used
+        ABSOLUTE_MAX_IMAGES_PER_SPECIES = 20  # Use this as the only max
 
         filtered_species_groups = {}
         for species, photos in species_groups.items():
