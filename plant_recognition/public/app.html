@@ -8,12 +8,31 @@
   <script src="/config.js"></script>
 </head>
 <body>
+    <script type="module" src="/js/main.js"></script>
   <div id="app">
     <header class="app-header">
+      <div class="menu-bubble">
+<button id="menu-btn" aria-label="Menu">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu" viewBox="0 0 24 24" aria-hidden="true" focusable="false" >
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</button>
+  <div id="menu-dropdown" class="menu-dropdown hidden">
+    <ul>
+      <li><a href="#">Option 1</a></li>
+      <li><a href="#">Option 2</a></li>
+      <li><a href="#">Option 3</a></li>
+    </ul>
+  </div>
+</div>
       <div class="brand">BotanicaVision</div>
       <div class="spacer"></div>
       <button id="btn-logout">Logout</button>
     </header>
+
+
 
     <main class="app-main">
       <div id="map"></div>
@@ -38,6 +57,6 @@
   </div>
 
   <script async id="maps-loader"></script>
-  <script type="module" src="/js/main.js"></script>
+
 </body>
 </html>

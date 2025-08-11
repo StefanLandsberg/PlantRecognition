@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { CONFIG } from './utils/config.js';
 import { logger } from './utils/logger.js';
 import { notFound, errorHandler } from './middleware/error.js';
+import { requireAuth } from './middleware/auth.js';
 
 import authRoutes from './routes/auth.routes.js';
 import analyzeRoutes from './routes/analyze.routes.js';
@@ -56,7 +57,9 @@ app.use('/', configRoutes);
 
 // Frontend routes
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
-app.get('/app', (_req, res) => res.sendFile(path.join(PUBLIC_DIR, 'app.html')));
+app.get('/app', requireAuth, (_req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'app.html'));
+});
 
 // Health endpoint (handy for debugging/deploys)
 app.get('/health', (_req, res) => {

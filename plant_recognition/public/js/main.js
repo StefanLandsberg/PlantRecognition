@@ -1,3 +1,5 @@
+const DEV_MODE = true; // Set to true for development
+
 import { AuthAPI, AnalyzeAPI, SightingsAPI } from './api.js';
 import { loadGoogleMaps, initMap, addMarker } from './map.js';
 import { startVideo, stopVideo } from './video.js';
@@ -30,11 +32,17 @@ async function geolocate() {
 
 async function boot() {
   try {
-    // Require auth
-    await AuthAPI.me().catch(() => { location.href = '/'; });
-    userLoc = await geolocate() || { lat: -25.8408, lng: 28.2395 };
-    await loadGoogleMaps();
-    const map = initMap('map', userLoc, 13);
+    if (!DEV_MODE) {
+      console.log('Checking auth...');
+      await AuthAPI.me();
+      console.log('Auth success!');
+      await loadGoogleMaps();
+      userLoc = await geolocate() || { lat: -25.8408, lng: 28.2395 };
+      const map = initMap('map', userLoc, 13);
+    } else {
+      console.log('Dev mode enabled — skipping auth and Google Maps');
+      userLoc = { lat: -25.8408, lng: 28.2395 }; // Default location for dev
+    }
 
     // load existing markers
     try {
@@ -81,9 +89,24 @@ async function boot() {
       });
     });
 
+    document.getElementById('menu-btn').addEventListener('click', () => {
+      const menu = document.getElementById('menu-dropdown');
+      menu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('menu-dropdown');
+      const btn = document.getElementById('menu-btn');
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+
   } catch (e) {
     console.error('Boot error', e);
-    location.href = '/';
+    if (!DEV_MODE) {
+      location.href = '/';
+    }
   }
 }
 

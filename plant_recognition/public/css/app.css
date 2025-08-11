@@ -142,3 +142,67 @@ body {
     font-weight: 800;
     cursor: pointer;
 }
+
+.menu-bubble {
+  position: relative;
+  margin-right: 0.75rem;  
+}
+
+#menu-btn {
+  background: var(--accent);
+  color: #0b1020;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+#menu-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 3;
+}
+
+
+.menu-dropdown {
+  position: absolute;
+  top: 40px; 
+  left: 0;
+  background: var(--panel);
+  border: 1px solid #24304a;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  min-width: 140px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.7);
+  z-index: 1000;
+}
+
+.menu-dropdown ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu-dropdown ul li {
+  margin: 0.5rem 0;
+}
+
+.menu-dropdown ul li a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  display: block;
+}
+
+.menu-dropdown ul li a:hover {
+  color: var(--accent);
+}
+
+.hidden {
+  display: none !important;
+}
