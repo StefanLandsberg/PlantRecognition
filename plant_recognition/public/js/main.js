@@ -1,12 +1,10 @@
-const DEV_MODE = true; // Set to true for development
-
 import { AuthAPI, AnalyzeAPI, SightingsAPI } from './api.js';
 import { loadGoogleMaps, initMap, addMarker } from './map.js';
 import { startVideo, stopVideo } from './video.js';
 import { pickFile } from './upload.js';
 import { startSSE } from './sse.js';
 import { addDetectionCard, setLLMCompleted } from './ui.js';
-
+ 
 const els = {
   btnLogout: document.getElementById('btn-logout'),
   btnVideo: document.getElementById('btn-video'),
@@ -16,9 +14,9 @@ const els = {
   btnStop: document.getElementById('btn-stop'),
   list: document.getElementById('detections-list')
 };
-
+ 
 let userLoc = null;
-
+ 
 async function geolocate() {
   return new Promise((res) => {
     if (!navigator.geolocation) return res(null);
@@ -29,21 +27,15 @@ async function geolocate() {
     );
   });
 }
-
+ 
 async function boot() {
   try {
-    if (!DEV_MODE) {
-      console.log('Checking auth...');
-      await AuthAPI.me();
-      console.log('Auth success!');
-      await loadGoogleMaps();
-      userLoc = await geolocate() || { lat: -25.8408, lng: 28.2395 };
-      const map = initMap('map', userLoc, 13);
-    } else {
-      console.log('Dev mode enabled — skipping auth and Google Maps');
-      userLoc = { lat: -25.8408, lng: 28.2395 }; // Default location for dev
-    }
-
+    // Require auth
+    await AuthAPI.me().catch(() => { location.href = '/'; });
+    userLoc = await geolocate() || { lat: -25.8408, lng: 28.2395 };
+    await loadGoogleMaps();
+    const map = initMap('map', userLoc, 13);
+ 
     // load existing markers
     try {
       const box = ''; // you can compute bbox from viewport if desired
@@ -53,20 +45,20 @@ async function boot() {
         addMarker({ lat, lng, title: d.analysis?.predictedSpecies || 'Sighting' });
       });
     } catch {}
-
+ 
     // SSE for LLM completion
     startSSE((msg) => {
       if (msg.type === 'analysis_done') {
         setLLMCompleted(msg.sightingId, msg.llm);
       }
     });
-
+ 
     // actions
     els.btnLogout.addEventListener('click', async () => {
       await AuthAPI.logout();
       location.href = '/';
     });
-
+ 
     els.btnVideo.addEventListener('click', async () => {
       els.videoPanel.classList.remove('hidden');
       await startVideo(async (blob) => {
@@ -75,12 +67,12 @@ async function boot() {
         addMarker({ lat: userLoc.lat, lng: userLoc.lng, title: res.predictedSpecies });
       });
     });
-
+ 
     els.btnStop.addEventListener('click', () => {
       stopVideo();
       els.videoPanel.classList.add('hidden');
     });
-
+ 
     els.btnUpload.addEventListener('click', () => {
       pickFile('file-input', async (file) => {
         const res = await AnalyzeAPI.analyze(file, { lat: userLoc.lat, lng: userLoc.lng, fromVideo: false });
@@ -89,7 +81,7 @@ async function boot() {
       });
     });
 
-    document.getElementById('menu-btn').addEventListener('click', () => {
+        document.getElementById('menu-btn').addEventListener('click', () => {
       const menu = document.getElementById('menu-dropdown');
       menu.classList.toggle('hidden');
     });
@@ -101,13 +93,12 @@ async function boot() {
         menu.classList.add('hidden');
       }
     });
-
+ 
   } catch (e) {
     console.error('Boot error', e);
-    if (!DEV_MODE) {
-      location.href = '/';
-    }
+    location.href = '/';
   }
 }
-
+ 
 boot();
+ 
