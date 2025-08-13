@@ -2,6 +2,22 @@ import { AuthAPI } from './api.js';
 
 const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
+// links to toggle between logIn and register
+const showRegisterLink = document.getElementById('show-register-link');
+const showLoginLink = document.getElementById('show-login-link');
+
+// Event listeners to toggle form visibility
+showRegisterLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm?.classList.add('hidden');
+    registerForm?.classList.remove('hidden');
+});
+
+showLoginLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm?.classList.remove('hidden');
+    registerForm?.classList.add('hidden');
+});
 
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
