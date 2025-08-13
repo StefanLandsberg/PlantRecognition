@@ -8,6 +8,13 @@
   <script src="/config.js"></script>
 </head>
 <body>
+      <svg style="display: none;">
+        <defs>
+            <filter id="protanopia"><feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0" /></filter>
+            <filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625 0.375 0 0 0  0.7 0.3 0 0 0  0 0.3 0.7 0 0  0 0 0 1 0" /></filter>
+            <filter id="tritanopia"><feColorMatrix type="matrix" values="0.95 0.05 0 0 0  0 0.433 0.567 0 0  0 0.475 0.525 0 0  0 0 0 1 0" /></filter>
+        </defs>
+    </svg>
     <script type="module" src="/js/main.js"></script>
   <div id="app">
     <header class="app-header">
@@ -23,7 +30,7 @@
     <ul>
       <li><a href="#">Option 1</a></li>
       <li><a href="#">Option 2</a></li>
-      <li><a href="#">Option 3</a></li>
+      <li><a href="settings.html">Settings</a></li>
     </ul>
   </div>
 </div>
@@ -57,6 +64,27 @@
   </div>
 
   <script async id="maps-loader"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const body = document.body;
+        const savedDarkMode = localStorage.getItem('darkMode');
+        const savedColorBlindMode = localStorage.getItem('colorBlindMode');
 
+        // Apply dark mode or light mode
+        if (savedDarkMode === 'true') {
+            body.classList.remove('light-mode'); // Remove light-mode if it exists
+            body.classList.add('dark-mode');
+        } else {
+            body.classList.remove('dark-mode');
+            body.classList.add('light-mode');
+        }
+
+        // Apply color blindness filter
+        body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
+        if (savedColorBlindMode && savedColorBlindMode !== 'none') {
+            body.classList.add(savedColorBlindMode);
+        }
+    });
+</script>
 </body>
 </html>
