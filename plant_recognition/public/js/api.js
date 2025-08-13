@@ -19,8 +19,8 @@ export async function postForm(url, formData) {
 
 // Auth
 export const AuthAPI = {
-  register: (email, password) => postJSON('/api/auth/register', { email, password }),
-  login: (email, password) => postJSON('/api/auth/login', { email, password }),
+  register: (username, email, password) => postJSON('/api/auth/register', { username, email, password }),
+  login: (username, password) => postJSON('/api/auth/login', { username, password }),
   logout: () => postJSON('/api/auth/logout', {}),
   me: () => getJSON('/api/auth/me')
 };

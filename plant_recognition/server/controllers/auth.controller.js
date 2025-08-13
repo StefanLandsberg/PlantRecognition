@@ -8,19 +8,19 @@ const cookieOpts = {
 
 export async function register(req, res, next) {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-    const user = await Auth.register(email, password);
+    const { username, email, password } = req.body;
+    if (!email || !password || !username) return res.status(400).json({ error: 'Email and password required' });
+    const user = await Auth.register(username, email, password);
     res.json({ success: true, user: { id: user._id, email: user.email } });
   } catch (e) { next(e); }
 }
 
 export async function login(req, res, next) {
   try {
-    const { email, password } = req.body;
-    const { user, token } = await Auth.login(email, password);
+    const { username, password } = req.body;
+    const { user, token } = await Auth.login(username, password);
     res.cookie('token', token, cookieOpts);
-    res.json({ success: true, user: { id: user._id, email: user.email } });
+    res.json({ success: true, user: { id: user._id, username: user.username } });
   } catch (e) { next(e); }
 }
 

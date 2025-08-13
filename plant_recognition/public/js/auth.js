@@ -5,22 +5,33 @@ const registerForm = document.getElementById('register-form');
 
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const fd = new FormData(loginForm);
-  const email = fd.get('email'); const password = fd.get('password');
+  const formData = new FormData(loginForm);
+  const username = formData.get('username'); 
+  const password = formData.get('password');
   const err = document.getElementById('login-error');
+
   try {
-    await AuthAPI.login(email, password);
+    await AuthAPI.login(username, password);
     location.href = '/app';
-  } catch (e) { err.textContent = 'Login failed'; }
+  } catch (e) { err.textContent = 'Login failed. ' + e; }
 });
 
 registerForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const fd = new FormData(registerForm);
-  const email = fd.get('email'); const password = fd.get('password');
+  const formData = new FormData(registerForm);
+  const username = formData.get('username'); 
+  const email = formData.get('email');
+  const password = formData.get('password');
+  const confirmPassword = formData.get('confirm-password')
   const err = document.getElementById('register-error');
-  try {
-    await AuthAPI.register(email, password);
-    err.textContent = 'Registered. You can login now.';
-  } catch (e) { err.textContent = 'Registration failed'; }
+
+  try{
+    if (password === confirmPassword){
+        try {
+        await AuthAPI.register(username, email, password);
+        err.textContent = 'Registered. You can login now.';
+      } catch (e) { err.textContent = 'Registration failed. ' + e; }
+    }
+    else err.textContent = 'Passwords did not match';
+  }catch (e) { err.textContent = 'Passwords did not match'; }
 });

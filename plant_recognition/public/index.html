@@ -10,8 +10,8 @@
   <div class="center-card">
     <h1>BotanicaVision</h1>
     <form id="login-form" class="auth-form">
-      <label>Email</label>
-      <input name="email" type="email" required />
+      <label>Username</label>
+      <input name="username" type="text" required />
       <label>Password</label>
       <input name="password" type="password" required />
       <button type="submit">Sign in</button>
@@ -20,10 +20,14 @@
     <hr />
     <form id="register-form" class="auth-form">
       <h3>Create account</h3>
+      <label>Username</label>
+      <input name="username" type="text" required />
       <label>Email</label>
       <input name="email" type="email" required />
       <label>Password</label>
       <input name="password" type="password" required minlength="6" />
+      <label>Confirm Password</label>
+      <input name="confirm-password" type="password" required minlength="6" />
       <button type="submit">Register</button>
       <div id="register-error" class="error"></div>
     </form>
