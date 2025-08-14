@@ -25,7 +25,7 @@
       <input name="password" type="password" required />
       <button type="submit">Sign in</button>
       <div id="login-error" class="error"></div>
-      <p>Don't have an account? <a href="#" id="show-register-link">Register here</a></p>
+      <p>Don't have an account? <a href="#" id="show-register-link" class="hidden-link">Register here</a></p>
     </form>
     <form id="register-form" class="auth-form form-container hidden">
       <label>Username</label>
@@ -38,7 +38,7 @@
       <input name="confirm-password" type="password" required minlength="6" />
       <button type="submit">Register</button>
       <div id="register-error" class="error"></div>
-      <p>Already have an account? <a href="#" id="show-login-link">Sign in here</a></p>
+      <p>Already have an account? <a href="#" id="show-login-link" class="hidden-link">Sign in here</a></p>
     </form>
   </div>
   <script type="module" src="/js/auth.js"></script>

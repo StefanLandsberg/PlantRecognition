@@ -64,3 +64,14 @@ h3 {
     min-height: 1.25rem;
     font-size: .9rem;
 }
+/* hidden link styling for auth form */
+
+.hidden-link{
+    text-decoration: none;
+    color: black;
+    border-radius: 7px;
+    border-width: 2px;
+    border-color: white;
+    background-color: var(--accent);
+    padding: 5px;
+}
