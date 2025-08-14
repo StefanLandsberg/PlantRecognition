@@ -363,3 +363,4 @@ newrelic.ini
 download_checkpoint.json
 descriptor_cache/
 stats/
+data_preprocessing/data/plant_images/*

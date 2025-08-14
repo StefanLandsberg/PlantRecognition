@@ -13,8 +13,36 @@ from PIL import Image
 # ----------------- Config -----------------
 IMAGE_SIZE = 224
 HERE = Path(__file__).resolve().parent
-MODEL_PATH = HERE.parent / "models" / "best_mlp_1000class.pt"
-CLASS_NAMES_PATH = HERE.parent / "models" / "class_names.txt"
+
+def _resolve_existing(*candidates):
+    for c in candidates:
+        p = Path(c)
+        if p.exists():
+            return p
+    return None
+
+# 1) Prefer env
+env_model = os.getenv("ML_MODEL_PATH")
+env_labels = os.getenv("ML_CLASS_NAMES_PATH")
+
+# 2) Common fallbacks
+fallback_models = [
+    HERE.parent / "models" / "best_mlp_1000class.pt",     # plant_recognition/models
+    Path("models/best_mlp_1000class.pt"),                 # repo-root/models
+]
+fallback_labels = [
+    HERE.parent / "models" / "class_names.txt",
+    Path("models/class_names.txt"),
+]
+
+MODEL_PATH = _resolve_existing(env_model, *fallback_models)
+CLASS_NAMES_PATH = _resolve_existing(env_labels, *fallback_labels)
+
+if MODEL_PATH is None:
+    raise FileNotFoundError("Model file not found. Set ML_MODEL_PATH or place best_mlp_1000class.pt under plant_recognition/models.")
+if CLASS_NAMES_PATH is None:
+    raise FileNotFoundError("class_names.txt not found. Set ML_CLASS_NAMES_PATH or place it under plant_recognition/models.")
+
 
 
 # ----------------- Model Head -----------------
