@@ -75,3 +75,10 @@ h3 {
     background-color: var(--accent);
     padding: 5px;
 }
+/* Optional CSS to hide the forms and add a transition */
+.hidden {
+    display: none;
+}
+.form-container {
+    transition: all 0.5s ease-in-out;
+}
