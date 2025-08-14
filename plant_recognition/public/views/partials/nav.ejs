@@ -1,0 +1,28 @@
+<header class="app-header">
+  <div class="menu-bubble">
+    <button id="menu-btn" aria-label="Menu" type="button">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <div id="menu-dropdown" class="menu-dropdown hidden" role="menu" aria-hidden="true">
+      <ul>
+        <li><a href="/app">Home</a></li>
+        <li><a href="/sightings">Sightings</a></li>
+        <li><a href="/settings">Settings</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="brand">BotanicaVision</div>
+  <div class="spacer"></div>
+  <div class="welcome" style="margin-right:.75rem;font-weight:700;">
+    <% if (typeof username !=='undefined' ) { %>
+      Welcome, <%= username %>!
+        <% } %>
+  </div>
+  <button id="btn-logout" type="button">Logout</button>
+</header>
+<script src="/js/nav.js" defer></script>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<%- include('partials/head', { title: 'Settings' , styles: ['/css/app.css'] }) %>
+
+  <body>
+    <%- include('partials/nav') %>
+
+      <div class="container" style="max-width:720px;margin:2rem auto;">
+        <h1>Settings</h1>
+
+        <div class="setting-item">
+          <label for="theme-toggle">Dark Mode</label>
+          <input type="checkbox" id="theme-toggle">
+        </div>
+
+        <div class="setting-item">
+          <label for="color-blindness">Color Blind Mode</label>
+          <select id="color-blindness">
+            <option value="none">Off</option>
+            <option value="protanopia">Protanopia</option>
+            <option value="deuteranopia">Deuteranopia</option>
+            <option value="tritanopia">Tritanopia</option>
+          </select>
+        </div>
+
+        <div class="button-group" style="gap:.5rem;display:flex;justify-content:flex-end;margin-top:1rem;">
+          <button id="cancel-btn" type="button">Cancel</button>
+          <a class="button" href="/app" id="apply-btn">Apply</a>
+        </div>
+      </div>
+
+      <script src="/js/settings.js"></script>
+  </body>
+
+</html>

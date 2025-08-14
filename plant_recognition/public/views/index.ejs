@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<%- include('partials/head', { title: 'BotanicaVision – Sign in' , styles: ['/css/base.css'] }) %>
+
+  <body>
+    <div class="center-card">
+      <h1>BotanicaVision</h1>
+      <form id="login-form" class="auth-form form-container">
+        <label>Username</label>
+        <input name="username" type="text" required />
+        <label>Password</label>
+        <input name="password" type="password" required />
+        <button type="submit">Sign in</button>
+        <div id="login-error" class="error"></div>
+
+        <button id="show-register-link" type="button" class="hidden-link" style="margin-top:.5rem;">
+          New here? Register
+        </button>
+      </form>
+
+      <form id="register-form" class="auth-form form-container hidden">
+        <label>Username</label>
+        <input name="username" type="text" required />
+        <label>Email</label>
+        <input name="email" type="email" required />
+        <label>Password</label>
+        <input name="password" type="password" required minlength="6" />
+        <label>Confirm Password</label>
+        <input name="confirm-password" type="password" required minlength="6" />
+        <button type="submit">Register</button>
+        <div id="register-error" class="error"></div>
+        <button id="show-login-link" type="button" class="hidden-link" style="margin-top:.5rem;">
+          Already have an account? Sign in
+        </button>
+      </form>
+    </div>
+
+    <script type="module" src="/js/auth.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+
+        document.getElementById('show-register-link')?.addEventListener('click', (e) => {
+          e.preventDefault(); loginForm.classList.add('hidden'); registerForm.classList.remove('hidden');
+        });
+
+        document.getElementById('show-login-link')?.addEventListener('click', (e) => {
+          e.preventDefault(); registerForm.classList.add('hidden'); loginForm.classList.remove('hidden');
+        });
+      });
+    </script>
+  </body>
+
+</html>
