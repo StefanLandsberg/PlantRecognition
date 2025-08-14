@@ -316,3 +316,9 @@ body.light-mode {
 .protanopia { filter: url(#protanopia); }
 .deuteranopia { filter: url(#deuteranopia); }
 .tritanopia { filter: url(#tritanopia); }
+/* hidden link styling for auth form */
+
+.hidden-link{
+    text-decoration: none;
+    color: white;
+}
