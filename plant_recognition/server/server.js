@@ -17,6 +17,8 @@ import analyzeRoutes from "./routes/analyze.routes.js";
 import sightingsAPIRoutes from "./routes/sightings.routes.js";
 import sseRoutes from "./routes/sse.routes.js";
 import configRoutes from "./routes/config.routes.js";
+import accountRoutes from "./routes/account.routes.js";
+
 
 import User from "./models/User.js";
 
@@ -37,6 +39,8 @@ app.use(morgan("dev"));
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use("/api/account", accountRoutes);
+
 
 app.use(
   cors({
@@ -78,6 +82,10 @@ app.get("/settings", requireAuth, attachUser, (_req, res) => {
 
 app.get("/sightings", requireAuth, attachUser, (_req, res) => {
   res.render("sightings");
+});
+
+app.get("/account", requireAuth, attachUser, (_req, res) => {
+  res.render("account");
 });
 
 app.get("/health", (_req, res) => {
