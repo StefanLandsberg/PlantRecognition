@@ -29,9 +29,9 @@ const PUBLIC_DIR = path.resolve(PROJECT_ROOT, "public");
 const UPLOADS_DIR = path.resolve(PROJECT_ROOT, "uploads");
 const VIEWS_DIR = path.resolve(PUBLIC_DIR, "views");
 
-import en from "../public/js/languages/en.json" assert { type: "json" };
-import afr from "../public/js/languages/afr.json" assert { type: "json" };
-import zulu from "../public/js/languages/zulu.json" assert { type: "json" };
+import en from "../public/js/languages/en.json" with { type: "json" };
+import afr from "../public/js/languages/afr.json" with { type: "json" };
+import zulu from "../public/js/languages/zulu.json" with { type: "json" };
 
 const languages = {
   en,
