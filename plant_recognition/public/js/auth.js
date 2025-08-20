@@ -45,6 +45,8 @@ registerForm?.addEventListener('submit', async (e) => {
         try {
         await AuthAPI.register(username, email, password);
         err.textContent = 'Registered. You can login now.';
+            loginForm?.classList.remove('hidden');
+            registerForm?.classList.add('hidden');
       } catch (e) { err.textContent = 'Registration failed. ' + e; }
     }
     else err.textContent = 'Passwords did not match';
