@@ -540,8 +540,12 @@ body.light-mode {
     margin-top: 0.5rem;
     position: absolute;
     margin-top: 10%;
+    display: none;
 }
-
+/* on focus in new password make recommendations display */
+#pwd-new:focus ~ .helper-password {
+    display: block;
+}
 .requirement.invalid {
     color: #d9534f; /* A red color */
     list-style-type: none;
