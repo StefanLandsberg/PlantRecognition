@@ -418,7 +418,7 @@ body.light-mode {
   --acc-danger-soft: color-mix(in oklab, var(--acc-danger) 18%, #000);
 }
 
-
+/* account page css */
 .account .page-header {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; margin: .5rem 0 1.25rem;
@@ -478,12 +478,15 @@ body.light-mode {
 }
 
 
-.account .button.primary { background: var(--acc-ring); color: #fff; }
+.account .button.primary { background: var(--acc-ring); color: #fff; padding: 5px; border-radius: 5px; }
 .account .button.ghost {
   background: transparent; border: 1px solid var(--acc-border);
+  padding: 5px; border-radius: 5px;
+  color: #253356;
 }
 .account .button.danger {
   background: var(--acc-danger); color: #fff;
+  padding: 5px; border-radius: 5px;
 }
 
 
