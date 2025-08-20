@@ -24,9 +24,15 @@
         <label>Email</label>
         <input name="email" type="email" required />
         <label>Password</label>
-        <input name="password" type="password" required minlength="6" />
+        <input id="pwd" name="password" type="password" required minlength="8" />
+        <div id="password-requirements" class="helper-password">
+          <p id="length" class="requirement invalid">At least 8 characters</p>
+          <p id="uppercase" class="requirement invalid">At least 1 uppercase letter</p>
+          <p id="number" class="requirement invalid">At least 1 number</p>
+          <p id="special" class="requirement invalid">At least 1 special character</p>
+        </div>
         <label>Confirm Password</label>
-        <input name="confirm-password" type="password" required minlength="6" />
+        <input name="confirm-password" type="password" required minlength="8" />
         <button type="submit">Register</button>
         <div id="register-error" class="error"></div>
         <button id="show-login-link" type="button" class="hidden-link" style="margin-top:.5rem;">
