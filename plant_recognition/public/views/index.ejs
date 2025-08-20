@@ -1,42 +1,42 @@
 <!doctype html>
 <html lang="en">
-<%- include('partials/head', { title: 'BotanicaVision – Sign in' , styles: ['/css/base.css'] }) %>
+<%- include('partials/head', { title: text.title, styles: ['/css/base.css'] }) %>
 
   <body>
     <div class="center-card">
-      <h1>BotanicaVision</h1>
+      <h1><%= text.login.header %></h1>
       <form id="login-form" class="auth-form form-container">
-        <label>Username</label>
+        <label><%= text.login.username_label %></label>
         <input name="username" type="text" required />
-        <label>Password</label>
+        <label><%= text.login.password_label %></label>
         <input name="password" type="password" required />
-        <button type="submit">Sign in</button>
+        <button type="submit"><%= text.login.signin_button %></button>
         <div id="login-error" class="error"></div>
 
         <button id="show-register-link" type="button" class="hidden-link" style="margin-top:.5rem;">
-          New here? Register
+          <%= text.login.new_here_link %>
         </button>
       </form>
 
       <form id="register-form" class="auth-form form-container hidden">
-        <label>Username</label>
+        <label><%= text.register.username_label %></label>
         <input name="username" type="text" required />
-        <label>Email</label>
+        <label><%= text.register.email_label %></label>
         <input name="email" type="email" required />
-        <label>Password</label>
+        <label><%= text.register.password_label %></label>
         <input id="pwd" name="password" type="password" required minlength="8" />
         <div id="password-requirements" class="helper-password">
-          <p id="length" class="requirement invalid">At least 8 characters</p>
-          <p id="uppercase" class="requirement invalid">At least 1 uppercase letter</p>
-          <p id="number" class="requirement invalid">At least 1 number</p>
-          <p id="special" class="requirement invalid">At least 1 special character</p>
+          <p id="length" class="requirement invalid"><%= text.register.length_req %></p>
+          <p id="uppercase" class="requirement invalid"><%= text.register.uppercase_req %></p>
+          <p id="number" class="requirement invalid"><%= text.register.number_req %></p>
+          <p id="special" class="requirement invalid"><%= text.register.special_req %></p>
         </div>
-        <label>Confirm Password</label>
+        <label><%= text.register.confirm_password_label %></label>
         <input name="confirm-password" type="password" required minlength="8" />
-        <button type="submit">Register</button>
+        <button type="submit"><%= text.register.register_button %></button>
         <div id="register-error" class="error"></div>
         <button id="show-login-link" type="button" class="hidden-link" style="margin-top:.5rem;">
-          Already have an account? Sign in
+          <%= text.register.already_account_link %>
         </button>
       </form>
     </div>

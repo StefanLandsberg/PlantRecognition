@@ -19,7 +19,6 @@ import sseRoutes from "./routes/sse.routes.js";
 import configRoutes from "./routes/config.routes.js";
 import accountRoutes from "./routes/account.routes.js";
 
-
 import User from "./models/User.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,6 +29,16 @@ const PUBLIC_DIR = path.resolve(PROJECT_ROOT, "public");
 const UPLOADS_DIR = path.resolve(PROJECT_ROOT, "uploads");
 const VIEWS_DIR = path.resolve(PUBLIC_DIR, "views");
 
+import en from "../public/js/languages/en.json" assert { type: "json" };
+import afr from "../public/js/languages/afr.json" assert { type: "json" };
+import zulu from "../public/js/languages/zulu.json" assert { type: "json" };
+
+const languages = {
+  en,
+  afr,
+  zulu
+};
+
 const app = express();
 
 app.set("view engine", "ejs");
@@ -39,8 +48,36 @@ app.use(morgan("dev"));
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use("/api/account", accountRoutes);
 
+app.use("/uploads", express.static(UPLOADS_DIR));
+app.use(express.static(PUBLIC_DIR));
+
+function setLanguage(req, res, next) {
+  const availableLangs = Object.keys(languages);
+  let userLang = 'en'; // Set default language
+
+  // 1. Check for a language parameter in the URL (e.g., /settings?lang=afr)
+  // This has the highest priority and is used to CHANGE the language.
+  if (req.query.lang && availableLangs.includes(req.query.lang)) {
+    userLang = req.query.lang;
+    // Set a cookie that expires in 30 days to remember the choice.
+    res.cookie('lang', userLang, { maxAge: 1000 * 60 * 60 * 24 * 30, httpOnly: true });
+  }
+  // 2. If no parameter, check if a language cookie already exists.
+  // This is used for all subsequent page loads.
+  else if (req.cookies.lang && availableLangs.includes(req.cookies.lang)) {
+    userLang = req.cookies.lang;
+  }
+
+  // 3. Make the text and the current language code available to all EJS templates.
+  res.locals.text = languages[userLang];
+  res.locals.currentLang = userLang; // This is needed for Step 2
+  next();
+}
+
+app.use(setLanguage);
+
+app.use("/api/account", accountRoutes);
 
 app.use(
   cors({
@@ -48,9 +85,6 @@ app.use(
     credentials: true,
   })
 );
-
-app.use("/uploads", express.static(UPLOADS_DIR));
-app.use(express.static(PUBLIC_DIR));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analyzeRoutes);
