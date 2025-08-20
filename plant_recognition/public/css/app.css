@@ -479,15 +479,17 @@ body.light-mode {
 }
 
 
-.account .button.primary { background: var(--acc-ring); color: #fff; padding: 5px; border-radius: 5px; }
+.account .button.primary { background: var(--acc-ring); color: #fff; padding: 5px; border-radius: 5px;margin-top: 2%; }
 .account .button.ghost {
   background: transparent; border: 1px solid var(--acc-border);
   padding: 5px; border-radius: 5px;
   color: #253356;
+  margin-top: 2%;
 }
 .account .button.danger {
   background: var(--acc-danger); color: #fff;
   padding: 5px; border-radius: 5px;
+  margin-top: 2%;
 }
 
 
