@@ -9,8 +9,9 @@ class UnifiedPlantAugmentationEngine:
     """
     Simplified augmentation engine using torchvision transforms
     """
-    def __init__(self, image_size=224):
+    def __init__(self, image_size=512, device='cuda'):
         self.image_size = image_size
+        self.device = device if torch.cuda.is_available() else 'cpu'
         
         # Realistic augmentations (60%)
         self.realistic_transforms = transforms.Compose([
@@ -63,16 +64,19 @@ class UnifiedPlantAugmentationEngine:
                 method = "realistic"
             
             if method == "realistic":
-                return self.realistic_transforms(img)
+                tensor_img = self.realistic_transforms(img)
             elif method == "seasonal":
-                return self.seasonal_transforms(img)
+                tensor_img = self.seasonal_transforms(img)
             else:
                 # Default to realistic
-                return self.realistic_transforms(img)
+                tensor_img = self.realistic_transforms(img)
+            
+            # Move to specified device
+            return tensor_img.to(self.device)
         except Exception as e:
             print(f"Error in generate_single_augmentation: {e}")
-            # Return a zero tensor as fallback
-            return torch.zeros(3, self.image_size, self.image_size)
+            # Return a zero tensor as fallback on the correct device
+            return torch.zeros(3, self.image_size, self.image_size, device=self.device)
     
     def generate_batch_augmentations(self, img, count=30, realistic_frac=0.6):
         """
@@ -116,8 +120,9 @@ class UnifiedPlantAugmentationEngine:
             print(f"Error in generate_batch_augmentations: {e}")
             return []
 
-def create_augmentation_engine(use_gpu=False, enable_all_features=True, **kwargs):
+def create_augmentation_engine(use_gpu=True, enable_all_features=True, **kwargs):
     """
     Factory function to create augmentation engine
     """
-    return UnifiedPlantAugmentationEngine(**kwargs) 
+    device = 'cuda' if use_gpu and torch.cuda.is_available() else 'cpu'
+    return UnifiedPlantAugmentationEngine(device=device, **kwargs) 
