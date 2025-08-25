@@ -269,7 +269,7 @@ async function processWithLLM(species, confidence, imagePath) {
             return null;
         }
         
-        // Send request to LLM process
+        // Send request to LLM process (keep simple format LLM expects)
         const request = JSON.stringify({
             species: species,
             confidence: confidence,
@@ -384,6 +384,9 @@ app.post('/upload', upload.single('image'), async (req, res) => {
                 try {
                     const result = JSON.parse(modelOutput.trim());
                     console.log('Model prediction:', result);
+                    
+                    // Store full ML result globally for LLM access
+                    global.lastMLResult = result;
 
                     // Generate a unique filename for the stored image
                     const timestamp = Date.now();

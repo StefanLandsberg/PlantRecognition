@@ -13,6 +13,9 @@ import time
 import chromadb
 from sentence_transformers import SentenceTransformer
 import re
+import torch
+import numpy as np
+from functools import lru_cache
 
 # === CONFIG ===
 # Get the directory where this script is located
@@ -22,6 +25,10 @@ COLLECTION_NAME = "plants"
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 TOP_K = 3
 SOURCE = "Source: Invasive Alien & Problem Plants on The Witwatersrand & Magaliesberg. Field Guide by Karin Spottiswoode"
+
+# GPU Configuration
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+BATCH_SIZE = 32 if torch.cuda.is_available() else 1
 
 # === INIT ===
 client = None
@@ -63,9 +70,15 @@ def initialize_components():
         except Exception as e:
             raise RuntimeError(f"Failed to access collection '{COLLECTION_NAME}': {e}")
         
-        # Initialize Sentence Transformer model
+        # Initialize Sentence Transformer model with GPU optimization
         try:
-            model = SentenceTransformer(EMBED_MODEL)
+            model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
+            if torch.cuda.is_available():
+                model.half()  # Use half precision for faster inference
+                torch.backends.cudnn.benchmark = True
+                print(f"Model loaded on {DEVICE} with half precision")
+            else:
+                print(f"Model loaded on {DEVICE}")
         except Exception as e:
             raise RuntimeError(f"Failed to load Sentence Transformer model: {e}")
         
@@ -79,6 +92,20 @@ def initialize_components():
         return False
 
 # === QUERY ===
+# Cache for embeddings to avoid recomputation
+@lru_cache(maxsize=1000)
+def _cached_embedding(plant_name_tuple):
+    """Cached embedding computation for plant names."""
+    plant_name = plant_name_tuple[0]  # Extract from tuple for caching
+    with torch.inference_mode():  # Disable gradients for faster inference
+        if torch.cuda.is_available():
+            with torch.cuda.amp.autocast():  # Mixed precision
+                embedding = model.encode([plant_name], convert_to_tensor=True, device=DEVICE)
+                return embedding.cpu().numpy().tolist()
+        else:
+            embedding = model.encode([plant_name], convert_to_numpy=True)
+            return embedding.tolist()
+
 def query_plants(plant_name):
     """Query the RAG system for plant information."""
     if not collection or not model:
@@ -91,12 +118,15 @@ def query_plants(plant_name):
     
     try:
         # Clean and validate plant name
-        plant_name = plant_name.strip()
+        plant_name = plant_name.strip().lower()  # Normalize for caching
         if not plant_name:
             print("Empty plant name provided")
             return None
         
-        query_embedding = model.encode([plant_name], convert_to_numpy=True).tolist()
+        # Use cached embedding computation
+        query_embedding = _cached_embedding((plant_name,))  # Tuple for caching
+        
+        # Query ChromaDB
         results = collection.query(
             query_embeddings=query_embedding,
             n_results=TOP_K
@@ -106,43 +136,55 @@ def query_plants(plant_name):
         print(f"Error querying RAG system: {e}")
         return None
 
+# Compile regex patterns for faster processing
+_ID_PATTERN = re.compile(r"(?:Not to be confused with|Identification)[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE)
+_SENTENCE_PATTERN = re.compile(r'(?<=[.!?])\s+')
+_POISON_KEYWORDS = {
+    "poison", "toxic", "irritant", "irritation", "rash", "allergic", "reaction",
+    "not edible", "noxious", "harmful", "respiratory tract"
+}
+
+@lru_cache(maxsize=100)
 def extract_identification(text):
     """Extract identification information from text."""
-    pattern = r"(?:Not to be confused with|Identification)[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Notes|Leaf|Habitat|Description)[\s:]*|\Z)"
-    match = re.search(pattern, text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
+    match = _ID_PATTERN.search(text)
     return match.group(1).strip() if match else "Not found"
 
+@lru_cache(maxsize=100)
 def extract_poisonous(text):
     """Extract poisonous information from text."""
-    poison_keywords = [
-        "poison", "toxic", "irritant", "irritation", "rash", "allergic", "reaction",
-        "not edible", "noxious", "harmful", "respiratory tract"
-    ]
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = _SENTENCE_PATTERN.split(text)
     poison_sentences = [
         s.strip() for s in sentences
-        if any(k in s.lower() for k in poison_keywords)
+        if any(k in s.lower() for k in _POISON_KEYWORDS)
     ]
     return " ".join(poison_sentences) if poison_sentences else "Not found"
 
+# Compile patterns for field extraction
+_WHITESPACE_PATTERN = re.compile(r"(\n\s*){2,}")
+_ORIGIN_PATTERN = re.compile(
+    r"^\s*Origin[\s:]*\n*(.*?)(?=\n(?:^\s*(Where found|Family|Common names|Treatment)[\s:]*|\Z))",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE
+)
+
+@lru_cache(maxsize=50)
 def extract_fields(text):
     """Extract structured information from plant text."""
-    text = re.sub(r"(\n\s*){2,}", "\n", text.strip())
+    text = _WHITESPACE_PATTERN.sub("\n", text.strip())
 
+    # Pre-compiled patterns for common field extractions
+    _stop_labels = [
+        "Family", "Common names", "Origin", "Where found", "Treatment",
+        "Uses", "Identification", "Notes", "Leaf", "Habitat", "Description"
+    ]
+    
     def multiline_extract(label):
-        stop_labels = [
-            "Family", "Common names", "Origin", "Where found", "Treatment",
-            "Uses", "Identification", "Notes", "Leaf", "Habitat", "Description"
-        ]
-        stop_pattern = "|".join([rf"^\s*{l}[\s:]*" for l in stop_labels if l.lower() != label.lower()])
+        stop_pattern = "|".join([rf"^\s*{l}[\s:]*" for l in _stop_labels if l.lower() != label.lower()])
         pattern = rf"^\s*{label}[\s:]*\n*(.*?)(?=\n(?:{stop_pattern})|\Z)"
         match = re.search(pattern, text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
         return re.sub(r"\s+", " ", match.group(1)).strip() if match else "Not found"
 
-    origin_match = re.search(
-        r"^\s*Origin[\s:]*\n*(.*?)(?=\n(?:^\s*(Where found|Family|Common names|Treatment)[\s:]*|\Z))",
-        text, re.IGNORECASE | re.DOTALL | re.MULTILINE
-    )
+    origin_match = _ORIGIN_PATTERN.search(text)
 
     if origin_match:
         origin_block = origin_match.group(1).strip()
@@ -221,6 +263,9 @@ def determine_invasive_status(fields, plant_name):
     
     return False
 
+# Result cache for analyze_plant function
+_analysis_cache = {}
+
 def analyze_plant(species_name, confidence, image_path=None):
     """Analyze a detected plant species using RAG system."""
     start_time = time.time()
@@ -234,6 +279,18 @@ def analyze_plant(species_name, confidence, image_path=None):
     
     # Clean species name for querying
     query_name = species_name.lower().replace(' ', '_')
+    
+    # Check cache first (cache key includes species and confidence range)
+    confidence_bucket = round(confidence, 1)  # Round to nearest 0.1 for caching
+    cache_key = f"{query_name}_{confidence_bucket}"
+    
+    if cache_key in _analysis_cache:
+        cached_result = _analysis_cache[cache_key]
+        # Update timestamp and image path
+        cached_result["timestamp"] = datetime.now().isoformat()
+        cached_result["image_path"] = image_path
+        print(f"LLM analysis completed from cache in {time.time() - start_time:.3f}s")
+        return cached_result
     
     # Query the RAG system
     results = query_plants(query_name)
@@ -351,6 +408,16 @@ def analyze_plant(species_name, confidence, image_path=None):
     
     total_time = time.time() - start_time
     print(f"LLM analysis completed in {total_time:.3f}s")
+    
+    # Cache the result for future use
+    _analysis_cache[cache_key] = analysis.copy()  # Store a copy to avoid mutations
+    
+    # Limit cache size to prevent memory issues
+    if len(_analysis_cache) > 500:  # Keep most recent 500 results
+        # Remove oldest entries (simple FIFO)
+        oldest_keys = list(_analysis_cache.keys())[:100]
+        for key in oldest_keys:
+            del _analysis_cache[key]
     
     return analysis
 

@@ -217,6 +217,8 @@ data/cache/
 plant_recognition/frontend/uploads/
 plant_recognition/database/storage/
 plant_recognition/data/plant_images/
+data_preprocessing/data/
+modeltraining/data/
 data/plant_images/
 uploads/
 storage/
