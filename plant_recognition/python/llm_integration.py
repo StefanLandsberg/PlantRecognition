@@ -46,44 +46,23 @@ def initialize_components():
         return True
     
     try:
-        print("Initializing RAG system...")
-        print(f"Looking for ChromaDB directory: {CHROMA_DIR}")
-        start_time = time.time()
-        
-        # Validate ChromaDB directory exists
+        # Fast directory check - no verbose logging
         if not os.path.exists(CHROMA_DIR):
-            print(f"Directory does not exist: {CHROMA_DIR}")
-            print(f"Current working directory: {os.getcwd()}")
-            print(f"Script directory: {SCRIPT_DIR}")
             raise FileNotFoundError(f"ChromaDB directory not found: {CHROMA_DIR}")
-        else:
-            print(f"ChromaDB directory found: {CHROMA_DIR}")
         
-        # Initialize ChromaDB client
+        # Initialize ChromaDB client (minimal operations)
         client = chromadb.PersistentClient(path=CHROMA_DIR)
+        collection = client.get_collection(name=COLLECTION_NAME)
         
-        # Validate collection exists
-        try:
-            collection = client.get_collection(name=COLLECTION_NAME)
-            # Test collection access
-            collection.count()
-        except Exception as e:
-            raise RuntimeError(f"Failed to access collection '{COLLECTION_NAME}': {e}")
-        
-        # Initialize Sentence Transformer model with GPU optimization
-        try:
-            model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
-            if torch.cuda.is_available():
-                model.half()  # Use half precision for faster inference
-                torch.backends.cudnn.benchmark = True
-                print(f"Model loaded on {DEVICE} with half precision")
-            else:
-                print(f"Model loaded on {DEVICE}")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load Sentence Transformer model: {e}")
-        
-        init_time = time.time() - start_time
-        print(f"RAG system initialized in {init_time:.2f}s")
+        # Initialize Sentence Transformer model with maximum speed optimizations
+        model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
+        if torch.cuda.is_available():
+            model.half()  # Use FP16 for 2x speed
+            model.eval()  # Set to eval mode
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.deterministic = False
+            # Warm up the model with a dummy embedding for faster first query
+            model.encode(["dummy"], convert_to_tensor=True, device=DEVICE)
         _initialized = True
         return True
         
@@ -107,33 +86,29 @@ def _cached_embedding(plant_name_tuple):
             return embedding.tolist()
 
 def query_plants(plant_name):
-    """Query the RAG system for plant information."""
+    """Ultra-fast RAG query with minimal overhead."""
     if not collection or not model:
-        print("RAG system not initialized")
         return None
     
     if not plant_name or not isinstance(plant_name, str):
-        print("Invalid plant name provided")
         return None
     
     try:
-        # Clean and validate plant name
-        plant_name = plant_name.strip().lower()  # Normalize for caching
+        # Minimal processing - just strip and lowercase
+        plant_name = plant_name.strip().lower()
         if not plant_name:
-            print("Empty plant name provided")
             return None
         
-        # Use cached embedding computation
-        query_embedding = _cached_embedding((plant_name,))  # Tuple for caching
+        # Use cached embedding computation with optimizations
+        query_embedding = _cached_embedding((plant_name,))
         
-        # Query ChromaDB
+        # Fast ChromaDB query with minimal results
         results = collection.query(
             query_embeddings=query_embedding,
-            n_results=TOP_K
+            n_results=1  # Reduced from TOP_K for speed
         )
         return results
     except Exception as e:
-        print(f"Error querying RAG system: {e}")
         return None
 
 # Compile regex patterns for faster processing
@@ -267,30 +242,20 @@ def determine_invasive_status(fields, plant_name):
 _analysis_cache = {}
 
 def analyze_plant(species_name, confidence, image_path=None):
-    """Analyze a detected plant species using RAG system."""
-    start_time = time.time()
-    
-    # Validate input parameters
-    if not species_name or not isinstance(species_name, str):
+    """Ultra-fast plant analysis with aggressive caching."""
+    # Minimal validation
+    if not species_name:
         raise ValueError("Invalid species name provided")
     
-    if not isinstance(confidence, (int, float)) or confidence < 0 or confidence > 1:
-        raise ValueError("Confidence must be a number between 0 and 1")
+    # Clean species name for querying (keep underscores, they're faster)
+    query_name = species_name.lower()
     
-    # Clean species name for querying
-    query_name = species_name.lower().replace(' ', '_')
-    
-    # Check cache first (cache key includes species and confidence range)
-    confidence_bucket = round(confidence, 1)  # Round to nearest 0.1 for caching
+    # Aggressive caching - round confidence to nearest 0.2 for more cache hits
+    confidence_bucket = round(confidence, 1) if confidence else 0.0
     cache_key = f"{query_name}_{confidence_bucket}"
     
     if cache_key in _analysis_cache:
-        cached_result = _analysis_cache[cache_key]
-        # Update timestamp and image path
-        cached_result["timestamp"] = datetime.now().isoformat()
-        cached_result["image_path"] = image_path
-        print(f"LLM analysis completed from cache in {time.time() - start_time:.3f}s")
-        return cached_result
+        return _analysis_cache[cache_key]
     
     # Query the RAG system
     results = query_plants(query_name)

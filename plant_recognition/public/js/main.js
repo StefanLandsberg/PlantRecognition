@@ -62,22 +62,35 @@ async function boot() {
     els.btnVideo.addEventListener("click", async () => {
       els.videoPanel.classList.remove("hidden");
       await startVideo(async (blob) => {
-        const res = await AnalyzeAPI.analyze(blob, {
-          lat: userLoc.lat,
-          lng: userLoc.lng,
-          fromVideo: true,
-        });
-        addDetectionCard(els.list, {
-          ...res,
-          predictedSpecies: res.predictedSpecies,
-          confidence: res.confidence,
-          imageUrl: res.imageUrl,
-        });
-        addMarker({
-          lat: userLoc.lat,
-          lng: userLoc.lng,
-          title: res.predictedSpecies,
-        });
+        try {
+          console.log('Analyzing video frame');
+          const res = await AnalyzeAPI.analyze(blob, {
+            lat: userLoc.lat,
+            lng: userLoc.lng,
+            fromVideo: true,
+          });
+          console.log('Video frame response:', res);
+          addDetectionCard(els.list, {
+            ...res,
+            predictedSpecies: res.predictedSpecies,
+            confidence: res.confidence,
+            imageUrl: res.imageUrl,
+          });
+          addMarker({
+            lat: userLoc.lat,
+            lng: userLoc.lng,
+            title: res.predictedSpecies,
+          });
+        } catch (error) {
+          console.error('Video frame analysis failed:', error);
+          // Add error card
+          addDetectionCard(els.list, {
+            sightingId: 'error-' + Date.now(),
+            predictedSpecies: 'Analysis Failed',
+            confidence: 0,
+            imageUrl: null,
+          });
+        }
       });
     });
 
@@ -88,22 +101,35 @@ async function boot() {
 
     els.btnUpload.addEventListener("click", () => {
       pickFile("file-input", async (file) => {
-        const res = await AnalyzeAPI.analyze(file, {
-          lat: userLoc.lat,
-          lng: userLoc.lng,
-          fromVideo: false,
-        });
-        addDetectionCard(els.list, {
-          ...res,
-          predictedSpecies: res.predictedSpecies,
-          confidence: res.confidence,
-          imageUrl: res.imageUrl,
-        });
-        addMarker({
-          lat: userLoc.lat,
-          lng: userLoc.lng,
-          title: res.predictedSpecies,
-        });
+        try {
+          console.log('Uploading file:', file.name);
+          const res = await AnalyzeAPI.analyze(file, {
+            lat: userLoc.lat,
+            lng: userLoc.lng,
+            fromVideo: false,
+          });
+          console.log('Upload response:', res);
+          addDetectionCard(els.list, {
+            ...res,
+            predictedSpecies: res.predictedSpecies,
+            confidence: res.confidence,
+            imageUrl: res.imageUrl,
+          });
+          addMarker({
+            lat: userLoc.lat,
+            lng: userLoc.lng,
+            title: res.predictedSpecies,
+          });
+        } catch (error) {
+          console.error('Upload failed:', error);
+          // Add error card to show user what happened
+          addDetectionCard(els.list, {
+            sightingId: 'error-' + Date.now(),
+            predictedSpecies: 'Upload Failed',
+            confidence: 0,
+            imageUrl: null,
+          });
+        }
       });
     });
   } catch (e) {

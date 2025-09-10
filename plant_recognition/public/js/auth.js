@@ -21,15 +21,37 @@ showLoginLink?.addEventListener('click', (e) => {
 
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  console.log('Login form submitted');
+  
+  const submitBtn = loginForm.querySelector('button[type="submit"]');
+  if (submitBtn.disabled) {
+    console.log('Login already in progress, ignoring');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in...';
+  
   const formData = new FormData(loginForm);
   const username = formData.get('username'); 
   const password = formData.get('password');
   const err = document.getElementById('login-error');
+  err.textContent = '';
+
+  console.log('Login attempt:', { username, password: password ? '[HIDDEN]' : 'empty' });
 
   try {
-    await AuthAPI.login(username, password);
+    console.log('Calling AuthAPI.login...');
+    const result = await AuthAPI.login(username, password);
+    console.log('Login successful:', result);
     location.href = '/app';
-  } catch (e) { err.textContent = 'Login failed. ' + e; }
+  } catch (e) { 
+    console.error('Login failed:', e);
+    err.textContent = 'Login failed. ' + e; 
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
 });
 
 registerForm?.addEventListener('submit', async (e) => {

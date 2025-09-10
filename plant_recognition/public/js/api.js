@@ -2,9 +2,22 @@ const base = '';
 const common = { credentials: 'include', headers: { 'Content-Type': 'application/json' } };
 
 export async function postJSON(url, body) {
-  const res = await fetch(url, { ...common, method: 'POST', body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  console.log('postJSON called:', url, body);
+  try {
+    const res = await fetch(url, { ...common, method: 'POST', body: JSON.stringify(body) });
+    console.log('fetch response:', res.status, res.statusText);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log('API error response:', errorText);
+      throw new Error(errorText);
+    }
+    const result = await res.json();
+    console.log('API success response:', result);
+    return result;
+  } catch (error) {
+    console.error('postJSON error:', error);
+    throw error;
+  }
 }
 export async function getJSON(url) {
   const res = await fetch(url, { ...common, method: 'GET' });

@@ -1,0 +1,53 @@
+{
+  "title": "Plant Recognition",
+  "login": {
+    "header": "Sign In",
+    "username_label": "Username",
+    "password_label": "Password",
+    "signin_button": "Sign In",
+    "new_here_link": "New here? Create an account"
+  },
+  "register": {
+    "username_label": "Username",
+    "email_label": "Email",
+    "password_label": "Password",
+    "confirm_password_label": "Confirm Password",
+    "register_button": "Create Account",
+    "already_account_link": "Already have an account? Sign in",
+    "length_req": "At least 8 characters",
+    "uppercase_req": "At least one uppercase letter",
+    "number_req": "At least one number",
+    "special_req": "At least one special character"
+  },
+  "account": {
+    "title": "Account Settings",
+    "header": "Profile Information",
+    "display_name_label": "Display Name",
+    "display_name_placeholder": "Enter your display name",
+    "email_label": "Email Address",
+    "email_placeholder": "Enter your email",
+    "save_button": "Save Changes",
+    "reset_button": "Reset",
+    "password_header": "Change Password",
+    "current_password_label": "Current Password",
+    "new_password_label": "New Password",
+    "confirm_password_label": "Confirm New Password",
+    "update_password_button": "Update Password",
+    "danger_zone_header": "Danger Zone",
+    "danger_zone_helper": "These actions cannot be undone.",
+    "delete_account_button": "Delete Account"
+  },
+  "settings": {
+    "title": "Settings",
+    "header": "Application Settings",
+    "dark_mode_label": "Dark Mode",
+    "color_blind_mode_label": "Color Blind Mode",
+    "color_blind_off_option": "Off",
+    "language_label": "Language",
+    "language_en_option": "English",
+    "language_afr_option": "Afrikaans",
+    "language_zulu_option": "isiZulu",
+    "cancel_button": "Cancel",
+    "apply_button": "Apply Settings"
+  }
+}

@@ -572,3 +572,70 @@ body.light-mode {
     left: 0;
 }
 
+/* LLM Analysis Styling */
+.llm-details {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(103, 212, 167, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+}
+
+.analysis-section {
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+}
+
+.analysis-section:last-child {
+    margin-bottom: 0;
+}
+
+.analysis-section h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.analysis-section p {
+    margin: 0.25rem 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.analysis-section strong {
+    color: var(--text);
+}
+
+.analysis-section.disclaimer {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+}
+
+.analysis-section.disclaimer h4 {
+    color: #ffc107;
+}
+
+.analysis-section.disclaimer p {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.llm details[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+.llm summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent);
+    padding: 0.25rem 0;
+}
+
+.llm summary:hover {
+    color: #7ee0b1;
+}
+

@@ -36,12 +36,12 @@
           const savedDarkMode = localStorage.getItem('darkMode');
           const savedColorBlindMode = localStorage.getItem('colorBlindMode');
 
-          if (savedDarkMode === 'true') {
-            body.classList.remove('light-mode');
-            body.classList.add('dark-mode');
-          } else {
+          if (savedDarkMode === 'false') {
             body.classList.remove('dark-mode');
             body.classList.add('light-mode');
+          } else {
+            body.classList.remove('light-mode');
+            body.classList.add('dark-mode');
           }
 
           body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');

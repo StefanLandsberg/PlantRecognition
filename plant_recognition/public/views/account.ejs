@@ -9,7 +9,7 @@
   <script>
     // This script for theme flashing is fine as is
     try {
-      var dark = localStorage.getItem('darkMode') === 'true';
+      var dark = localStorage.getItem('darkMode') !== 'false';
       document.documentElement.classList.add(dark ? 'dark-mode' : 'light-mode');
       var cb = localStorage.getItem('colorBlindMode');
       if (cb && cb !== 'none') document.documentElement.classList.add(cb);

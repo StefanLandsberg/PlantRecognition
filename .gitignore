@@ -1,5 +1,6 @@
 # PlantRecognition .gitignore file
 
+
 # ===== ENVIRONMENT & CONFIGURATION =====
 # Environment variables and secrets
 .env
@@ -182,7 +183,6 @@ cython_debug/
 # ===== MACHINE LEARNING & MODELS =====
 # Model files and checkpoints
 *.pth
-*.pt
 *.ckpt
 *.h5
 *.hdf5
@@ -368,3 +368,9 @@ download_checkpoint.json
 descriptor_cache/
 stats/
 data_preprocessing/data/plant_images/*
+
+#include
+!afr.json
+!en.json
+!zulu.json
+
