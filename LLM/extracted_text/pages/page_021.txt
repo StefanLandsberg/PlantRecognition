@@ -1,0 +1,20 @@
+We are experimenting with quantifying places where AIPS still need to
+be removed by entering a negative number in the place of the number
+removed.
+
+A free on-line programme on https://www.earthpoint.us/ can be used
+to generate a file for plotting records in Google Earth. This programme
+allows for a wider range of icons exported by GPS Essentials as well as
+colours and symbol sizes
+<<COLBREAK>>
+Documenting AIPs (Continued)
+
+AIP removal has been recorded by more than eight people to date using
+the GPS Essential app. The recordings are exported by email or
+WhatsApp to Dr Steve Spottiswoode as KML format file. He reads these
+files and adds new records to a master CSV file using custom-written
+software. Further processing is under development to expand analysis
+and reporting of the data. This includes clustering and filtering of
+locations in space and time.
+
+Sample of CSV data and a spatial plot of recordings.

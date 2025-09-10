@@ -1,0 +1,19 @@
+We are using an Android Cellphone App called GPS Essentials to
+record groups of AIPs removed from the Kloofendal NR as Waypoints.
+Once the App is set up and a Waypoint is requested, we follow a few
+simple steps to check that the location accuracy is sufficient, namely
+Checking that the location is accurately estimated, for example with
+the error (δ) is less than 10m.
+Entering the common name of the plant(s)
+The number of plants
+Any relevant comment
+<<COLBREAK>>
+Documenting AIPs removed in Kloofendal
+
+The bulk of this book deals with qualitative descriptions of the AIPs, the
+why, what and how of control of AIPs.
+The Friends of Kloofendal are developing methodologies to quantify the
+process of controlling AIPs, in terms of Where, How much and When.
+Where - what place or position.
+How much – How many and how big
+When - at what date and time
