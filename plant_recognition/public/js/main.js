@@ -3,8 +3,9 @@ import { startVideo, stopVideo } from "./video.js";
 import { pickFile } from "./upload.js";
 import { startSSE } from "./sse.js";
 import { addDetectionCard, setLLMCompleted } from "./ui.js";
-import { MapLoaderProxy } from "./map.js";
-const mapProxy = new MapLoaderProxy(); // create an instant of the map
+// Import the singleton instance directly
+import { mapProxy } from "./map.js";
+
 
 const els = {
   btnLogout: document.getElementById("btn-logout"),

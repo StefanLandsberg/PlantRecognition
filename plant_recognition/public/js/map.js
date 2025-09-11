@@ -1,4 +1,4 @@
-export class MapLoaderProxy {
+class MapLoaderProxy {
   constructor() {
     this.map = null;
     this.markers = [];
@@ -63,3 +63,6 @@ export class MapLoaderProxy {
     }
   }
 }
+
+const mapProxy = new MapLoaderProxy();
+export { mapProxy }; 
