@@ -1,9 +1,10 @@
 import { AuthAPI, AnalyzeAPI, SightingsAPI } from "./api.js";
-import { loadGoogleMaps, initMap, addMarker } from "./map.js";
 import { startVideo, stopVideo } from "./video.js";
 import { pickFile } from "./upload.js";
 import { startSSE } from "./sse.js";
 import { addDetectionCard, setLLMCompleted } from "./ui.js";
+import { MapLoaderProxy } from "./map.js";
+const mapProxy = new MapLoaderProxy(); // create an instant of the map
 
 const els = {
   btnLogout: document.getElementById("btn-logout"),
@@ -34,8 +35,8 @@ async function boot() {
       location.href = "/";
     });
     userLoc = (await geolocate()) || { lat: -25.8408, lng: 28.2395 };
-    await loadGoogleMaps();
-    const map = initMap("map", userLoc, 13);
+    await mapProxy.loadGoogleMaps();
+    const map = mapProxy.initMap("map", userLoc, 13);
 
     try {
       const box = "";
@@ -45,12 +46,13 @@ async function boot() {
           userLoc.lng,
           userLoc.lat,
         ];
-        addMarker({
+        mapProxy.addMarker({
           lat,
           lng,
           title: d.analysis?.predictedSpecies || "Sighting",
         });
       });
+      mapProxy.fitToMarkers();
     } catch {}
 
     startSSE((msg) => {
@@ -76,7 +78,7 @@ async function boot() {
             confidence: res.confidence,
             imageUrl: res.imageUrl,
           });
-          addMarker({
+          mapProxy.addMarker({
             lat: userLoc.lat,
             lng: userLoc.lng,
             title: res.predictedSpecies,
@@ -115,7 +117,7 @@ async function boot() {
             confidence: res.confidence,
             imageUrl: res.imageUrl,
           });
-          addMarker({
+          mapProxy.addMarker({
             lat: userLoc.lat,
             lng: userLoc.lng,
             title: res.predictedSpecies,
