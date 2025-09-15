@@ -75,16 +75,28 @@ export async function analyzeOnce(req, res, next) {
       confidence
     });
 
+    // Immediately publish new sighting for real-time map updates
+    publish(req.auth.userId, {
+      type: 'new_sighting',
+      sighting: {
+        _id: doc._id,
+        analysis: doc.analysis,
+        location: doc.location,
+        createdAt: doc.createdAt
+      }
+    });
+
     // 3) Kick LLM and publish when done (async for speed)
     setImmediate(async () => {
       try {
         const llm = await kickLLM(doc._id, predicted_species, confidence);
         await Sighting.updateOne(
           { _id: doc._id },
-          { $set: { 'analysis.llm': { summary: llm.summary || '', details: llm, status: 'completed' } } }
+          { $set: { 'analysis.llm': { summary: llm.summary || '', details: llm.details, status: 'completed' } } }
         );
         publish(req.auth.userId, { type: 'analysis_done', sightingId: doc._id, llm });
       } catch (e) {
+        console.error('LLM analysis failed:', e);
         await Sighting.updateOne(
           { _id: doc._id },
           { $set: { 'analysis.llm.status': 'failed' } }

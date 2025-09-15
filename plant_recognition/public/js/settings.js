@@ -31,14 +31,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Load and display the current saved settings when the page opens
     function loadCurrentSettings() {
-        // Get saved settings, providing defaults if none exist
-        const isDarkModeSaved = localStorage.getItem('darkMode') === 'true';
+        // Check if dark mode is saved in localStorage, or detect from body class
+        let isDarkModeSaved;
+
+        if (localStorage.getItem('darkMode') !== null) {
+            // If setting exists in localStorage, use it
+            isDarkModeSaved = localStorage.getItem('darkMode') === 'true';
+        } else {
+            // If no setting exists, detect current theme from body classes
+            // Default to dark mode (true) since that's the application default
+            isDarkModeSaved = !body.classList.contains('light-mode');
+        }
+
         const colorBlindModeSaved = localStorage.getItem('colorBlindMode') || 'none';
         const languageSaved = localStorage.getItem('language') || 'en';
+
         // Update the controls on the page to reflect the saved settings
         themeToggle.checked = isDarkModeSaved;
         colorBlindnessSelect.value = colorBlindModeSaved;
         languageSelect.value = languageSaved;
+
         // Apply the current settings to the settings page itself for consistency
         applySettings();
     }

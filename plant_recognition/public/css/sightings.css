@@ -1,0 +1,1001 @@
+/* Sightings Tab Specific Styles */
+
+/* Farmer Alert Banners */
+.alert-banner {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.alert-banner.high {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.alert-banner.medium {
+  background: linear-gradient(135deg, #d97706, #b45309);
+}
+
+.alert-banner.low {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.alert-banner h3 {
+  margin: 0 0 0.5rem 0;
+  color: white;
+}
+
+.alert-banner p {
+  margin: 0;
+  color: white;
+}
+
+/* Immediate Actions */
+.immediate-actions {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.immediate-actions h4 {
+  margin: 0 0 0.5rem 0;
+  color: #dc2626;
+}
+
+.immediate-actions ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.immediate-actions li {
+  margin-bottom: 0.25rem;
+}
+
+/* Farmer Metrics Grid */
+.farmer-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.metric-value.invasive-count {
+  color: #dc2626;
+}
+
+.metric-value.hotspot-count {
+  color: #d97706;
+}
+
+.metric-value.spread-rate {
+  color: #059669;
+}
+
+.metric-value.removal-count {
+  color: #10b981;
+}
+
+.metric-value.environment-impact {
+  color: #8b5cf6;
+}
+
+/* Environmental Impact Severity Colors */
+.environment-impact.Critical {
+  color: #dc2626 !important;
+  font-weight: bold;
+}
+
+.environment-impact.High {
+  color: #ea580c !important;
+  font-weight: 600;
+}
+
+.environment-impact.Moderate {
+  color: #d97706 !important;
+  font-weight: 600;
+}
+
+.environment-impact.Low {
+  color: #059669 !important;
+}
+
+.environment-impact.Minimal {
+  color: #10b981 !important;
+}
+
+/* Environmental Impact Details */
+.environmental-details {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+.environmental-details strong {
+  color: var(--text);
+}
+
+/* Farmer Insights Grid */
+.farmer-insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .farmer-insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.insight-card {
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.insight-card h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.insight-card p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Weather Impact Card */
+.insight-card.weather {
+  background: rgba(103, 212, 167, 0.05);
+  border: 1px solid #67d4a7;
+}
+
+.insight-card.weather h4 {
+  color: #059669;
+}
+
+/* Control Effectiveness Card */
+.insight-card.control {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid #f59e0b;
+}
+
+.insight-card.control h4 {
+  color: #d97706;
+}
+
+/* Timeline Container */
+.timeline-container {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  background: rgba(103, 212, 167, 0.02);
+  border-radius: 8px;
+  margin-top: 1rem;
+  position: relative;
+  padding-left: 2.5rem; /* Add more space for icons */
+}
+
+.timeline-line {
+  position: absolute;
+  left: 20px; /* Move line right to prevent cutoff */
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #67d4a7 0%, rgba(103, 212, 167, 0.3) 100%);
+}
+
+.timeline-events {
+  position: relative;
+  padding-left: 2rem;
+}
+
+/* Timeline Items */
+.timeline-item {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-item.farmer-threat .timeline-marker {
+  position: absolute;
+  left: -2.3rem; /* Adjust positioning to prevent cutoff */
+  top: 0.8rem;
+  width: 12px;
+  height: 12px;
+  border: 3px solid white;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.timeline-item.farmer-strategic .timeline-marker {
+  position: absolute;
+  left: -2.5rem; /* Adjust positioning for larger markers */
+  top: 1.2rem;
+  width: 14px;
+  height: 14px;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(103, 212, 167, 0.3);
+  z-index: 2;
+}
+
+.timeline-content {
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-left: 0.5rem;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.timeline-date {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.threat-badge {
+  font-size: 0.65rem;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.timeline-count {
+  font-size: 0.7rem;
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 15px;
+  font-weight: 600;
+}
+
+.timeline-title {
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.farmer-action {
+  font-size: 0.7rem;
+  color: #dc2626;
+  font-weight: 500;
+  margin: 0.3rem 0;
+}
+
+.timeline-details {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.timeline-species {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.3;
+  margin-top: 0.5rem;
+}
+
+/* Sighting Cards */
+.sighting-card {
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: var(--card-bg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.sighting-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.invasive-sighting {
+  border: 2px solid #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.non-invasive-sighting {
+  border: 1px solid #10b981;
+  background: rgba(16, 185, 129, 0.03);
+  transform: scale(0.9);
+  margin: 0.5rem 0;
+}
+
+/* Species Labels */
+.species-label {
+  font-weight: bold;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.invasive-label {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.non-invasive-label {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  font-weight: bold;
+}
+
+/* Non-invasive card specific styling */
+.non-invasive-sighting .sighting-species {
+  font-size: 0.9rem;
+}
+
+.non-invasive-sighting .sighting-meta {
+  font-size: 0.8rem;
+}
+
+.non-invasive-sighting .sighting-badge {
+  font-size: 0.7rem;
+}
+
+.non-invasive-sighting .sighting-thumbnail {
+  width: 60px;
+  height: 60px;
+}
+
+/* Risk Level Badge */
+.risk-level {
+  color: white !important;
+  font-weight: 600;
+}
+
+/* Remove Button */
+.remove-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.remove-btn:hover {
+  background: #b91c1c;
+  transform: scale(1.1);
+}
+
+.remove-btn:active {
+  transform: scale(0.95);
+}
+
+/* Section Headers */
+.section-header h2 {
+  font-size: 1.2rem;
+  margin: 1.5rem 0 1rem 0;
+  border-bottom: 2px solid;
+  padding-bottom: 0.5rem;
+}
+
+.section-header.invasive h2 {
+  color: #ef4444;
+  border-bottom-color: #ef4444;
+}
+
+.section-header.non-invasive h2 {
+  color: #10b981;
+  border-bottom-color: #10b981;
+}
+
+/* Dashboard Header */
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-title {
+  font-size: 1.8rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-subtitle {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Farmer Alert Section */
+.farmer-alert-section {
+  margin-bottom: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .farmer-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-container {
+    padding-left: 2rem;
+  }
+
+  .timeline-item.farmer-threat .timeline-marker,
+  .timeline-item.farmer-strategic .timeline-marker {
+    left: -1.8rem;
+  }
+
+  .timeline-line {
+    left: 15px;
+  }
+}
+
+/* Removal Confirmation Modal */
+.removal-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.removal-modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.removal-modal h3 {
+  margin-top: 0;
+  color: #dc2626;
+}
+
+.removal-modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.btn-confirm {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-cancel {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-confirm:hover {
+  background: #b91c1c;
+}
+
+.btn-cancel:hover {
+  background: #4b5563;
+}
+
+/* Timeline Insights Styles */
+.weekly-insights {
+  margin-bottom: 0.4rem;
+}
+
+.monthly-insights {
+  margin-bottom: 0.4rem;
+}
+
+.yearly-insights {
+  margin-bottom: 0.4rem;
+}
+
+.insight-detail-text {
+  font-size: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.insight-detail-text:last-child {
+  margin-bottom: 0;
+}
+
+/* Timeline Item Styles */
+.timeline-item-content {
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-left: 0.5rem;
+}
+
+.timeline-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.timeline-date-text {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.timeline-title-text {
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.timeline-details-text {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+/* Risk Level Colors */
+.invasive-species-header {
+  color: #ef4444;
+  font-size: 1.2rem;
+  margin: 1.5rem 0 1rem 0;
+  border-bottom: 2px solid #ef4444;
+  padding-bottom: 0.5rem;
+}
+
+.non-invasive-species-header {
+  color: #10b981;
+  font-size: 1.2rem;
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #10b981;
+}
+
+/* Species Status Labels */
+.invasive-status-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.non-invasive-status-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+/* Alert and Notification Styles */
+.alert-timestamp {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.alert-recommendations {
+  padding: 1rem;
+}
+
+.recommendation-card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(103, 212, 167, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.recommendation-title {
+  margin: 0 0 0.5rem 0;
+  color: var(--accent);
+}
+
+.recommendation-description {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.recommendation-meta {
+  margin-top: 0.5rem;
+}
+
+.recommendation-meta-text {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Unknown Species Section */
+.unknown-species-subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.unknown-metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.unknown-location-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* LLM Analysis Styles */
+.llm-analysis-header {
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.llm-analysis-pending {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Hidden content */
+.hidden-content {
+  display: none;
+}
+
+/* LLM Dropdown */
+.llm-dropdown-content-hidden {
+  display: none !important;
+}
+
+/* Unknown Species Section Additional Styles */
+.unknown-species-subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.unknown-metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.unknown-location-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Alert Styles */
+.alert-timestamp {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.alert-recommendations {
+  padding: 1rem;
+}
+
+.recommendation-card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(103, 212, 167, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.recommendation-title {
+  margin: 0 0 0.5rem 0;
+  color: var(--accent);
+}
+
+.recommendation-description {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.recommendation-meta {
+  margin-top: 0.5rem;
+}
+
+.recommendation-meta-text {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Timeline Item Detailed Styles */
+.timeline-item-content {
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-left: 0.5rem;
+}
+
+.timeline-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.timeline-date-text {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.timeline-title-text {
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.timeline-details-text {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+/* Insight Detail Styles */
+.insight-detail-text {
+  font-size: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.insight-detail-text:last-child {
+  margin-bottom: 0;
+}
+
+/* Timeline Threat Item */
+.timeline-threat-item {
+  padding: 0.3rem 0;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.timeline-threat-marker {
+  position: absolute;
+  left: -1.6rem;
+  top: 0.8rem;
+  width: 12px;
+  height: 12px;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px;
+}
+
+.timeline-threat-content {
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border-left: 4px solid;
+  margin-left: 0.5rem;
+}
+
+.timeline-threat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.timeline-threat-date {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.threat-badge {
+  font-size: 0.65rem;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.timeline-threat-title {
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.farmer-action {
+  font-size: 0.7rem;
+  color: #dc2626;
+  font-weight: 500;
+  margin: 0.3rem 0;
+}
+
+.timeline-threat-details {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+/* Timeline Strategic Item */
+.timeline-strategic-item {
+  padding: 0.4rem 0;
+  margin-bottom: 0.6rem;
+  position: relative;
+}
+
+.timeline-strategic-marker {
+  position: absolute;
+  left: -1.6rem;
+  top: 1.2rem;
+  width: 14px;
+  height: 14px;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(103, 212, 167, 0.3);
+}
+
+.timeline-strategic-content {
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, rgba(103, 212, 167, 0.12) 0%, rgba(103, 212, 167, 0.03) 100%);
+  border-radius: 10px;
+  border-left: 4px solid;
+  margin-left: 0.5rem;
+}
+
+.timeline-strategic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.timeline-strategic-date {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.timeline-count {
+  font-size: 0.7rem;
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 15px;
+  font-weight: 600;
+}
+
+.timeline-strategic-species {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.3;
+  margin-top: 0.5rem;
+}
+
+/* Timeline Simple Item */
+.timeline-simple-item {
+  padding: 0.2rem 0;
+  margin-bottom: 0.4rem;
+  position: relative;
+}
+
+.timeline-simple-marker {
+  position: absolute;
+  left: -1.6rem;
+  top: 0.8rem;
+  width: 10px;
+  height: 10px;
+  background: #67d4a7;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #67d4a7;
+}
+
+.timeline-simple-content {
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, rgba(103, 212, 167, 0.08) 0%, rgba(103, 212, 167, 0.02) 100%);
+  border-radius: 8px;
+  border-left: 3px solid #67d4a7;
+  margin-left: 0.5rem;
+}
+
+.timeline-simple-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.timeline-simple-date {
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.timeline-confidence {
+  font-size: 0.65rem;
+  background: rgba(103, 212, 167, 0.2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 12px;
+}
+
+.timeline-simple-title {
+  font-size: 0.8rem;
+  margin: 0.1rem 0;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.timeline-location {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+/* Timeline Summary Item */
+.timeline-summary-item {
+  padding: 0.3rem 0;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.timeline-summary-marker {
+  position: absolute;
+  left: -1.6rem;
+  top: 1rem;
+  width: 12px;
+  height: 12px;
+  background: #67d4a7;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(103, 212, 167, 0.3);
+}
+
+.timeline-summary-content {
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, rgba(103, 212, 167, 0.1) 0%, rgba(103, 212, 167, 0.03) 100%);
+  border-radius: 10px;
+  border-left: 4px solid #67d4a7;
+  margin-left: 0.5rem;
+}
+
+.timeline-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.timeline-summary-date {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.timeline-summary-count {
+  font-size: 0.7rem;
+  background: rgba(103, 212, 167, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 15px;
+  font-weight: 600;
+}
+
+.timeline-summary-species {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+/* No Data Display */
+.no-data-display {
+  text-align: center;
+  color: var(--muted);
+  padding: 2rem;
+}

@@ -6,6 +6,24 @@
     --muted: #9aa7bd;
 }
 
+/* Dark mode variables (default) */
+.dark-mode {
+    --bg: #0b1020;
+    --panel: #151a2b;
+    --accent: #67d4a7;
+    --text: #e9eef5;
+    --muted: #9aa7bd;
+}
+
+/* Light mode variables */
+.light-mode {
+    --bg: #ffffff;
+    --panel: #f8f9fa;
+    --accent: #28a745;
+    --text: #212529;
+    --muted: #6c757d;
+}
+
 * {
     box-sizing: border-box;
 }

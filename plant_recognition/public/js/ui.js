@@ -6,27 +6,115 @@ export function addDetectionCard(container, det) {
   el.id = `det-${det.sightingId}`;
   el.innerHTML = `
     <div class="badges">
-      <div>Species: ${sanitizeHtml(det.predictedSpecies || 'Unknown')}</div>
+      <div class="detection-species" onclick="toggleMainDetectionLLM('${det.sightingId}')" style="cursor: pointer; color: var(--accent);">
+        Species: ${sanitizeHtml(det.predictedSpecies || 'Unknown')}
+      </div>
       <div>Conf: ${(det.confidence*100).toFixed(1)}%</div>
     </div>
     ${det.imageUrl ? `<img src="${det.imageUrl}" alt="detection" />` : ''}
-    <div class="llm">LLM: <span class="llm-status">pending</span></div>
+    <div class="classification-loading" style="display: none;">
+      <div class="loading-spinner classification"></div>
+      <span>Classifying...</span>
+    </div>
+    <div class="llm-loading" style="display: none;">
+      <div class="loading-spinner llm"></div>
+      <span>Analyzing with AI...</span>
+    </div>
+    <div class="llm" style="display: none;">
+      <div class="llm-header" onclick="toggleMainDetectionLLM('${det.sightingId}')" style="cursor: pointer;">
+        <span>AI Analysis</span>
+        <span class="llm-arrow">▼</span>
+      </div>
+      <div class="llm-content" style="display: none;">
+        <span class="llm-status">pending</span>
+      </div>
+    </div>
   `;
   container.prepend(el);
 }
 
+// Show classification loading
+export function showClassificationLoading(sightingId) {
+  const el = document.getElementById(`det-${sightingId}`);
+  if (!el) return;
+
+  const loadingDiv = el.querySelector('.classification-loading');
+  if (loadingDiv) {
+    loadingDiv.style.display = 'flex';
+  }
+}
+
+// Hide classification loading, show LLM loading
+export function showLLMLoading(sightingId) {
+  const el = document.getElementById(`det-${sightingId}`);
+  if (!el) return;
+
+  const classificationLoading = el.querySelector('.classification-loading');
+  const llmLoading = el.querySelector('.llm-loading');
+
+  if (classificationLoading) classificationLoading.style.display = 'none';
+  if (llmLoading) llmLoading.style.display = 'flex';
+}
+
+// Hide all loading, show LLM section
+export function hideLLMLoading(sightingId) {
+  const el = document.getElementById(`det-${sightingId}`);
+  if (!el) return;
+
+  const llmLoading = el.querySelector('.llm-loading');
+  const llmDiv = el.querySelector('.llm');
+
+  if (llmLoading) llmLoading.style.display = 'none';
+  if (llmDiv) llmDiv.style.display = 'block';
+}
+
+// Global function to toggle LLM analysis in main detection cards
+window.toggleMainDetectionLLM = function(sightingId) {
+  const el = document.getElementById(`det-${sightingId}`);
+  if (!el) return;
+
+  const llmDiv = el.querySelector('.llm');
+  const llmContent = el.querySelector('.llm-content');
+  const llmArrow = el.querySelector('.llm-arrow');
+
+  if (llmDiv && llmContent) {
+    const isVisible = llmContent.style.display !== 'none';
+    llmContent.style.display = isVisible ? 'none' : 'block';
+    if (llmArrow) {
+      llmArrow.textContent = isVisible ? '▼' : '▲';
+    }
+  }
+};
+
 export function setLLMCompleted(sightingId, llm) {
   const el = document.getElementById(`det-${sightingId}`);
   if (!el) return;
-  
+
+  // Hide LLM loading
+  hideLLMLoading(sightingId);
+
+  // Make sure LLM section is visible when completed
   const llmDiv = el.querySelector('.llm');
-  if (llmDiv && llm) {
+  if (llmDiv) {
+    llmDiv.style.display = 'block';
+  }
+
+  // Update species name to show it's clickable and LLM is ready
+  const speciesDiv = el.querySelector('.detection-species');
+  if (speciesDiv && llm) {
+    speciesDiv.style.color = 'var(--accent)';
+    speciesDiv.style.fontWeight = '600';
+    speciesDiv.title = 'Click to view AI analysis';
+  }
+
+  const llmContent = el.querySelector('.llm-content');
+  if (llmContent && llm) {
     // Get the analysis data (should be an object now)
     const analysisData = llm.details;
-    
+
     // Create a nicely formatted LLM display
     let formattedContent = '';
-    
+
     if (analysisData && typeof analysisData === 'object') {
       // Species Information
       if (analysisData.advisory_content?.species_identification) {
@@ -40,7 +128,7 @@ export function setLLMCompleted(sightingId, llm) {
           </div>
         `;
       }
-      
+
       // Legal Status & Risk
       if (analysisData.advisory_content?.legal_status) {
         const legalInfo = analysisData.advisory_content.legal_status;
@@ -53,7 +141,7 @@ export function setLLMCompleted(sightingId, llm) {
           </div>
         `;
       }
-      
+
       // Description
       if (analysisData.description) {
         formattedContent += `
@@ -63,7 +151,7 @@ export function setLLMCompleted(sightingId, llm) {
           </div>
         `;
       }
-      
+
       // Distribution
       if (analysisData.where_found) {
         formattedContent += `
@@ -73,7 +161,7 @@ export function setLLMCompleted(sightingId, llm) {
           </div>
         `;
       }
-      
+
       // Control Methods
       if (analysisData.treatment && analysisData.treatment !== 'Not found') {
         formattedContent += `
@@ -83,7 +171,7 @@ export function setLLMCompleted(sightingId, llm) {
           </div>
         `;
       }
-      
+
       // Action Required
       if (analysisData.action_required) {
         formattedContent += `
@@ -93,7 +181,7 @@ export function setLLMCompleted(sightingId, llm) {
           </div>
         `;
       }
-      
+
       // Disclaimer
       if (analysisData.disclaimer) {
         formattedContent += `
@@ -107,14 +195,11 @@ export function setLLMCompleted(sightingId, llm) {
       // Fallback for string content
       formattedContent = `<div class="analysis-section"><p>${analysisData || 'Analysis completed successfully.'}</p></div>`;
     }
-    
-    llmDiv.innerHTML = `
-      <details open>
-        <summary>${llm.summary || 'AI Analysis Complete'}</summary>
-        <div class="llm-details">
-          ${formattedContent}
-        </div>
-      </details>
+
+    llmContent.innerHTML = `
+      <div class="llm-details">
+        ${formattedContent}
+      </div>
     `;
   } else {
     const span = el.querySelector('.llm-status');

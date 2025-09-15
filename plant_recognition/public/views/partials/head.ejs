@@ -9,4 +9,28 @@
         <% if (Array.isArray(styles)) { styles.forEach(href=> { %>
             <link rel="stylesheet" href="<%= href %>" />
             <% }) } %>
+
+    <!-- Theme initialization script -->
+    <script>
+        (function() {
+            // Apply theme immediately to prevent flash
+            const isDarkMode = localStorage.getItem('darkMode');
+            const body = document.body;
+
+            if (isDarkMode === 'false') {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+            } else {
+                // Default to dark mode (remove light-mode if present, add dark-mode)
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+            }
+
+            // Apply color blindness filter
+            const colorBlindMode = localStorage.getItem('colorBlindMode');
+            if (colorBlindMode && colorBlindMode !== 'none') {
+                body.classList.add(colorBlindMode);
+            }
+        })();
+    </script>
 </head>

@@ -243,10 +243,12 @@ _analysis_cache = {}
 
 def analyze_plant(species_name, confidence, image_path=None):
     """Ultra-fast plant analysis with aggressive caching."""
+    start_time = time.time()  # Track analysis time
+
     # Minimal validation
     if not species_name:
         raise ValueError("Invalid species name provided")
-    
+
     # Clean species name for querying (keep underscores, they're faster)
     query_name = species_name.lower()
     
