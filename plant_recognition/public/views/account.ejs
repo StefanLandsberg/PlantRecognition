@@ -3,11 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  
   <%- include('partials/head', { title: text.account.title, styles: ['/css/app.css'] }) %>
-
   <script>
-    // This script for theme flashing is fine as is
     try {
       var dark = localStorage.getItem('darkMode') !== 'false';
       document.documentElement.classList.add(dark ? 'dark-mode' : 'light-mode');
@@ -19,93 +16,90 @@
 <body>
   <%- include('partials/nav') %>
 
-  <main class="container">
-    <div class="account-wrapper">
-      <section class="account" aria-label="Account">
-        <div class="card" aria-labelledby="profile-h">
-          <h1 id="profile-h" style="margin:0 0 .75rem;"><%= text.account.header %></h1>
-
-          <div class="form-grid" style="margin-top:.5rem;">
-            <div class="field">
-              <label for="acc-name"><%= text.account.display_name_label %></label>
-              <input
-                id="acc-name"
-                name="displayName"
-                type="text"
-                placeholder="<%= text.account.display_name_placeholder %>"
-                autocomplete="name" />
-            </div>
-            <div class="field">
-              <label for="acc-email"><%= text.account.email_label %></label>
-              <input
-                id="acc-email"
-                name="email"
-                type="email"
-                placeholder="<%= text.account.email_placeholder %>"
-                autocomplete="email" />
-            </div>
+  <div class="container" style="max-width:720px;margin:2rem auto;">
+    <h1 style="margin-bottom:1.5rem;"><%= text.account.header %></h1>
+    <section class="account" aria-label="Account">
+      <div class="card" aria-labelledby="profile-h">
+        <h2 id="profile-h" style="margin:0 0 .75rem;"><%= text.account.profile_header || text.account.header %></h2>
+        <div class="form-grid" style="margin-top:.5rem;">
+          <div class="field">
+            <label for="acc-name"><%= text.account.display_name_label %></label>
+            <input
+              id="acc-name"
+              name="displayName"
+              type="text"
+              placeholder="<%= text.account.display_name_placeholder %>"
+              autocomplete="name" />
           </div>
-          <div class="row-actions">
-            <button id="acc-save" class="button primary"><%= text.account.save_button %></button>
-            <button id="acc-cancel" class="button ghost"><%= text.account.reset_button %></button>
-          </div>
-          <p id="acc-error" class="error" role="status" aria-live="polite"></p>
-        </div>
-
-        <div class="card" aria-labelledby="pwd-h" style="margin-top:1rem;">
-          <h3 id="pwd-h" style="margin:0 0 .75rem;"><%= text.account.password_header %></h3>
-          <div class="form-grid">
-            <div class="field">
-              <label for="pwd-current"><%= text.account.current_password_label %></label>
-              <input
-                id="pwd-current"
-                name="currentPassword"
-                type="password"
-                placeholder="••••••••"
-                autocomplete="new-password" />
-            </div>
-            <div class="field">
-              <label for="pwd-new"><%= text.account.new_password_label %></label>
-              <input
-                id="pwd-new"
-                name="newPassword"
-                type="password"
-                placeholder="••••••••"
-                autocomplete="new-password" />
-              <div id="password-requirements" class="helper-password">
-                <p id="length" class="requirement invalid"><%= text.register.length_req %></p>
-                <p id="uppercase" class="requirement invalid"><%= text.register.uppercase_req %></p>
-                <p id="number" class="requirement invalid"><%= text.register.number_req %></p>
-                <p id="special" class="requirement invalid"><%= text.register.special_req %></p>
-              </div>
-            </div>
-            <div class="field">
-              <label for="pwd-confirm"><%= text.account.confirm_password_label %></label>
-              <input
-                id="pwd-confirm"
-                name="confirmNewPassword"
-                type="password"
-                placeholder="••••••••"
-                autocomplete="new-password" />
-            </div>
-          </div>
-          <div class="row-actions">
-            <button id="pwd-update" class="button primary"><%= text.account.update_password_button %></button>
-          </div>
-          <p id="pwd-error" class="error" role="status" aria-live="polite"></p>
-        </div>
-
-        <div class="card danger-card" style="margin-top:1rem;" aria-labelledby="danger-h">
-          <h3 id="danger-h" style="margin:0 0 .25rem;"><%= text.account.danger_zone_header %></h3>
-          <p class="helper"><%= text.account.danger_zone_helper %></p>
-          <div class="row-actions">
-            <button id="acc-delete" class="button danger"><%= text.account.delete_account_button %></button>
+          <div class="field">
+            <label for="acc-email"><%= text.account.email_label %></label>
+            <input
+              id="acc-email"
+              name="email"
+              type="email"
+              placeholder="<%= text.account.email_placeholder %>"
+              autocomplete="email" />
           </div>
         </div>
-      </section>
-    </div>
-  </main>
+        <div class="row-actions">
+          <button id="acc-save" class="button primary"><%= text.account.save_button %></button>
+          <button id="acc-cancel" class="button ghost"><%= text.account.reset_button %></button>
+        </div>
+        <p id="acc-error" class="error" role="status" aria-live="polite"></p>
+      </div>
 
+      <div class="card" aria-labelledby="pwd-h" style="margin-top:1.5rem;">
+        <h3 id="pwd-h" style="margin:0 0 .75rem;"><%= text.account.password_header %></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="pwd-current"><%= text.account.current_password_label %></label>
+            <input
+              id="pwd-current"
+              name="currentPassword"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label for="pwd-new"><%= text.account.new_password_label %></label>
+            <input
+              id="pwd-new"
+              name="newPassword"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="new-password" />
+            <div id="password-requirements" class="helper-password">
+              <p id="length" class="requirement invalid"><%= text.register.length_req %></p>
+              <p id="uppercase" class="requirement invalid"><%= text.register.uppercase_req %></p>
+              <p id="number" class="requirement invalid"><%= text.register.number_req %></p>
+              <p id="special" class="requirement invalid"><%= text.register.special_req %></p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="pwd-confirm"><%= text.account.confirm_password_label %></label>
+            <input
+              id="pwd-confirm"
+              name="confirmNewPassword"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="new-password" />
+          </div>
+        </div>
+        <div class="row-actions">
+          <button id="pwd-update" class="button primary"><%= text.account.update_password_button %></button>
+        </div>
+        <p id="pwd-error" class="error" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="card danger-card" style="margin-top:1.5rem;" aria-labelledby="danger-h">
+        <h3 id="danger-h" style="margin:0 0 .25rem;"><%= text.account.danger_zone_header %></h3>
+        <p class="helper"><%= text.account.danger_zone_helper %></p>
+        <div class="row-actions">
+          <button id="acc-delete" class="button danger"><%= text.account.delete_account_button %></button>
+        </div>
+      </div>
+    </section>
+  </div>
   <script src="/js/account.js" type="module"></script>
 </body>
 </html>

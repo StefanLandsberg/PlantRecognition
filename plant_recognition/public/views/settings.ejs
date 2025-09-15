@@ -6,7 +6,7 @@
   <%- include('partials/nav') %>
 
   <div class="container" style="max-width:720px;margin:2rem auto;">
-    <h1><%= text.settings.header %></h1>
+    <h1 style="margin-bottom:1.5rem;"><%= text.settings.header %></h1>
 
     <div class="setting-item">
       <label for="theme-toggle"><%= text.settings.dark_mode_label %></label>
@@ -26,19 +26,9 @@
     <div class="setting-item">
       <label for="language-select"><%= text.settings.language_label %></label>
       <select id="language-select">
-        
-        <option value="en" <%= currentLang === 'en' ? 'selected' : '' %>>
-          <%= text.settings.language_en_option %>
-        </option>
-
-        <option value="afr" <%= currentLang === 'afr' ? 'selected' : '' %>>
-          <%= text.settings.language_afr_option %>
-        </option>
-
-        <option value="zulu" <%= currentLang === 'zulu' ? 'selected' : '' %>>
-          <%= text.settings.language_zulu_option %>
-        </option>
-
+        <option value="en" <%= currentLang === 'en' ? 'selected' : '' %>><%= text.settings.language_en_option %></option>
+        <option value="afr" <%= currentLang === 'afr' ? 'selected' : '' %>><%= text.settings.language_afr_option %></option>
+        <option value="zulu" <%= currentLang === 'zulu' ? 'selected' : '' %>><%= text.settings.language_zulu_option %></option>
       </select>
     </div>
 
@@ -50,5 +40,4 @@
 
   <script src="/js/settings.js"></script>
 </body>
-
 </html>
