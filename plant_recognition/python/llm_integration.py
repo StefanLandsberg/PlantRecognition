@@ -63,6 +63,11 @@ def initialize_components():
             torch.backends.cudnn.deterministic = False
             # Warm up the model with a dummy embedding for faster first query
             model.encode(["dummy"], convert_to_tensor=True, device=DEVICE)
+        else:
+            # CPU optimizations
+            model.eval()
+            # Warm up CPU model
+            model.encode(["dummy"], convert_to_numpy=True)
         _initialized = True
         return True
         
@@ -457,21 +462,22 @@ def run_server_mode():
             try:
                 # Parse request
                 request = json.loads(line.strip())
+                request_id = request.get('id')
                 species_name = request.get('species')
                 confidence = request.get('confidence')
                 image_path = request.get('image_path')
-                
+
                 if not species_name or confidence is None:
-                    response = {"error": "Missing required fields: species, confidence"}
+                    response = {"id": request_id, "error": "Missing required fields: species, confidence"}
                 else:
                     # Analyze the plant
                     analysis = analyze_plant(species_name, confidence, image_path)
                     if analysis:
-                        response = {"success": True, "analysis": analysis}
+                        response = {"id": request_id, "success": True, "analysis": analysis}
                     else:
-                        response = {"error": "Analysis failed"}
-                
-                # Send response
+                        response = {"id": request_id, "error": "Analysis failed"}
+
+                # Send response with immediate flush for faster communication
                 print(json.dumps(response))
                 sys.stdout.flush()
                 

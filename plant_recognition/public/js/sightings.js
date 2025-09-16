@@ -293,12 +293,21 @@ window.toggleLLMDropdown = function(sightingId) {
   const arrow = document.querySelector(`[data-sighting-id="${sightingId}"] .llm-dropdown-arrow`);
 
   if (dropdown && content) {
-    const isVisible = content.style.display !== 'none';
-    content.style.display = isVisible ? 'none' : 'block';
-    if (arrow) {
-      arrow.textContent = isVisible ? '▼' : '▲';
+    const isHidden = content.classList.contains('llm-dropdown-content-hidden');
+
+    if (isHidden) {
+      content.classList.remove('llm-dropdown-content-hidden');
+      if (arrow) {
+        arrow.textContent = '▲';
+      }
+      dropdown.classList.add('open');
+    } else {
+      content.classList.add('llm-dropdown-content-hidden');
+      if (arrow) {
+        arrow.textContent = '▼';
+      }
+      dropdown.classList.remove('open');
     }
-    dropdown.classList.toggle('open', !isVisible);
   }
 };
 

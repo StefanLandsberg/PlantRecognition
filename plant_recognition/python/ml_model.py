@@ -11,11 +11,21 @@ IMAGE_SIZE = 512
 MODEL_PATH = "../models/best_end_to_end_model.pt"
 CLASS_NAMES_PATH = "../models/class_names.txt"
 
+# Global variables for model caching to avoid reloading
+_cached_model = None
+_cached_class_names = None
+_cached_transform = None
+
 def load_class_names():
-    """Load class names from file."""
+    """Load class names from file with caching."""
+    global _cached_class_names
+    if _cached_class_names is not None:
+        return _cached_class_names
+
     try:
         with open(CLASS_NAMES_PATH, 'r', encoding='utf-8') as f:
-            return [line.strip() for line in f.readlines()]
+            _cached_class_names = [line.strip() for line in f.readlines()]
+            return _cached_class_names
     except Exception as e:
         print(json.dumps({"error": f"Failed to load class names: {e}"}))
         sys.exit(1)
@@ -31,7 +41,11 @@ class PlantClassifier(nn.Module):
         return self.backbone(x)
 
 def load_model(num_classes):
-    """Ultra-fast model loading with optimizations."""
+    """Ultra-fast model loading with caching and optimizations."""
+    global _cached_model
+    if _cached_model is not None:
+        return _cached_model
+
     try:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
@@ -82,7 +96,9 @@ def load_model(num_classes):
         # Disable gradient computation permanently
         for param in model.parameters():
             param.requires_grad_(False)
-            
+
+        # Cache the model for future use
+        _cached_model = (model, device)
         return model, device
     except Exception as e:
         # Return demo result instead of failing
@@ -93,20 +109,29 @@ def load_model(num_classes):
         }))
         sys.exit(0)
 
-def preprocess_image(image_path):
-    """Ultra-fast image preprocessing."""
-    try:
-        # Optimized transform - minimal operations
-        transform = transforms.Compose([
+def get_transform():
+    """Get cached transform to avoid recreation."""
+    global _cached_transform
+    if _cached_transform is None:
+        _cached_transform = transforms.Compose([
             transforms.Resize((IMAGE_SIZE, IMAGE_SIZE), antialias=False),  # Disable antialiasing for speed
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
+    return _cached_transform
+
+def preprocess_image(image_path):
+    """Ultra-fast image preprocessing with cached transform."""
+    try:
+        transform = get_transform()
         
-        # Fast image loading
+        # Ultra-fast image loading with optimizations
         with Image.open(image_path) as image:
+            # Only convert if necessary
             if image.mode != 'RGB':
                 image = image.convert('RGB')
+
+            # Apply transform directly without intermediate steps
             image_tensor = transform(image).unsqueeze(0)
         return image_tensor
     except Exception as e:
@@ -163,8 +188,9 @@ def main():
     # Make prediction
     result = predict(model, image_tensor, class_names, device)
     
-    # Output result
+    # Output result with immediate flush for faster response
     print(json.dumps(result))
+    sys.stdout.flush()
 
 if __name__ == "__main__":
     main()

@@ -640,12 +640,13 @@ class MapLoaderProxy {
       max-width: 400px;
       width: 90%;
       text-align: center;
+      color: black;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     `;
 
     modalContent.innerHTML = `
       <h3 style="margin-top: 0; color: #dc2626;">Confirm Removal</h3>
-      <p>Are you sure you want to mark this <strong>${speciesName}</strong> sighting as removed?</p>
+      <p style="color: black;">Are you sure you want to mark this <strong>${speciesName}</strong> sighting as removed?</p>
       <p style="font-size: 0.9rem; color: #666;"><em>This indicates the plant has been physically removed from the location.</em></p>
       <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
         <button id="confirm-removal" style="background: #dc2626; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-weight: 600;">Mark as Removed</button>

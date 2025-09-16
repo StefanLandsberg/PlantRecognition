@@ -463,6 +463,15 @@
   max-width: 400px;
   width: 90%;
   text-align: center;
+  color: black;
+}
+
+.removal-modal-content p {
+  color: black;
+}
+
+.removal-modal-content em {
+  color: #666;
 }
 
 .removal-modal h3 {

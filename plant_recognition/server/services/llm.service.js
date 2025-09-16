@@ -1,5 +1,47 @@
 import { PythonShell } from 'python-shell';
 
+// Simple in-memory cache for LLM results to avoid repeated computations
+const llmCache = new Map();
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const MAX_CACHE_SIZE = 1000; // Maximum number of cached entries
+
+function getCacheKey(species, confidence) {
+  // Normalize the species name and round confidence to avoid cache misses on minor differences
+  const normalizedSpecies = species.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const roundedConfidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
+  return `${normalizedSpecies}_${roundedConfidence}`;
+}
+
+function getCachedResult(species, confidence) {
+  const key = getCacheKey(species, confidence);
+  const cached = llmCache.get(key);
+
+  if (cached && (Date.now() - cached.timestamp) < CACHE_EXPIRY) {
+    return cached.result;
+  }
+
+  if (cached) {
+    llmCache.delete(key); // Remove expired entry
+  }
+
+  return null;
+}
+
+function setCachedResult(species, confidence, result) {
+  const key = getCacheKey(species, confidence);
+
+  // Implement LRU-style cache size management
+  if (llmCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = llmCache.keys().next().value;
+    llmCache.delete(firstKey);
+  }
+
+  llmCache.set(key, {
+    result: result,
+    timestamp: Date.now()
+  });
+}
+
 export async function kickLLM(sightingId, species, confidence) {
   try {
     // Fast parameter validation
@@ -9,14 +51,21 @@ export async function kickLLM(sightingId, species, confidence) {
     if (!confidence || isNaN(confidence) || confidence === 'undefined' || confidence === 'null') {
       confidence = 0.0;
     }
-    
+
     // Normalize species name - replace underscores with spaces for LLM lookup
     const normalizedSpecies = species.replace(/_/g, ' ');
+
+    // Check cache first - instant response for repeated species
+    const cachedResult = getCachedResult(normalizedSpecies, confidence);
+    if (cachedResult) {
+      return cachedResult;
+    }
     
     const options = {
       mode: 'text',
       scriptPath: '../python/',
-      args: ['analyze', normalizedSpecies, String(confidence)]
+      args: ['analyze', normalizedSpecies, String(confidence)],
+      pythonOptions: ['-u', '-O']  // Unbuffered, optimized bytecode
     };
 
     const results = await PythonShell.run('llm_integration.py', options);
@@ -52,15 +101,22 @@ export async function kickLLM(sightingId, species, confidence) {
       }
       
       if (jsonData) {
-        return {
+        const result = {
           summary: `${jsonData.species || normalizedSpecies} - ${jsonData.confidence_level || 'Analysis complete'}`,
           details: jsonData,
           sources: jsonData.data_sources || []
         };
+
+        // Cache the successful result
+        setCachedResult(normalizedSpecies, confidence, result);
+        return result;
       }
     }
-    
-    return createBasicAnalysis(species, confidence);
+
+    const fallbackResult = createBasicAnalysis(species, confidence);
+    // Cache fallback results too, but with shorter expiry
+    setCachedResult(normalizedSpecies, confidence, fallbackResult);
+    return fallbackResult;
   } catch (error) {
     console.error('LLM processing error:', error.message);
     return createBasicAnalysis(species, confidence);

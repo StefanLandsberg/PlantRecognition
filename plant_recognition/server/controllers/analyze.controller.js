@@ -25,19 +25,20 @@ export async function analyzeOnce(req, res, next) {
     const fullImagePath = path.join(UPLOADS_DIR, path.basename(imageUrlPath));
     // Minimal logging for speed
 
-    // 1) ML - Use system Python (no path specified)
+    // 1) ML - Use system Python with optimized script
     const options = {
       mode: 'text',
       scriptPath: '../python/',
-      args: [fullImagePath]
+      args: [fullImagePath],
+      pythonOptions: ['-u']  // Unbuffered output for faster response
     };
 
     let predicted_species = 'Unknown species';
     let confidence = 0.0;
-    
+
     try {
       const results = await PythonShell.run('ml_model.py', options);
-      
+
       if (results && results.length > 0) {
         try {
           const mlResult = JSON.parse(results[0]);
@@ -86,23 +87,22 @@ export async function analyzeOnce(req, res, next) {
       }
     });
 
-    // 3) Kick LLM and publish when done (async for speed)
-    setImmediate(async () => {
-      try {
-        const llm = await kickLLM(doc._id, predicted_species, confidence);
+    // 3) Kick LLM in parallel with response (for maximum speed)
+    kickLLM(doc._id, predicted_species, confidence)
+      .then(async (llm) => {
         await Sighting.updateOne(
           { _id: doc._id },
           { $set: { 'analysis.llm': { summary: llm.summary || '', details: llm.details, status: 'completed' } } }
         );
         publish(req.auth.userId, { type: 'analysis_done', sightingId: doc._id, llm });
-      } catch (e) {
+      })
+      .catch(async (e) => {
         console.error('LLM analysis failed:', e);
         await Sighting.updateOne(
           { _id: doc._id },
           { $set: { 'analysis.llm.status': 'failed' } }
         );
-      }
-    });
+      });
 
   } catch (e) { next(e); }
 }
