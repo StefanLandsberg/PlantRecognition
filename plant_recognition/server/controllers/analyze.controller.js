@@ -83,7 +83,8 @@ export async function analyzeOnce(req, res, next) {
         _id: doc._id,
         analysis: doc.analysis,
         location: doc.location,
-        createdAt: doc.createdAt
+        createdAt: doc.createdAt,
+        imagePath: doc.imagePath
       }
     });
 

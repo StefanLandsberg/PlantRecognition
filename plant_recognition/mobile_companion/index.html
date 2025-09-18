@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Recognition Mobile Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Connection Screen -->
+        <div id="connection-screen" class="screen active">
+            <div class="logo">
+                <h1>Plant Recognition</h1>
+                <p>Mobile Companion</p>
+            </div>
+
+            <div class="connection-form">
+                <h2>Connect to Main App</h2>
+                <div class="input-group">
+                    <label for="companion-code">Companion Code</label>
+                    <input type="text" id="companion-code" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}">
+                </div>
+                <button id="request-permissions-btn" class="primary-btn" style="margin-bottom: 0.5rem;">Request Permissions</button>
+                <button id="connect-btn" class="primary-btn">Connect</button>
+                <div id="connection-status" class="status-message"></div>
+            </div>
+
+            <div class="help-text">
+                <p>1. First tap "Request Permissions" and allow camera/location</p>
+                <p>2. Get companion code from main app (next to username)</p>
+                <p>3. Enter code and tap "Connect"</p>
+            </div>
+        </div>
+
+        <!-- Camera Screen -->
+        <div id="camera-screen" class="screen">
+            <div class="header">
+                <div class="connection-info">
+                    <span class="status-indicator connected"></span>
+                    <span id="connection-user">Connected to Main App</span>
+                </div>
+                <button id="disconnect-btn" class="disconnect-btn">Disconnect</button>
+            </div>
+
+            <div class="camera-container">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas" style="display: none;"></canvas>
+
+                <div class="camera-overlay">
+                    <div class="viewfinder"></div>
+                </div>
+
+                <div class="camera-controls">
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <button id="gallery-btn" class="control-btn">
+                        <span>Gallery</span>
+                    </button>
+                    <button id="capture-btn" class="capture-btn">
+                        <span class="capture-circle"></span>
+                    </button>
+                    <button id="switch-camera-btn" class="control-btn">
+                        <span>Flip</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Classification Status -->
+            <div id="classification-status" class="classification-status">
+                <div class="status-content">
+                    <div class="status-icon"></div>
+                    <div class="status-text">Ready to capture</div>
+                </div>
+            </div>
+
+            <!-- Results Display -->
+            <div id="results-display" class="results-display hidden">
+                <div class="result-header">
+                    <h3>Classification Result</h3>
+                    <button id="close-results" class="close-btn">×</button>
+                </div>
+                <div class="result-content">
+                    <div class="result-image-container">
+                        <img id="result-image" alt="Captured image">
+                    </div>
+                    <div class="result-details">
+                        <div class="species-name" id="species-name">-</div>
+                        <div class="confidence" id="confidence">-</div>
+                        <div class="status" id="analysis-status">Processing...</div>
+                    </div>
+                </div>
+                <button id="capture-another" class="primary-btn">Capture Another</button>
+            </div>
+        </div>
+
+        <!-- Error Screen -->
+        <div id="error-screen" class="screen">
+            <div class="error-content">
+                <div class="error-icon">!</div>
+                <h2 id="error-title">Connection Error</h2>
+                <p id="error-message">Unable to connect to the main app</p>
+                <button id="retry-btn" class="primary-btn">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

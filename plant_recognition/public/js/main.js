@@ -84,7 +84,23 @@ async function boot() {
     startSSE((msg) => {
       if (msg.type === "analysis_done") {
         setLLMCompleted(msg.sightingId, msg.llm);
+
+        // Update map marker with LLM analysis
+        if (mapProxy.map) {
+          mapProxy.updateMarkerWithAnalysis(msg.sightingId, msg.llm);
+        }
       } else if (msg.type === "new_sighting") {
+        // Add detection card to UI
+        addDetectionCard(els.list, {
+          sightingId: msg.sighting._id,
+          predictedSpecies: msg.sighting.analysis?.predictedSpecies || "Unknown Species",
+          confidence: msg.sighting.analysis?.confidence || 0,
+          imageUrl: msg.sighting.imagePath || msg.sighting.imageUrl,
+        });
+
+        // Show LLM loading for the new detection
+        showLLMLoading(msg.sighting._id);
+
         // Add pin to map immediately
         if (mapProxy.map && msg.sighting.location?.coordinates) {
           const [lng, lat] = msg.sighting.location.coordinates;

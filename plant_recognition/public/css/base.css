@@ -140,4 +140,31 @@ h3 {
     left: 0;
 }
 
+/* Companion Code Styles */
+.companion-code-container {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: normal;
+}
+
+.companion-code-label {
+    color: var(--muted);
+    margin-right: 0.25rem;
+}
+
+.companion-code-value {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.companion-code-value:hover {
+    opacity: 0.8;
+}
+
 

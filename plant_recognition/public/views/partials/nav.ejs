@@ -22,7 +22,11 @@
   <div class="welcome" style="margin-right:.75rem;font-weight:700;">
     <% if (typeof username !=='undefined' ) { %>
       Welcome, <%= username %>!
-        <% } %>
+      <div class="companion-code-container">
+        <span class="companion-code-label">Mobile Code:</span>
+        <span id="companion-code" class="companion-code-value">Loading...</span>
+      </div>
+    <% } %>
   </div>
   <button id="btn-logout" type="button">Logout</button>
 </header>

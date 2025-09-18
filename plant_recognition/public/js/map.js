@@ -852,6 +852,20 @@ class MapLoaderProxy {
       setTimeout(() => notification.remove(), 300);
     }, 3000);
   }
+
+  updateMarkerWithAnalysis(sightingId, llmData) {
+    // Find the cluster that contains this sighting
+    for (const [key, cluster] of this.markerClusters) {
+      const sightingIndex = cluster.sightings.findIndex(s => s._id === sightingId);
+      if (sightingIndex !== -1) {
+        // Update the sighting data with LLM analysis
+        cluster.sightings[sightingIndex].analysis.llm = llmData;
+        // No need to update the visual marker since it only shows basic info
+        // The detailed analysis will be available when the marker is clicked
+        break;
+      }
+    }
+  }
 }
 
 const mapProxy = new MapLoaderProxy();
