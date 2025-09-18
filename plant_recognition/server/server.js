@@ -7,7 +7,11 @@ import cors from "cors";
 import { fileURLToPath } from "url";
 import ejs from "ejs";
 import { createServer } from "http";
-import WebSocket, { WebSocketServer } from "ws";
+// import WebSocket, { WebSocketServer } from "ws";
+// this caused an error so I used the following more reliable code
+import pkg from "ws";
+const WebSocket = pkg;
+const WebSocketServer = pkg.WebSocketServer || pkg.Server;
 
 import { CONFIG } from "./utils/config.js";
 import { logger } from "./utils/logger.js";
@@ -96,7 +100,7 @@ app.use("/api/analyze", analyzeRoutes);
 app.use("/api/sightings", sightingsAPIRoutes);
 app.use("/api/events", sseRoutes);
 
-// Companion code registration endpoint (must be before notFound middleware)
+// // Companion code registration endpoint (must be before notFound middleware)
 app.post('/api/companion/register', requireAuth, async (req, res) => {
   try {
     const { companionCode } = req.body;
