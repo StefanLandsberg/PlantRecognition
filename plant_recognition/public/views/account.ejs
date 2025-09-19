@@ -4,14 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <%- include('partials/head', { title: text.account.title, styles: ['/css/styling.css'] }) %>
-  <script>
-    try {
-      var dark = localStorage.getItem('darkMode') !== 'false';
-      document.documentElement.classList.add(dark ? 'dark-mode' : 'light-mode');
-      var cb = localStorage.getItem('colorBlindMode');
-      if (cb && cb !== 'none') document.documentElement.classList.add(cb);
-    } catch(e) {}
-  </script>
+<script src="/js/theme.js"></script>
 </head>
 <body>
   <%- include('partials/nav') %>

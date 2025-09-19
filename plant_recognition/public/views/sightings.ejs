@@ -1,7 +1,9 @@
 <!doctype html>
 <html lang="en">
 <%- include('partials/head', { title: 'Sightings' , styles: ['/css/styling.css', '/css/sightings.css'] }) %>
-
+<head>
+  <script src="/js/theme.js"></script>
+</head>
   <body>
     <%- include('partials/nav') %>
 
@@ -72,26 +74,6 @@
       </main>
 
       <script type="module" src="/js/sightings.js"></script>
-      <script>
-        document.addEventListener('DOMContentLoaded', () => {
-          const body = document.body;
-          const savedDarkMode = localStorage.getItem('darkMode');
-          const savedColorBlindMode = localStorage.getItem('colorBlindMode');
-
-          if (savedDarkMode === 'false') {
-            body.classList.remove('dark-mode');
-            body.classList.add('light-mode');
-          } else {
-            body.classList.remove('light-mode');
-            body.classList.add('dark-mode');
-          }
-
-          body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
-          if (savedColorBlindMode && savedColorBlindMode !== 'none') {
-            body.classList.add(savedColorBlindMode);
-          }
-        });
-      </script>
   </body>
 
 </html>

@@ -1,5 +1,8 @@
 <!doctype html>
 <html lang="en">
+<head>
+  <script src="/js/theme.js"></script>
+</head>
 <%- include('partials/head', { title: 'BotanicaVision' , styles: ['/css/styling.css'] }) %>
 
   <body>
@@ -44,26 +47,6 @@
     </svg>
     <script type="module" src="/js/main.js"></script>
     <script async id="maps-loader"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const body = document.body;
-        const savedDarkMode = localStorage.getItem('darkMode');
-        const savedColorBlindMode = localStorage.getItem('colorBlindMode');
-
-        if (savedDarkMode === 'false') {
-          body.classList.remove('dark-mode');
-          body.classList.add('light-mode');
-        } else {
-          body.classList.remove('light-mode');
-          body.classList.add('dark-mode');
-        }
-
-        body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
-        if (savedColorBlindMode && savedColorBlindMode !== 'none') {
-          body.classList.add(savedColorBlindMode);
-        }
-      });
-    </script>
   </body>
 
 </html>

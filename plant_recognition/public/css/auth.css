@@ -1,0 +1,168 @@
+:root {
+    --bg: #0b1020;
+    --panel: #151a2b;
+    --accent: #67d4a7;
+    --text: #e9eef5;
+    --muted: #9aa7bd;
+}
+
+/* Dark mode variables (default) */
+.dark-mode {
+    --bg: #0b1020;
+    --panel: #151a2b;
+    --accent: #67d4a7;
+    --text: #e9eef5;
+    --muted: #9aa7bd;
+}
+
+/* Light mode variables */
+.light-mode {
+    --bg: #ffffff;
+    --panel: #f8f9fa;
+    --accent: #28a745;
+    --text: #212529;
+    --muted: #6c757d;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, Arial, sans-serif;
+}
+
+.center-card {
+    max-width: 420px;
+    margin: 5rem auto;
+    background: var(--panel);
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+}
+
+h1,
+h3 {
+    margin-top: 0;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.auth-form input {
+    padding: .75rem;
+    border-radius: 10px;
+    border: 1px solid #2a314a;
+    background: #0f1424;
+    color: var(--text);
+}
+
+.auth-form button {
+    margin-top: .5rem;
+    padding: .75rem 1rem;
+    background: var(--accent);
+    color: #0b1020;
+    border: 0;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.error {
+    color: #ff8a8a;
+    min-height: 1.25rem;
+    font-size: .9rem;
+}
+/* hidden link styling for auth form */
+
+.hidden-link{
+    text-decoration: none;
+    color: black;
+    border-radius: 7px;
+    border-width: 2px;
+    border-color: white;
+    background-color: var(--accent);
+    padding: 5px;
+}
+/* Optional CSS to hide the forms and add a transition */
+.hidden {
+    display: none;
+}
+.form-container {
+    transition: all 0.5s ease-in-out;
+}
+
+/* password recommendations */
+
+.helper-password {
+    font-size: 0.9em;
+    color:var(--acc-muted);
+    margin-top: 0.5rem;
+    margin-top: 10%;
+    display: none;
+}
+/* on focus in new password make recommendations display */
+#pwd:focus ~ .helper-password {
+    display: block;
+}
+.requirement.invalid {
+    color: #d9534f; /* A red color */
+    list-style-type: none;
+    padding-left: 1.2em; /* Space for the icon */
+    position: relative;
+}
+
+.requirement.valid {
+    color: #5cb85c; /* A green color */
+    list-style-type: none;
+    padding-left: 1.2em;
+    position: relative;
+}
+
+.requirement.valid:before {
+    content: "✅";
+    position: absolute;
+    left: 0;
+}
+
+.requirement.invalid:before {
+    content: "❌";
+    position: absolute;
+    left: 0;
+}
+
+/* Companion Code Styles */
+.companion-code-container {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: normal;
+}
+
+.companion-code-label {
+    color: var(--muted);
+    margin-right: 0.25rem;
+}
+
+.companion-code-value {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.companion-code-value:hover {
+    opacity: 0.8;
+}
