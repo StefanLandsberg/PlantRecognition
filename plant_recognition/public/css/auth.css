@@ -61,8 +61,8 @@ h3 {
 .auth-form input {
     padding: .75rem;
     border-radius: 10px;
-    border: 1px solid #2a314a;
-    background: #0f1424;
+    border: 1px solid var(--muted);
+    background: var(--panel);
     color: var(--text);
 }
 
@@ -86,10 +86,10 @@ h3 {
 
 .hidden-link{
     text-decoration: none;
-    color: black;
+    color: var(--bg);
     border-radius: 7px;
     border-width: 2px;
-    border-color: white;
+    border-color: var(--bg);
     background-color: var(--accent);
     padding: 5px;
 }
