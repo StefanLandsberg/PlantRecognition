@@ -101,7 +101,7 @@ app.use("/api/storage", storageRoutes);
 app.use("/api/sightings", sightingsAPIRoutes);
 app.use("/api/events", sseRoutes);
 
-// Companion code registration endpoint (must be before notFound middleware)
+// // Companion code registration endpoint (must be before notFound middleware)
 app.post('/api/companion/register', requireAuth, async (req, res) => {
   try {
     const { companionCode } = req.body;

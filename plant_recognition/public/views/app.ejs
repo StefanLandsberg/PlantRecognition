@@ -47,26 +47,6 @@
     <script src="/js/map.js" type="module"></script>
     <script type="module" src="/js/main.js"></script>
     <script async id="maps-loader"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const body = document.body;
-        const savedDarkMode = localStorage.getItem('darkMode');
-        const savedColorBlindMode = localStorage.getItem('colorBlindMode');
-
-        if (savedDarkMode === 'false') {
-          body.classList.remove('dark-mode');
-          body.classList.add('light-mode');
-        } else {
-          body.classList.remove('light-mode');
-          body.classList.add('dark-mode');
-        }
-
-        body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
-        if (savedColorBlindMode && savedColorBlindMode !== 'none') {
-          body.classList.add(savedColorBlindMode);
-        }
-      });
-    </script>
   </body>
 
 </html>
