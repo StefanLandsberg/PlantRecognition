@@ -6,6 +6,7 @@ from PIL import Image
 import sys
 import json
 import os
+import time
 
 IMAGE_SIZE = 512
 MODEL_PATH = "../models/best_end_to_end_model.pt"
@@ -168,29 +169,47 @@ def predict(model, image_tensor, class_names, device):
         sys.exit(1)
 
 def main():
+    start_time = time.time()
+
     if len(sys.argv) != 2:
         print(json.dumps({"error": "Usage: python ml_model.py <image_path>"}))
         sys.exit(1)
-    
+
     image_path = sys.argv[1]
-    
+
     if not os.path.exists(image_path):
         print(json.dumps({"error": f"Image file not found: {image_path}"}))
         sys.exit(1)
-    
-    # Load components
-    class_names = load_class_names()
-    model, device = load_model(len(class_names))
-    
-    # Process image
-    image_tensor = preprocess_image(image_path)
-    
-    # Make prediction
-    result = predict(model, image_tensor, class_names, device)
-    
-    # Output result with immediate flush for faster response
-    print(json.dumps(result))
-    sys.stdout.flush()
+
+    try:
+        # Load components
+        class_names = load_class_names()
+        model, device = load_model(len(class_names))
+
+        # Process image
+        image_tensor = preprocess_image(image_path)
+
+        # Make prediction
+        result = predict(model, image_tensor, class_names, device)
+
+        # Add timing info for monitoring
+        total_time = time.time() - start_time
+        result['processing_time'] = f"{total_time:.3f}s"
+
+        # Output result with immediate flush for faster response
+        print(json.dumps(result))
+        sys.stdout.flush()
+
+    except Exception as e:
+        # Fallback for any errors - always return something
+        print(json.dumps({
+            "predicted_species": "Processing Error",
+            "confidence": 0.0,
+            "predicted_class_index": 0,
+            "error": str(e),
+            "processing_time": f"{time.time() - start_time:.3f}s"
+        }))
+        sys.stdout.flush()
 
 if __name__ == "__main__":
     main()

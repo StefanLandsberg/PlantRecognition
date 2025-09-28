@@ -24,8 +24,15 @@ export async function getJSON(url) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-export async function postForm(url, formData) {
-  const res = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
+export async function postForm(url, formData, options = {}) {
+  const fetchOptions = {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+    ...options // Allow passing AbortController signal
+  };
+
+  const res = await fetch(url, fetchOptions);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -40,17 +47,35 @@ export const AuthAPI = {
 
 // Sightings
 export const SightingsAPI = {
-  list: (bbox) => getJSON('/api/sightings' + (bbox ? `?bbox=${bbox}` : ''))
+  list: (bbox, includeRemoved = false) => {
+    let url = '/api/sightings';
+    const params = [];
+    if (bbox) params.push(`bbox=${bbox}`);
+    if (includeRemoved) params.push('includeRemoved=true');
+    if (params.length > 0) url += '?' + params.join('&');
+    return getJSON(url);
+  }
 };
 
 // Analyze
 export const AnalyzeAPI = {
-  analyze: (blob, { lat, lng, fromVideo }) => {
+  analyze: (blob, { lat, lng, fromVideo }, options = {}) => {
     const fd = new FormData();
     fd.append('image', blob, 'frame.jpg');
     if (lat != null) fd.append('lat', String(lat));
     if (lng != null) fd.append('lng', String(lng));
     if (fromVideo != null) fd.append('fromVideo', String(fromVideo));
-    return postForm('/api/analyze', fd);
+    return postForm('/api/analyze', fd, options);
   }
+};
+
+// Storage
+export const StorageAPI = {
+  getStatus: () => getJSON('/api/storage/status'),
+  cleanup: (days = 30) => postJSON('/api/storage/cleanup', { days })
+};
+
+// Account Storage Preferences
+export const AccountAPI = {
+  updateStoragePreference: (storagePreference) => postJSON('/api/account/storage-preference', { storagePreference })
 };

@@ -6,13 +6,16 @@ import path from "path";
 import cors from "cors";
 import { fileURLToPath } from "url";
 import ejs from "ejs";
-import { createServer } from "http";
+import { createServer as createHttpServer } from "http";
+import { createServer as createHttpsServer } from "https";
+import fs from "fs";
 import WebSocket, { WebSocketServer } from "ws";
 
 import { CONFIG } from "./utils/config.js";
 import { logger } from "./utils/logger.js";
 import { notFound, errorHandler } from "./middleware/error.js";
 import { requireAuth } from "./middleware/auth.js";
+import QRCode from "qrcode";
 
 import authRoutes from "./routes/auth.routes.js";
 import analyzeRoutes from "./routes/analyze.routes.js";
@@ -20,6 +23,7 @@ import sightingsAPIRoutes from "./routes/sightings.routes.js";
 import sseRoutes from "./routes/sse.routes.js";
 import configRoutes from "./routes/config.routes.js";
 import accountRoutes from "./routes/account.routes.js";
+import storageRoutes from "./routes/storage.routes.js";
 
 import User from "./models/User.js";
 
@@ -93,6 +97,7 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analyzeRoutes);
+app.use("/api/storage", storageRoutes);
 app.use("/api/sightings", sightingsAPIRoutes);
 app.use("/api/events", sseRoutes);
 
@@ -169,6 +174,52 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// QR Code endpoint for mobile access
+app.get('/qr-mobile', requireAuth, async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    logger.info(`QR code request from user: ${userId}`);
+
+    const protocol = req.secure || req.get('X-Forwarded-Proto') === 'https' ? 'https' : 'http';
+
+    // Generate a 6-digit companion code
+    const companionCode = Math.floor(100000 + Math.random() * 900000).toString();
+    logger.info(`Generated companion code: ${companionCode} for user: ${userId}`);
+
+    // Register the code for this user (24 hour expiry)
+    registeredCodes.set(companionCode, userId);
+    setTimeout(() => {
+      registeredCodes.delete(companionCode);
+      logger.info(`QR companion code ${companionCode} expired and removed`);
+    }, 24 * 60 * 60 * 1000);
+
+    // Include companion code in mobile URL for auto-connect
+    const mobileUrl = `${protocol}://192.168.101.251:${CONFIG.PORT}/mobile?code=${companionCode}`;
+
+    const qrCodeDataURL = await QRCode.toDataURL(mobileUrl, {
+      width: 256,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+
+    const response = {
+      success: true,
+      qrCode: qrCodeDataURL,
+      mobileUrl: mobileUrl,
+      companionCode: companionCode
+    };
+
+    logger.info(`Sending QR response with companionCode: ${companionCode}`);
+    res.json(response);
+  } catch (error) {
+    logger.error('QR code generation failed:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate QR code' });
+  }
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
@@ -192,8 +243,19 @@ function broadcastToUser(userId, message) {
     });
     logger.info("MongoDB connected");
 
-    // Create HTTP server
-    const server = createServer(app);
+    // Create HTTPS server with self-signed certificates
+    let server;
+    try {
+      const httpsOptions = {
+        key: fs.readFileSync(path.resolve(__dirname, 'key.pem')),
+        cert: fs.readFileSync(path.resolve(__dirname, 'cert.pem'))
+      };
+      server = createHttpsServer(httpsOptions, app);
+      logger.info("HTTPS server created with SSL certificates");
+    } catch (error) {
+      logger.warn("SSL certificates not found, falling back to HTTP:", error.message);
+      server = createHttpServer(app);
+    }
 
     // Create WebSocket server
     const wss = new WebSocketServer({
@@ -348,11 +410,14 @@ function broadcastToUser(userId, message) {
 
         const mockRes = {
           json: (result) => {
-            // Send result back to mobile AND trigger SSE updates like normal
-            ws.send(JSON.stringify({
-              type: 'classification_result',
-              result: result
-            }));
+            // Only send classification_result if not filtered out for low confidence
+            if (result.success !== false || result.reason !== 'low_confidence') {
+              ws.send(JSON.stringify({
+                type: 'classification_result',
+                result: result
+              }));
+            }
+            // If low confidence, don't send anything to mobile - just silently filter
 
             // The analyze controller should handle SSE updates automatically
             // through the publish() calls in the controller
@@ -388,8 +453,13 @@ function broadcastToUser(userId, message) {
     }
 
     server.listen(CONFIG.PORT, '0.0.0.0', () => {
-      logger.info(`Main app: http://localhost:${CONFIG.PORT}`);
-      logger.info(`Mobile companion: http://192.168.101.251:${CONFIG.PORT}/mobile`);
+      const protocol = server.key ? 'https' : 'http'; // Check if HTTPS
+      logger.info(`Main app: ${protocol}://localhost:${CONFIG.PORT}`);
+      logger.info(`Mobile companion: ${protocol}://192.168.101.251:${CONFIG.PORT}/mobile`);
+      if (protocol === 'https') {
+        logger.info(`HTTPS enabled - Mobile permissions will work!`);
+        logger.info(`Accept the security warning on mobile devices`);
+      }
       logger.info(`Serving public from: ${PUBLIC_DIR}`);
       logger.info(`Serving views from: ${VIEWS_DIR}`);
       logger.info(`Serving uploads from: ${UPLOADS_DIR}`);

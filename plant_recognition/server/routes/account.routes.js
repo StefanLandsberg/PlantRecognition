@@ -3,6 +3,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { requireAuth } from "../middleware/auth.js";
 import User from "../models/User.js";
+import { cleanupUserServerImages } from "../services/storage.service.js";
 
 const router = express.Router();
 
@@ -58,6 +59,45 @@ router.put("/password", requireAuth, async (req, res, next) => {
   }
 });
 
+
+router.put("/storage-preference", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.auth.userId;
+    const { storagePreference } = req.body;
+
+    if (!['server', 'local'].includes(storagePreference)) {
+      return res.status(400).json({ error: "Invalid storage preference. Must be 'server' or 'local'" });
+    }
+
+    // Get current user to check existing preference
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const oldPreference = user.storagePreference;
+
+    // Update storage preference
+    await User.findByIdAndUpdate(userId, { storagePreference }, { runValidators: true });
+
+    // If switching from server to local, clean up server images
+    let cleanupResult = null;
+    if (oldPreference === 'server' && storagePreference === 'local') {
+      cleanupResult = await cleanupUserServerImages(userId);
+      console.log(`User ${userId} switched to local storage. Cleaned up ${cleanupResult.removedCount} server images (${cleanupResult.freedFormatted})`);
+    }
+
+    return res.json({
+      ok: true,
+      storagePreference,
+      previousPreference: oldPreference,
+      cleanupResult: cleanupResult ? {
+        message: `Cleaned up ${cleanupResult.removedCount} server images and freed ${cleanupResult.freedFormatted}`,
+        ...cleanupResult
+      } : null
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.delete("/", requireAuth, async (req, res, next) => {
   try {

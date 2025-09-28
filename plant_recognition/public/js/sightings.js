@@ -8,6 +8,9 @@ function fmtDate(s) {
   }
 }
 
+// Make fmtDate globally available
+window.fmtDate = fmtDate;
+
 function fmtLatLng(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return "";
   const [lng, lat] = coords;
@@ -20,7 +23,7 @@ function pct(n) {
 }
 
 function formatLLMSection(llmData, section) {
-  if (!llmData || !llmData.details) return '<p>No analysis data available.</p>';
+  if (!llmData || !llmData.details) return '<p style="color: var(--text);">No analysis data available.</p>';
 
   const analysisData = llmData.details;
 
@@ -28,66 +31,66 @@ function formatLLMSection(llmData, section) {
     case 'species':
       const speciesInfo = analysisData.advisory_content?.species_identification;
       return `
-        <h4>Species Information</h4>
-        <p><strong>Scientific Name:</strong> ${speciesInfo?.scientific_name || analysisData.species || 'Unknown'}</p>
-        <p><strong>Common Names:</strong> ${speciesInfo?.common_names || analysisData.common_name || 'Unknown'}</p>
-        <p><strong>Family:</strong> ${speciesInfo?.family || analysisData.family || 'Unknown'}</p>
+        <h4 style="color: var(--accent);">Species Information</h4>
+        <p style="color: var(--text);"><strong>Scientific Name:</strong> ${speciesInfo?.scientific_name || analysisData.species || 'Unknown'}</p>
+        <p style="color: var(--text);"><strong>Common Names:</strong> ${speciesInfo?.common_names || analysisData.common_name || 'Unknown'}</p>
+        <p style="color: var(--text);"><strong>Family:</strong> ${speciesInfo?.family || analysisData.family || 'Unknown'}</p>
       `;
 
     case 'legal':
       const legalInfo = analysisData.advisory_content?.legal_status;
       return `
-        <h4>Legal Status</h4>
-        <p><strong>NEMBA Category:</strong> ${legalInfo?.nemba_category || 'Unknown'}</p>
-        <p><strong>Legal Requirements:</strong> ${legalInfo?.legal_requirements || 'Unknown'}</p>
-        <p><strong>Risk Level:</strong> ${analysisData.risk_level || 'Unknown'}</p>
-        <p><strong>Invasive Status:</strong> ${analysisData.invasive_status ? 'Yes' : 'No'}</p>
+        <h4 style="color: var(--accent);">Legal Status</h4>
+        <p style="color: var(--text);"><strong>NEMBA Category:</strong> ${legalInfo?.nemba_category || 'Unknown'}</p>
+        <p style="color: var(--text);"><strong>Legal Requirements:</strong> ${legalInfo?.legal_requirements || 'Unknown'}</p>
+        <p style="color: var(--text);"><strong>Risk Level:</strong> ${analysisData.risk_level || 'Unknown'}</p>
+        <p style="color: var(--text);"><strong>Invasive Status:</strong> ${analysisData.invasive_status ? 'Yes' : 'No'}</p>
       `;
 
     case 'description':
       const physicalDesc = analysisData.advisory_content?.physical_description;
       return `
-        <h4>Physical Description</h4>
-        <p>${physicalDesc || analysisData.description || 'No description available.'}</p>
-        <p><strong>Origin:</strong> ${analysisData.origin || 'Unknown'}</p>
+        <h4 style="color: var(--accent);">Physical Description</h4>
+        <p style="color: var(--text);">${physicalDesc || analysisData.description || 'No description available.'}</p>
+        <p style="color: var(--text);"><strong>Origin:</strong> ${analysisData.origin || 'Unknown'}</p>
       `;
 
     case 'distribution':
       const distributionInfo = analysisData.advisory_content?.distribution || analysisData.where_found || analysisData.distribution;
       if (!distributionInfo || distributionInfo === 'Not found') {
-        return '<p>No distribution information available.</p>';
+        return '<p style="color: var(--text);">No distribution information available.</p>';
       }
       return `
-        <h4>Where Found</h4>
-        <p>${distributionInfo}</p>
+        <h4 style="color: var(--accent);">Where Found</h4>
+        <p style="color: var(--text);">${distributionInfo}</p>
       `;
 
     case 'control':
       const controlInfo = analysisData.advisory_content?.control_methods || analysisData.treatment || analysisData.control_methods;
       if (!controlInfo || controlInfo === 'Not found') {
-        return '<p>No control methods available.</p>';
+        return '<p style="color: var(--text);">No control methods available.</p>';
       }
       return `
-        <h4>Control Methods</h4>
-        <p>${controlInfo}</p>
+        <h4 style="color: var(--accent);">Control Methods</h4>
+        <p style="color: var(--text);">${controlInfo}</p>
       `;
 
     case 'action':
       const actionInfo = analysisData.action_required || analysisData.advisory_content?.action_required;
       if (!actionInfo || actionInfo === 'Not found') {
-        return '<p>No action required.</p>';
+        return '<p style="color: var(--text);">No action required.</p>';
       }
       return `
-        <h4>Action Required</h4>
-        <p>${actionInfo}</p>
+        <h4 style="color: var(--accent);">Action Required</h4>
+        <p style="color: var(--text);">${actionInfo}</p>
       `;
 
     default:
-      return '<p>Select a section to view details.</p>';
+      return '<p style="color: var(--text);">Select a section to view details.</p>';
   }
 }
 
-function createLLMDropdown(sighting) {
+function createSightingLLMDropdown(sighting) {
   // Fix the data path - LLM data is in sighting.analysis.llm, not sighting.llm
   const hasLLM = sighting.analysis?.llm && sighting.analysis.llm.details;
 
@@ -132,9 +135,11 @@ function createLLMDropdown(sighting) {
 }
 
 function showImageModal(imageUrl) {
+  if (!imageUrl) return; // Don't show modal for null images
+
   const modal = document.createElement('div');
   modal.className = 'image-modal';
-  modal.innerHTML = `<img src="${imageUrl}" alt="Sighting Image" />`;
+  modal.innerHTML = `<img src="${imageUrl}" alt="Plant sighting image" />`;
 
   document.body.appendChild(modal);
 
@@ -339,7 +344,35 @@ window.toggleDropdown = function() {
 
   dropdown.classList.toggle('open');
   menu.classList.toggle('show');
+
+  // Add click-outside listener when dropdown is opened
+  if (dropdown.classList.contains('open')) {
+    setTimeout(() => {
+      const handleClickOutside = (e) => {
+        if (!dropdown.contains(e.target)) {
+          dropdown.classList.remove('open');
+          menu.classList.remove('show');
+          document.removeEventListener('click', handleClickOutside);
+        }
+      };
+      document.addEventListener('click', handleClickOutside);
+    }, 10);
+  }
 };
+
+// Toggle LLM dropdown
+window.toggleLLMDropdown = function(sightingId) {
+  const dropdown = document.querySelector(`[data-sighting-id="${sightingId}"] .llm-dropdown`);
+  if (!dropdown) return;
+
+  dropdown.classList.toggle('open');
+
+  const content = dropdown.querySelector('.llm-dropdown-content');
+  if (content) {
+    content.classList.toggle('llm-dropdown-content-hidden');
+  }
+};
+
 
 window.switchTab = function(tabName) {
   // Close dropdown
@@ -424,8 +457,8 @@ function aggregateSpeciesData(sightings) {
     }
 
     // Store LLM data from most recent analysis
-    if (sighting.llm && !data.llmData) {
-      data.llmData = sighting.llm;
+    if (sighting.analysis?.llm && !data.llmData) {
+      data.llmData = sighting.analysis.llm;
     }
   });
 
@@ -536,8 +569,10 @@ function loadSpeciesAnalytics(sightings) {
     card.innerHTML = `
       <div class="analytics-header">
         ${stats.mainImage ? `
-          <img src="${stats.mainImage}" alt="${stats.species}" class="analytics-image" />
-        ` : ''}
+          <img src="${stats.mainImage}" alt="${stats.species}" class="analytics-image" onerror="this.style.display='none'" />
+        ` : `
+          <div class="no-image-placeholder analytics-image"></div>
+        `}
         <div class="analytics-title">
           <h3>${stats.species}</h3>
           ${stats.scientificName ? `<p class="species-scientific">${stats.scientificName}</p>` : ''}
@@ -1019,9 +1054,6 @@ function loadRiskAssessment(sightings) {
           <div class="alert-description">${alert.description}</div>
           ${alert.level !== 'info' ? `
             <div class="alert-actions">
-              <button class="alert-action-btn" onclick="handleAlertAction('${alert.id || 'temp'}', '${alert.action || 'Take action'}', '${alert.level}')">
-                ${alert.action || 'Take Action'}
-              </button>
               <button class="alert-action-btn secondary" onclick="handleAlertDismiss('${alert.id || 'temp'}', '${alert.level}')">
                 Dismiss
               </button>
@@ -1147,21 +1179,7 @@ window.closeActionModal = function() {
   }
 };
 
-function showNotificationToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = `notification-toast ${type}`;
-  toast.textContent = message;
-
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => {
-    toast.classList.add('show');
-  });
-
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
+// Notification function removed - use showNotification from map.js
 
 async function load() {
   const container = document.getElementById("sightings-container");
@@ -1173,7 +1191,7 @@ async function load() {
   initializeNotifications();
 
   try {
-    const { data } = await SightingsAPI.list("");
+    const { data } = await SightingsAPI.list("", false); // Exclude removed sightings from main view
 
     if (!data || data.length === 0) {
       empty.style.display = "block";
@@ -1224,10 +1242,13 @@ async function load() {
         <div class="sighting-header">
           ${(sighting.imageUrl || sighting.imagePath) ? `
             <img src="${sighting.imageUrl || sighting.imagePath}"
-                 alt="Sighting"
+                 alt="${sighting.analysis?.predictedSpecies || 'Plant sighting'}"
                  class="sighting-thumbnail"
-                 onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')" />
-          ` : ''}
+                 onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')"
+                 onerror="this.style.display='none'" />
+          ` : `
+            <div class="no-image-placeholder sighting-thumbnail"></div>
+          `}
 
           <div class="sighting-info">
             <h3 class="sighting-species">
@@ -1243,14 +1264,14 @@ async function load() {
             <div class="sighting-badges">
               <span class="sighting-badge confidence">${pct(sighting.analysis?.confidence)} confidence</span>
               <span class="sighting-badge source">${sighting.fromVideo ? 'Live Video' : 'Upload'}</span>
-              <span class="sighting-badge risk-level" style="background-color: ${riskColor}; color: white;">
+              <span class="sighting-badge risk-level" style="background-color: ${riskColor}; color: var(--background);">
                 Risk: ${riskLevel}
               </span>
             </div>
           </div>
         </div>
 
-        ${createLLMDropdown(sighting)}
+        ${createSightingLLMDropdown(sighting)}
       `;
 
       container.appendChild(card);
@@ -1282,10 +1303,13 @@ async function load() {
           <div class="sighting-header">
             ${(sighting.imageUrl || sighting.imagePath) ? `
               <img src="${sighting.imageUrl || sighting.imagePath}"
-                   alt="Sighting"
+                   alt="${sighting.analysis?.predictedSpecies || 'Plant sighting'}"
                    class="sighting-thumbnail"
-                   onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')" />
-            ` : ''}
+                   onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')"
+                   onerror="this.style.display='none'" />
+            ` : `
+              <div class="no-image-placeholder sighting-thumbnail"></div>
+            `}
 
             <div class="sighting-info">
               <h3 class="sighting-species">
@@ -1305,7 +1329,7 @@ async function load() {
             </div>
           </div>
 
-          ${createLLMDropdown(sighting)}
+          ${createSightingLLMDropdown(sighting)}
         `;
 
         container.appendChild(card);
@@ -1673,33 +1697,60 @@ function calculateEcosystemRecovery(sightings) {
 }
 
 function renderPeriodSpecificData(item, period) {
+  // Calculate actual data-driven insights based on the sightings in this time period
+  const sightings = item.sightings || [];
+  const invasiveSightings = sightings.filter(s => isInvasiveSpeciesFromAnalysis(s));
+  const removedSightings = sightings.filter(s => s.isRemoved);
+
   switch (period) {
     case 'weekly':
+      const avgConfidence = sightings.length > 0 ?
+        (sightings.reduce((sum, s) => sum + (s.analysis?.confidence || 0), 0) / sightings.length * 100).toFixed(1) : 0;
+      const invasivePercentage = sightings.length > 0 ?
+        (invasiveSightings.length / sightings.length * 100).toFixed(1) : 0;
+
       return `
         <div class="weekly-insights">
-          <div class="insight-detail-text"><strong>Spread Rate:</strong> ${item.spreadRate}m this week</div>
-          <div class="insight-detail-text"><strong>Actions:</strong> ${item.actionItems.slice(0, 2).join(', ')}</div>
+          <div class="insight-detail-text"><strong>Detection Rate:</strong> ${sightings.length} sightings (${avgConfidence}% avg confidence)</div>
+          <div class="insight-detail-text"><strong>Invasive Rate:</strong> ${invasivePercentage}% of detections this week</div>
         </div>
       `;
     case 'monthly':
+      const uniqueSpecies = [...new Set(sightings.map(s => s.analysis?.predictedSpecies).filter(Boolean))];
+      const removalEffectiveness = sightings.length > 0 ?
+        (removedSightings.length / sightings.length * 100).toFixed(1) : 0;
+      const diversityIndex = uniqueSpecies.length;
+
       return `
         <div class="monthly-insights">
-          <div class="insight-detail-text"><strong>Environmental Impact:</strong> ${item.environmentalSeverity}</div>
-          <div class="insight-detail-text"><strong>Control Effectiveness:</strong> ${item.controlEffectiveness}%</div>
-          <div class="insight-detail-text"><strong>Seasonal Factor:</strong> ${item.seasonalFactors}</div>
+          <div class="insight-detail-text"><strong>Species Diversity:</strong> ${diversityIndex} distinct species detected</div>
+          <div class="insight-detail-text"><strong>Management Success:</strong> ${removalEffectiveness}% removal rate</div>
+          <div class="insight-detail-text"><strong>Risk Assessment:</strong> ${invasiveSightings.length} invasive detections</div>
         </div>
       `;
     case 'yearly':
+      const monthSpread = [...new Set(sightings.map(s => new Date(s.createdAt).getMonth()))].length;
+      const locationSpread = sightings.filter(s => s.location?.coordinates).length;
+      const trendDirection = sightings.length > 12 ?
+        (sightings.slice(0, 6).length > sightings.slice(-6).length ? 'decreasing' : 'increasing') : 'stable';
+
       return `
         <div class="yearly-insights">
-          <div class="insight-detail-text"><strong>Climate Correlation:</strong> ${item.climateCorrelation}</div>
-          <div class="insight-detail-text"><strong>Ecosystem Recovery:</strong> ${item.ecosystemRecovery}</div>
-          <div class="insight-detail-text"><strong>Prediction:</strong> ${item.predictiveInsights}</div>
+          <div class="insight-detail-text"><strong>Seasonal Activity:</strong> Active in ${monthSpread}/12 months</div>
+          <div class="insight-detail-text"><strong>Geographic Spread:</strong> ${locationSpread} tracked locations</div>
+          <div class="insight-detail-text"><strong>Annual Trend:</strong> ${trendDirection} detection pattern</div>
         </div>
       `;
     default:
       return '';
   }
+}
+
+// Helper function to determine if a species is invasive based on analysis
+function isInvasiveSpeciesFromAnalysis(sighting) {
+  return sighting.analysis?.llm?.details?.invasive_status ||
+         sighting.analysis?.llm?.details?.risk_level?.toLowerCase().includes('high') ||
+         sighting.analysis?.llm?.details?.risk_level?.toLowerCase().includes('severe');
 }
 
 // Invasive Species Analysis
@@ -1711,15 +1762,35 @@ function analyzeInvasiveRisk(invasiveSpecies, allSightings) {
     speciesGroups[species].push(s);
   });
 
-  const highRiskSpecies = Object.keys(speciesGroups).filter(species => {
+  let highRiskSpecies = 0;
+  let mediumRiskSpecies = 0;
+  let lowRiskSpecies = 0;
+
+  Object.keys(speciesGroups).forEach(species => {
     const sightings = speciesGroups[species];
-    return sightings.length >= 3 || sightings.some(s =>
-      s.llm?.details?.risk_level?.toLowerCase().includes('severe')
+    const isHighRisk = sightings.length >= 3 || sightings.some(s =>
+      s.llm?.details?.risk_level?.toLowerCase().includes('severe') ||
+      s.llm?.details?.risk_level?.toLowerCase().includes('high')
     );
-  }).length;
+
+    const isMediumRisk = !isHighRisk && (sightings.length >= 2 || sightings.some(s =>
+      s.llm?.details?.risk_level?.toLowerCase().includes('medium') ||
+      s.llm?.details?.risk_level?.toLowerCase().includes('moderate')
+    ));
+
+    if (isHighRisk) {
+      highRiskSpecies++;
+    } else if (isMediumRisk) {
+      mediumRiskSpecies++;
+    } else {
+      lowRiskSpecies++;
+    }
+  });
 
   return {
     highRiskSpecies,
+    mediumRiskSpecies,
+    lowRiskSpecies,
     totalSpecies: Object.keys(speciesGroups).length,
     avgSightingsPerSpecies: invasiveSpecies.length / Math.max(Object.keys(speciesGroups).length, 1)
   };
@@ -2147,11 +2218,16 @@ function generateRiskChart(riskAnalysis, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  // Calculate proper risk distribution from actual data
+  const highRisk = riskAnalysis.highRiskSpecies;
+  const mediumRisk = riskAnalysis.mediumRiskSpecies || 0;
+  const lowRisk = Math.max(0, riskAnalysis.totalSpecies - highRisk - mediumRisk);
+
   const data = [
-    { label: 'High Risk', value: riskAnalysis.highRiskSpecies, color: '#ef4444' },
-    { label: 'Medium Risk', value: Math.max(0, riskAnalysis.totalSpecies - riskAnalysis.highRiskSpecies), color: '#f59e0b' },
-    { label: 'Low Risk', value: 0, color: '#10b981' }
-  ];
+    { label: 'High Risk', value: highRisk, color: '#ef4444' },
+    { label: 'Medium Risk', value: mediumRisk, color: '#f59e0b' },
+    { label: 'Low Risk', value: lowRisk, color: '#10b981' }
+  ].filter(item => item.value > 0); // Only show categories with data
 
   generateSimpleBarChart(data, container);
 }
@@ -2449,6 +2525,7 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
         avgRisk: calculateAvgRisk(sightings),
         spreadRate: calculateWeeklySpread(sightings),
         actionItems: generateWeeklyActions(sightings),
+        sightings: sightings, // Add actual sightings data
         type: 'weekly'
       }));
       break;
@@ -2469,6 +2546,7 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
         environmentalSeverity: calculateEnvironmentalSeverity(sightings),
         controlEffectiveness: calculateControlEffectiveness(sightings),
         seasonalFactors: getSeasonalFactors(month),
+        sightings: sightings, // Add actual sightings data
         type: 'monthly'
       }));
       break;
@@ -2489,6 +2567,7 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
         climateCorrelation: getClimateCorrelation(year, sightings),
         predictiveInsights: generatePredictiveInsights(sightings),
         ecosystemRecovery: calculateEcosystemRecovery(sightings),
+        sightings: sightings, // Add actual sightings data
         type: 'yearly'
       }));
       break;
@@ -2762,36 +2841,6 @@ window.closeRemovalModal = function() {
   }
 };
 
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  notification.className = `notification ${type}`;
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${type === 'success' ? '#059669' : type === 'error' ? '#dc2626' : '#3b82f6'};
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    z-index: 1001;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-  `;
-  notification.textContent = message;
-
-  document.body.appendChild(notification);
-
-  // Slide in
-  setTimeout(() => {
-    notification.style.transform = 'translateX(0)';
-  }, 100);
-
-  // Auto remove after 3 seconds
-  setTimeout(() => {
-    notification.style.transform = 'translateX(100%)';
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
+// Duplicate showNotification function removed - use the one from map.js
 
 load();

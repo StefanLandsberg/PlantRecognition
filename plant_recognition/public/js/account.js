@@ -5,11 +5,13 @@ function setLoading(btn, on) {
   if (!btn) return;
   btn.disabled = !!on;
   btn.classList.toggle("is-loading", !!on);
+  btn.classList.toggle("loading-overlay", !!on);
   if (on) {
     btn.dataset._label = btn.textContent;
-    btn.textContent = "Please wait…";
+    btn.textContent = "Processing...";
   } else if (btn.dataset._label) {
     btn.textContent = btn.dataset._label;
+    btn.classList.remove("loading-overlay");
   }
 }
 
@@ -66,7 +68,7 @@ async function onSaveProfile(e) {
     });
     if (!res.ok) throw new Error(await res.text());
     _profile = { name, email };
-    alert("Profile saved");
+    await showModal.success("Profile Updated", "Your profile has been saved successfully.");
   } catch (err) {
     showErr("acc-error", typeof err?.message === "string" ? err.message : "Failed to save profile.");
   } finally {
@@ -96,7 +98,7 @@ async function onUpdatePassword(e) {
     if (!res.ok) throw new Error(await res.text());
 
     ["pwd-current","pwd-new","pwd-confirm"].forEach(id => (document.getElementById(id).value = ""));
-    alert("Password updated");
+    await showModal.success("Password Updated", "Your password has been changed successfully.");
   } catch (err) {
     showErr("pwd-error", typeof err?.message === "string" ? err.message : "Failed to update password.");
   } finally {
@@ -107,8 +109,17 @@ async function onUpdatePassword(e) {
 async function onDeleteAccount(e) {
   const btn = e.currentTarget;
   try {
-    const ok = confirm("This will permanently delete your account and data. Continue?");
-    if (!ok) return;
+    const confirmed = await showModal.confirm(
+      "Delete Account",
+      "This will permanently delete your account and all your data. This action cannot be undone.",
+      {
+        danger: true,
+        confirmText: "Delete Account",
+        cancelText: "Cancel"
+      }
+    );
+
+    if (!confirmed) return;
 
     setLoading(btn, true);
     const res = await fetch("/api/account", {
@@ -119,10 +130,10 @@ async function onDeleteAccount(e) {
     });
     if (!res.ok) throw new Error(await res.text());
 
-    alert("Account deleted");
+    await showModal.success("Account Deleted", "Your account has been permanently deleted.");
     location.href = "/";
   } catch (err) {
-    alert(typeof err?.message === "string" ? err.message : "Failed to delete account.");
+    await showModal.error("Error", typeof err?.message === "string" ? err.message : "Failed to delete account.");
   } finally {
     setLoading(btn, false);
   }
@@ -130,52 +141,17 @@ async function onDeleteAccount(e) {
 
 document.addEventListener("DOMContentLoaded", boot);
 
-//code for password recommendations
-// Get a reference to the input field and all requirement elements
-const passwordInput = document.getElementById('pwd-new');
-const lengthRequirement = document.getElementById('length');
-const uppercaseRequirement = document.getElementById('uppercase');
-const numberRequirement = document.getElementById('number');
-const specialRequirement = document.getElementById('special');
-
-// Add an event listener for the 'keyup' event
-passwordInput.addEventListener('keyup', () => {
-    const password = passwordInput.value;
-
-    // 1. Check for password length
-    if (password.length >= 8) {
-        lengthRequirement.classList.remove('invalid');
-        lengthRequirement.classList.add('valid');
-    } else {
-        lengthRequirement.classList.remove('valid');
-        lengthRequirement.classList.add('invalid');
-    }
-
-    // 2. Check for at least one uppercase letter (A-Z)
-    if (/[A-Z]/.test(password)) {
-        uppercaseRequirement.classList.remove('invalid');
-        uppercaseRequirement.classList.add('valid');
-    } else {
-        uppercaseRequirement.classList.remove('valid');
-        uppercaseRequirement.classList.add('invalid');
-    }
-
-    // 3. Check for at least one number (0-9)
-    if (/\d/.test(password)) {
-        numberRequirement.classList.remove('invalid');
-        numberRequirement.classList.add('valid');
-    } else {
-        numberRequirement.classList.remove('valid');
-        numberRequirement.classList.add('invalid');
-    }
-
-    // 4. Check for at least one special character
-    // This regular expression matches common special characters
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) {
-        specialRequirement.classList.remove('invalid');
-        specialRequirement.classList.add('valid');
-    } else {
-        specialRequirement.classList.remove('valid');
-        specialRequirement.classList.add('invalid');
-    }
-});
+// Use the reusable password validation function from auth.js
+// Load auth.js functions if not already available
+if (typeof setupPasswordValidation === 'undefined') {
+    // Import the function from auth.js or define it here if needed
+    // For now, use a simplified inline version until proper module loading is set up
+    const script = document.createElement('script');
+    script.src = '/js/auth.js';
+    document.head.appendChild(script);
+    script.onload = () => {
+        setupPasswordValidation('pwd-new');
+    };
+} else {
+    setupPasswordValidation('pwd-new');
+}

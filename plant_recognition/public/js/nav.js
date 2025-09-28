@@ -29,6 +29,15 @@
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") menu.classList.add("hidden");
       });
+
+      // Close menu when any navigation link is clicked
+      const navLinks = menu.querySelectorAll("a");
+      navLinks.forEach(link => {
+        link.addEventListener("click", () => {
+          menu.classList.add("hidden");
+          menu.setAttribute("aria-hidden", "true");
+        });
+      });
     }
 
     const logoutBtn = document.getElementById("btn-logout");
@@ -123,6 +132,101 @@
       } catch (error) {
         console.error('Failed to register companion code:', error);
       }
+    }
+
+    // Mobile QR Code button functionality
+    const navMobileQR = document.getElementById("nav-mobile-qr");
+    console.log('Setting up Mobile QR button, element found:', !!navMobileQR);
+    if (navMobileQR) {
+      console.log('Adding click listener to Mobile QR button');
+      navMobileQR.addEventListener("click", async (event) => {
+        console.log('Mobile QR button clicked!');
+        event.preventDefault();
+        try {
+          console.log('Requesting QR code...');
+          const response = await fetch('/qr-mobile');
+          const data = await response.json();
+          console.log('QR response:', data);
+
+          if (data.success) {
+            console.log('Calling showQRModal with:', {
+              hasQRCode: !!data.qrCode,
+              mobileUrl: data.mobileUrl,
+              companionCode: data.companionCode
+            });
+            showQRModal(data.qrCode, data.mobileUrl, data.companionCode);
+          } else {
+            console.error('QR generation failed:', data.error);
+            alert('Failed to generate QR code: ' + data.error);
+          }
+        } catch (error) {
+          console.error('QR code generation error:', error);
+          alert('Failed to generate QR code');
+        }
+      });
+    }
+
+    function showQRModal(qrCodeDataURL, mobileUrl, companionCode) {
+      // Remove existing modal if any
+      const existingModal = document.getElementById('qr-modal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      // Debug: Log the parameters to see what we're receiving
+      console.log('showQRModal called with:', { qrCodeDataURL: !!qrCodeDataURL, mobileUrl, companionCode });
+
+      // Ensure companionCode is defined
+      if (!companionCode) {
+        console.error('Missing companion code');
+        alert('Failed to generate companion code');
+        return;
+      }
+
+      // Create modal
+      const modal = document.createElement('div');
+      modal.id = 'qr-modal';
+      modal.className = 'qr-modal';
+
+      const modalContent = document.createElement('div');
+      modalContent.className = 'qr-modal-content';
+
+      modalContent.innerHTML = `
+        <h3 class="qr-modal-title">Scan for Mobile Access</h3>
+        <img src="${qrCodeDataURL}" alt="QR Code" class="qr-code-image">
+        <p class="qr-modal-subtitle">Scan with your phone's camera app</p>
+        <div class="qr-modal-buttons">
+          <button id="copy-url-btn" class="qr-modal-btn primary">Copy URL</button>
+          <button id="close-qr-modal" class="qr-modal-btn secondary">Close</button>
+        </div>
+      `;
+
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+
+      // Event listeners
+      modalContent.querySelector('#close-qr-modal').addEventListener('click', () => {
+        modal.remove();
+      });
+
+      modalContent.querySelector('#copy-url-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(mobileUrl).then(() => {
+          const btn = modalContent.querySelector('#copy-url-btn');
+          btn.textContent = 'Copied!';
+          setTimeout(() => {
+            btn.textContent = 'Copy URL';
+          }, 2000);
+        }).catch(() => {
+          alert('Failed to copy URL');
+        });
+      });
+
+      // Close on backdrop click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove();
+        }
+      });
     }
   });
 })();
