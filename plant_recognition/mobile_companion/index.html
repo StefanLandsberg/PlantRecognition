@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>Plant Recognition Mobile Companion</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
     <div class="app-container">
@@ -33,6 +33,24 @@
             </div>
         </div>
 
+        <!-- QR Connection Screen -->
+        <div id="qr-connection-screen" class="screen">
+            <div class="logo">
+                <h1>Plant Recognition</h1>
+                <p>Auto-connecting via QR code...</p>
+            </div>
+
+            <div class="qr-connection-status">
+                <div class="connection-spinner"></div>
+                <div id="qr-status-message" class="status-message info">Setting up connection...</div>
+            </div>
+
+            <div class="qr-help-text">
+                <p>Connected via QR code</p>
+                <p>Requesting camera and location permissions...</p>
+            </div>
+        </div>
+
         <!-- Camera Screen -->
         <div id="camera-screen" class="screen">
             <div class="header">
@@ -44,7 +62,7 @@
             </div>
 
             <div class="camera-container">
-                <video id="camera-video" autoplay playsinline></video>
+                <video id="camera-video" autoplay playsinline muted></video>
                 <canvas id="camera-canvas" style="display: none;"></canvas>
 
                 <div class="camera-overlay">
@@ -56,11 +74,17 @@
                     <button id="gallery-btn" class="control-btn">
                         <span>Gallery</span>
                     </button>
+                    <button id="stream-toggle-btn" class="stream-btn">
+                        <span id="stream-btn-text">Start Live Stream</span>
+                    </button>
                     <button id="capture-btn" class="capture-btn">
                         <span class="capture-circle"></span>
                     </button>
                     <button id="switch-camera-btn" class="control-btn">
                         <span>Flip</span>
+                    </button>
+                    <button id="settings-btn" class="control-btn">
+                        <span>Settings</span>
                     </button>
                 </div>
             </div>
@@ -93,6 +117,47 @@
             </div>
         </div>
 
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen">
+            <div class="header">
+                <div class="settings-title">
+                    <h2>Settings</h2>
+                </div>
+                <button id="cancel-settings-btn" class="disconnect-btn">Cancel</button>
+            </div>
+
+            <div class="settings-container">
+                <div class="setting-group">
+                    <label for="resolution-select">Camera Resolution</label>
+                    <select id="resolution-select" class="setting-select">
+                        <option value="640x360">360p (Low)</option>
+                        <option value="854x480">480p (Medium)</option>
+                        <option value="1280x720">720p HD (Default)</option>
+                        <option value="1920x1080">1080p Full HD</option>
+                    </select>
+                    <div class="setting-help">
+                        Higher resolution provides better quality but uses more bandwidth and storage.
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label for="storage-select">Image Storage</label>
+                    <select id="storage-select" class="setting-select">
+                        <option value="server">Server Storage (2GB total, 90 days, backed up)</option>
+                        <option value="local">Local Storage (Unlimited, device only)</option>
+                    </select>
+                    <div class="setting-help">
+                        <strong>Server Storage:</strong> Images saved to server with backup.<br>
+                        <strong>Local Storage:</strong> Images stored only on this device.
+                    </div>
+                </div>
+
+                <div class="setting-actions">
+                    <button id="save-settings-btn" class="primary-btn">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Error Screen -->
         <div id="error-screen" class="screen">
             <div class="error-content">
@@ -104,6 +169,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

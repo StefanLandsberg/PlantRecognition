@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <%- include('partials/head', { title: text.account.title, styles: ['/css/app.css'] }) %>
+  <%- include('partials/head', { title: text.account.title, styles: ['/css/variables.css', '/css/themes.css', '/css/layout.css', '/css/components.css', '/css/app.css'] }) %>
   <script>
     try {
       var dark = localStorage.getItem('darkMode') !== 'false';
@@ -13,15 +13,15 @@
     } catch(e) {}
   </script>
 </head>
-<body>
+<body class="account-page">
   <%- include('partials/nav') %>
 
-  <div class="container" style="max-width:720px;margin:2rem auto;">
-    <h1 style="margin-bottom:1.5rem;"><%= text.account.header %></h1>
+  <div class="container container-narrow">
+    <h1 class="page-header"><%= text.account.header %></h1>
     <section class="account" aria-label="Account">
       <div class="card" aria-labelledby="profile-h">
-        <h2 id="profile-h" style="margin:0 0 .75rem;"><%= text.account.profile_header || text.account.header %></h2>
-        <div class="form-grid" style="margin-top:.5rem;">
+        <h2 id="profile-h" class="section-header"><%= text.account.profile_header || text.account.header %></h2>
+        <div class="form-grid form-section">
           <div class="field">
             <label for="acc-name"><%= text.account.display_name_label %></label>
             <input
@@ -48,8 +48,8 @@
         <p id="acc-error" class="error" role="status" aria-live="polite"></p>
       </div>
 
-      <div class="card" aria-labelledby="pwd-h" style="margin-top:1.5rem;">
-        <h3 id="pwd-h" style="margin:0 0 .75rem;"><%= text.account.password_header %></h3>
+      <div class="card card-section" aria-labelledby="pwd-h">
+        <h3 id="pwd-h" class="section-header"><%= text.account.password_header %></h3>
         <div class="form-grid">
           <div class="field">
             <label for="pwd-current"><%= text.account.current_password_label %></label>
@@ -100,6 +100,7 @@
       </div>
     </section>
   </div>
+  <script src="/js/modal.js"></script>
   <script src="/js/account.js" type="module"></script>
 </body>
 </html>

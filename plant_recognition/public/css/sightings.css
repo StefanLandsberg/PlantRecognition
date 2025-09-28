@@ -1,5 +1,209 @@
 /* Sightings Tab Specific Styles */
 
+/* Sighting Cards */
+.sighting-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  transition: border-color 0.2s ease, height 0.3s ease;
+  overflow: hidden;
+}
+
+.sighting-card:hover {
+  border-color: var(--accent);
+}
+
+.sighting-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.sighting-thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.sighting-thumbnail:hover {
+  border-color: var(--accent);
+}
+
+.sighting-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sighting-species {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.5rem 0;
+}
+
+.sighting-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.sighting-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sighting-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.sighting-badge {
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sighting-badge.confidence {
+  background: #4ade80;
+}
+
+.sighting-badge.source {
+  background: #06b6d4;
+}
+
+/* LLM Analysis Dropdown */
+.llm-dropdown {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.llm-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.llm-dropdown-header:hover {
+  color: #7ee0b1;
+}
+
+.llm-dropdown-arrow {
+  transition: transform 0.2s ease;
+}
+
+.llm-dropdown.open .llm-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.llm-dropdown-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.llm-dropdown.open .llm-dropdown-content {
+  max-height: 500px;
+}
+
+.llm-section-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  flex-wrap: wrap;
+}
+
+.llm-section-btn {
+  background: var(--border);
+  color: var(--text);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.llm-section-btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.llm-section-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.llm-section {
+  display: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.llm-section.active {
+  display: block;
+}
+
+.llm-section-header {
+  background: var(--border);
+  padding: 0.75rem;
+  color: var(--text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.llm-section-header:hover {
+  background: rgba(103, 212, 167, 0.1);
+}
+
+.species-dropdown-arrow {
+  transition: transform 0.2s ease;
+}
+
+.llm-section.expanded .species-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.llm-section .llm-content {
+  padding: 0.75rem;
+  background: var(--background);
+  color: var(--text);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.llm-section-content {
+  background: rgba(103, 212, 167, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
 /* Farmer Alert Banners */
 .alert-banner {
   padding: 1rem;

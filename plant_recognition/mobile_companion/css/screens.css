@@ -1,0 +1,366 @@
+/* Screen-specific Styles */
+
+/* Connection Screen */
+.logo {
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-md);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.logo h1 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 2.5rem;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.logo p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.125rem;
+}
+
+.connection-form {
+    padding: var(--spacing-md);
+    background: var(--panel);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.connection-form h2 {
+    margin: 0 0 var(--spacing-lg) 0;
+    text-align: center;
+    color: var(--text);
+    font-size: 1.5rem;
+}
+
+.help-text {
+    padding: var(--spacing-md);
+    background: rgba(103, 212, 167, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.help-text p {
+    margin: var(--spacing-sm) 0;
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* QR Connection Screen */
+.qr-connection-status {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+}
+
+.connection-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(103, 212, 167, 0.3);
+    border-top: 3px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--spacing-md);
+}
+
+.qr-help-text {
+    padding: var(--spacing-md);
+    text-align: center;
+}
+
+.qr-help-text p {
+    margin: var(--spacing-sm) 0;
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+/* Camera Screen */
+.connection-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.status-indicator.connected {
+    background: var(--success);
+    animation: pulse 2s infinite;
+}
+
+.camera-container {
+    flex: 1;
+    position: relative;
+    background: black;
+    overflow: hidden;
+}
+
+#camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#camera-canvas {
+    display: none;
+}
+
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.viewfinder {
+    width: 250px;
+    height: 250px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-lg);
+    position: relative;
+}
+
+.viewfinder::before,
+.viewfinder::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--accent);
+}
+
+.viewfinder::before {
+    top: -3px;
+    left: -3px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.viewfinder::after {
+    bottom: -3px;
+    right: -3px;
+    border-left: none;
+    border-top: none;
+}
+
+.camera-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+    min-height: 80px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    /* Add safe area padding for devices with home indicators */
+    padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+    gap: var(--spacing-md);
+}
+
+.classification-status {
+    background: var(--panel);
+    padding: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.status-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--success);
+}
+
+.status-text {
+    color: var(--text);
+    font-size: 0.875rem;
+}
+
+/* Settings Screen */
+.settings-title h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.5rem;
+}
+
+.settings-container {
+    flex: 1;
+    padding: var(--spacing-md);
+}
+
+.setting-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.setting-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.setting-help {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(103, 212, 167, 0.05);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+.setting-actions {
+    padding: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Error Screen */
+.error-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    text-align: center;
+}
+
+.error-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--error);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    margin-bottom: var(--spacing-lg);
+}
+
+.error-content h2 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--error);
+    font-size: 1.5rem;
+}
+
+.error-content p {
+    margin: 0 0 var(--spacing-lg) 0;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+/* Results Display */
+.results-display {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--panel);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: var(--spacing-md);
+    transform: translateY(100%);
+    transition: transform var(--transition-normal);
+}
+
+.results-display:not(.hidden) {
+    transform: translateY(0);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.result-header h3 {
+    margin: 0;
+    color: var(--accent);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.result-content {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.result-image-container {
+    flex-shrink: 0;
+}
+
+.result-image-container img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+}
+
+.result-details {
+    flex: 1;
+}
+
+.species-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: var(--spacing-xs);
+}
+
+.confidence {
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: var(--spacing-xs);
+}
+
+.status {
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+/* Animations */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

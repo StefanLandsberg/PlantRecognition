@@ -1,0 +1,688 @@
+/* Popup and Modal Styles for Plant Recognition App */
+/* This file contains all styles for popups, modals, dropdowns, and overlays */
+
+@import './variables.css';
+
+/* Base Modal and Popup Styles */
+.modal-backdrop,
+.multi-popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.modal-backdrop.show,
+.multi-popup-backdrop.show {
+  opacity: 1;
+}
+
+/* Analysis Popup (Center) */
+.analysis-popup {
+  position: absolute;
+  background: var(--surface);
+  backdrop-filter: blur(2px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  max-width: 600px;
+  width: 90%;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-modal);
+}
+
+/* Timeline Popup (Left) */
+.timeline-popup {
+  position: absolute;
+  left: var(--space-2xl);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface);
+  backdrop-filter: blur(2px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  width: 350px;
+  max-height: 60vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-modal);
+}
+
+/* Stats Popup (Right) */
+.stats-popup {
+  position: absolute;
+  right: var(--space-2xl);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface);
+  backdrop-filter: blur(2px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  width: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-modal);
+}
+
+/* Tidbit Popup (Bottom) */
+.tidbit-popup {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  backdrop-filter: blur(2px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  max-width: 400px;
+  width: 80vw;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-modal);
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.25rem;
+}
+
+.modal-header img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+/* Modal Body */
+.modal-body {
+  color: var(--text);
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-wrap: break-word;
+}
+
+/* Modal Close Button */
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text);
+  padding: var(--space-xs);
+  transition: color var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--accent);
+}
+
+/* LLM Analysis Section */
+.llm-analysis {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.llm-analysis h4 {
+  color: var(--accent);
+  margin-bottom: var(--space-sm);
+}
+
+.llm-analysis > div {
+  color: var(--text);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Analysis Sections */
+.analysis-section {
+  margin-bottom: var(--space-lg);
+}
+
+.analysis-section h4 {
+  color: var(--accent);
+  margin-bottom: var(--space-sm);
+  font-size: 1rem;
+}
+
+.analysis-section p {
+  color: var(--text);
+  margin-bottom: var(--space-sm);
+  line-height: 1.5;
+}
+
+.analysis-section.disclaimer {
+  background: rgba(var(--warning), 0.1);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--warning);
+}
+
+/* Removal Confirmation Modal */
+.removal-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.removal-modal-content {
+  background: var(--surface);
+  padding: var(--space-xl);
+  border-radius: var(--radius-md);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  color: var(--text);
+  box-shadow: var(--shadow-xl);
+}
+
+.removal-modal h3 {
+  margin-top: 0;
+  color: var(--error);
+}
+
+.removal-modal-buttons {
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: center;
+  margin-top: var(--space-xl);
+}
+
+.removal-btn {
+  background: var(--error);
+  color: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  transition: background-color var(--transition-fast);
+}
+
+.removal-btn:hover {
+  background: #b91c1c;
+}
+
+/* Button Styles */
+.btn-primary {
+  background: var(--error);
+  color: var(--surface);
+  border: none;
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-secondary {
+  background: #6b7280;
+  color: var(--surface);
+  border: none;
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-primary:hover {
+  background: #b91c1c;
+}
+
+.btn-secondary:hover {
+  background: #4b5563;
+}
+
+/* Toast Notifications */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: var(--space-lg) var(--space-xl);
+  border-radius: var(--radius-md);
+  z-index: var(--z-toast);
+  box-shadow: var(--shadow-md);
+  transform: translateX(100%);
+  transition: transform var(--transition-normal);
+  color: var(--surface);
+}
+
+.toast-notification.show {
+  transform: translateX(0);
+}
+
+.toast-notification.success {
+  background: var(--success);
+}
+
+.toast-notification.error {
+  background: var(--error);
+}
+
+.toast-notification.info {
+  background: var(--info);
+}
+
+/* Sighting Modal */
+.sighting-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: var(--z-modal);
+}
+
+.sighting-modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Image Modal */
+.image-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: var(--z-modal);
+  cursor: pointer;
+}
+
+.image-modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-modal img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: var(--radius-md);
+}
+
+/* Custom Scrollbars for Popups */
+.analysis-popup::-webkit-scrollbar,
+.timeline-popup::-webkit-scrollbar,
+.stats-popup::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.analysis-popup::-webkit-scrollbar-thumb,
+.timeline-popup::-webkit-scrollbar-thumb,
+.stats-popup::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+.analysis-popup::-webkit-scrollbar-thumb:hover,
+.timeline-popup::-webkit-scrollbar-thumb:hover,
+.stats-popup::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+  background-clip: content-box;
+}
+
+/* Additional Content Classes */
+.species-status {
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.species-status.invasive {
+  color: var(--error);
+}
+
+.species-status.native {
+  color: var(--success);
+}
+
+.previous-detection-label {
+  color: var(--warning);
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+.warning-button {
+  background: var(--warning);
+  color: var(--background);
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.warning-button:hover {
+  background: #d97706;
+}
+
+/* JavaScript Modal Content Classes */
+.modal-header-flex {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.modal-title-section {
+    flex: 1;
+}
+
+.modal-title {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.25rem;
+}
+
+.modal-subtitle {
+    margin: 0.25rem 0 0 0;
+    color: var(--text);
+    font-size: 0.875rem;
+}
+
+.modal-coordinates {
+    margin: 0.25rem 0 0 0;
+    color: var(--text);
+    font-size: 0.75rem;
+}
+
+.modal-button-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.removal-button {
+    background: #dc2626;
+    color: var(--background);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text);
+    padding: 0.25rem;
+}
+
+.modal-body-flex {
+    color: var(--text);
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+}
+
+.analysis-loading {
+    color: var(--text);
+    font-style: italic;
+}
+
+/* Timeline Chart Styles */
+.timeline-chart {
+    min-height: 200px;
+    width: 100%;
+}
+
+.timeline-legend-flex {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+.legend-item-flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.chart-title-centered {
+    text-align: center;
+}
+
+.chart-main-title {
+    margin: 0 0 1rem 0;
+    color: var(--accent);
+}
+
+.chart-subtitle {
+    font-size: 0.875rem;
+    color: var(--text);
+    margin-bottom: 1rem;
+}
+
+/* No Timeline Data */
+.no-timeline-data {
+    text-align: center;
+    color: var(--text);
+    padding: 2rem;
+}
+
+/* Statistics Styles */
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.stats-label-bold {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.nearby-species-title {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--accent);
+}
+
+.nearby-species-scroll {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.nearby-species-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+}
+
+/* Tidbit Styles */
+.tidbit-flex {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.tidbit-icon {
+    font-size: 2rem;
+}
+
+.tidbit-title {
+    margin: 0;
+    color: var(--accent);
+}
+
+.tidbit-content-text {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.875rem;
+    color: var(--text);
+}
+
+/* Confirmation Modal Styles */
+.confirm-title {
+    margin-top: 0;
+    color: #dc2626;
+}
+
+.confirm-text {
+    color: var(--text);
+}
+
+.confirm-subtext {
+    font-size: 0.9rem;
+    color: var(--text);
+    font-style: italic;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.confirm-remove-btn {
+    background: #dc2626;
+    color: var(--background);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.confirm-cancel-btn {
+    background: #6b7280;
+    color: var(--background);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* LLM Analysis Styling */
+.llm-details {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(103, 212, 167, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+}
+
+.analysis-section {
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+.analysis-section:last-child {
+    margin-bottom: 0;
+}
+
+.analysis-section h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--accent);
+    font-weight: 600;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.analysis-section p {
+    margin: 0.25rem 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text);
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.analysis-section strong {
+    color: var(--text);
+}
+
+.analysis-section.disclaimer {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+}
+
+.analysis-section.disclaimer h4 {
+    color: #ffc107;
+}
+
+.analysis-section.disclaimer p {
+    color: var(--text);
+    font-size: 0.8rem;
+}

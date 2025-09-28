@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="en">
-<%- include('partials/head', { title: 'Sightings' , styles: ['/css/app.css', '/css/sightings.css'] }) %>
+<%- include('partials/head', { title: 'Sightings' , styles: ['/css/variables.css', '/css/themes.css', '/css/layout.css', '/css/components.css', '/css/scrollbars.css', '/css/popups.css', '/css/analytics.css', '/css/sightings.css'] }) %>
 
   <body>
     <%- include('partials/nav') %>
 
-      <main class="container" style="max-width:1200px;margin:2rem auto;">
+      <main class="container container-wide">
         <h1>Your Sightings</h1>
 
         <!-- Tab Navigation -->
@@ -20,15 +20,15 @@
               <button class="dropdown-item" onclick="switchTab('invasive-dashboard')">Invasive Species Dashboard</button>
               <button class="dropdown-item" onclick="switchTab('geographic-insights')">Geographic Insights</button>
               <button class="dropdown-item" onclick="switchTab('temporal-analysis')">Temporal Analysis</button>
-              <button class="dropdown-item" onclick="switchTab('risk-assessment')" style="position: relative;">
+              <button class="dropdown-item relative-position" onclick="switchTab('risk-assessment')">
                 Risk Assessment & Alerts
-                <span id="risk-notification-badge" class="notification-badge danger" style="display: none;">0</span>
+                <span id="risk-notification-badge" class="notification-badge danger notification-badge-hidden">0</span>
               </button>
             </div>
           </div>
         </div>
 
-        <div id="sightings-empty" class="muted" style="margin:.5rem 0; display:none;">
+        <div id="sightings-empty" class="muted empty-state">
           No sightings yet.
         </div>
 
