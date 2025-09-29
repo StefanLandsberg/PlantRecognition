@@ -63,7 +63,9 @@ export const calculateStats = (speciesData) => {
       avgLocation = [avgLng, avgLat];
     }
 
-    const riskLevel = data.llmData?.details?.risk_level || 'Unknown';
+    // Get risk level from most recent sighting - same as invasive dashboard
+    const mostRecentSighting = sortedSightings[0]; // Already sorted above
+    const riskLevel = mostRecentSighting?.analysis?.llm?.details?.risk_level || 'Medium';
     const scientificName = data.llmData?.details?.advisory_content?.species_identification?.scientific_name || '';
 
     return {

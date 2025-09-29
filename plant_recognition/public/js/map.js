@@ -8,6 +8,31 @@ class MapLoaderProxy {
     this.clusterTolerance = 0.0001; // ~10 meters tolerance for clustering
   }
 
+  // Helper function for safe image rendering
+  getImageHTML(sighting, className = '', style = '') {
+    const imageUrl = sighting.imageUrl || sighting.imagePath;
+
+    // Debug logging and validation
+    if (imageUrl && typeof imageUrl === 'string' && !imageUrl.startsWith('http') && !imageUrl.startsWith('/') && !imageUrl.startsWith('data:')) {
+      console.warn('Invalid image URL detected:', {
+        sightingId: sighting._id,
+        imageUrl: imageUrl,
+        species: sighting.analysis?.predictedSpecies
+      });
+      // Return placeholder for invalid URLs
+      return '<div class="' + className + ' no-image-placeholder" style="' + style + '; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; background: var(--panel);"></div>';
+    }
+
+    const isValidUrl = imageUrl && typeof imageUrl === 'string' &&
+      (imageUrl.startsWith('http') || imageUrl.startsWith('/') || imageUrl.startsWith('data:'));
+
+    if (isValidUrl) {
+      return '<img src="' + imageUrl + '" alt="' + (sighting.analysis?.predictedSpecies || 'Plant sighting') + '" class="' + className + '" style="' + style + '" onerror="this.outerHTML=\'<div class=&quot;' + className + ' no-image-placeholder&quot; style=&quot;' + style + '; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; background: var(--panel);&quot;></div>\'" />';
+    } else {
+      return '<div class="' + className + ' no-image-placeholder" style="' + style + '; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; background: var(--panel);"></div>';
+    }
+  }
+
   async loadGoogleMaps() {
     if (this.isScriptLoaded) {
       return this.loadingPromise;
@@ -1050,7 +1075,9 @@ class MapLoaderProxy {
 
     popup.innerHTML = `
       <div class="modal-header" style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;">
-        ${(sighting.imageUrl || sighting.imagePath) ? `<img src="${sighting.imageUrl || sighting.imagePath}" alt="${sighting.analysis?.predictedSpecies || 'Plant sighting'}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'" />` : `<div style="width: 80px; height: 80px; border-radius: 8px; border: 2px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--panel);"></div>`}
+${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sighting.imagePath) === 'string' && ((sighting.imageUrl || sighting.imagePath).startsWith('/') || (sighting.imageUrl || sighting.imagePath).startsWith('http')) ?
+          `<img src="${sighting.imageUrl || sighting.imagePath}" alt="Plant" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'" />` :
+          `<div style="width: 80px; height: 80px; border-radius: 8px; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; background: var(--panel);"></div>`}
         <div style="flex: 1;">
           <h3 style="margin: 0; color: var(--text); font-size: 1.25rem;">${sighting.analysis?.predictedSpecies || 'Unknown Species'}</h3>
           <p style="margin: 0.25rem 0 0 0; color: var(--text); font-size: 0.875rem;">${confidence}% confidence • ${createdDate}</p>
@@ -1883,7 +1910,9 @@ class MapLoaderProxy {
         <div class="cluster-popup-content">
           ${cluster.sightings.map(sighting => `
             <div class="cluster-item" data-sighting-id="${sighting._id}">
-              ${(sighting.imageUrl || sighting.imagePath) ? `<img src="${sighting.imageUrl || sighting.imagePath}" alt="${sighting.analysis?.predictedSpecies || 'Unknown'}" class="cluster-item-image" onerror="this.style.display='none'" />` : `<div class="cluster-item-image no-image-placeholder" style="min-height: 60px;"></div>`}
+${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sighting.imagePath) === 'string' && ((sighting.imageUrl || sighting.imagePath).startsWith('/') || (sighting.imageUrl || sighting.imagePath).startsWith('http')) ?
+                `<img src="${sighting.imageUrl || sighting.imagePath}" alt="Plant" class="cluster-item-image" style="min-height: 60px;" onerror="this.style.display='none'" />` :
+                `<div class="cluster-item-image no-image-placeholder" style="min-height: 60px;"></div>`}
               <div class="cluster-item-info">
                 <div class="cluster-item-species">${sighting.analysis?.predictedSpecies || 'Unknown Species'}</div>
                 <div class="cluster-item-date">${formatDate(sighting.createdAt)}</div>

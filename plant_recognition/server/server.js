@@ -24,6 +24,7 @@ import sseRoutes from "./routes/sse.routes.js";
 import configRoutes from "./routes/config.routes.js";
 import accountRoutes from "./routes/account.routes.js";
 import storageRoutes from "./routes/storage.routes.js";
+import alertsRoutes from "./routes/alerts.routes.js";
 
 import User from "./models/User.js";
 
@@ -99,6 +100,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analyzeRoutes);
 app.use("/api/storage", storageRoutes);
 app.use("/api/sightings", sightingsAPIRoutes);
+app.use("/api/alerts", alertsRoutes);
 app.use("/api/events", sseRoutes);
 
 // // Companion code registration endpoint (must be before notFound middleware)

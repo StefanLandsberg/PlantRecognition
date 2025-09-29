@@ -49,48 +49,50 @@ const showImageModal = (imageUrl) => {
 // === ANALYTICS TAB RENDERERS ===
 
 const loadSpeciesAnalytics = (sightings) => {
-  const container = document.getElementById('species-analytics-container');
-  if (!sightings || sightings.length === 0) {
-    container.innerHTML = '<p class="muted">No sightings data available for analytics.</p>';
-    return;
-  }
+    const container = document.getElementById('species-analytics-container');
+    if (!sightings || sightings.length === 0) {
+        container.innerHTML = '<p class="muted">No sightings data available for analytics.</p>';
+        return;
+    }
 
-  const speciesData = analytics.aggregateSpeciesData(sightings);
-  const statsData = analytics.calculateStats(speciesData).sort((a, b) => b.totalCount - a.totalCount);
+    const speciesData = analytics.aggregateSpeciesData(sightings);
+    const statsData = analytics.calculateStats(speciesData).sort((a, b) => b.totalCount - a.totalCount);
 
-  container.innerHTML = `
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">Species Analytics</h2>
-      <p class="dashboard-subtitle">Comprehensive species identification and distribution analysis</p>
-    </div>
-    <div id="species-analytics-grid"></div>`;
-
-  const grid = container.querySelector('#species-analytics-grid');
-  statsData.forEach(stats => {
-    const card = document.createElement('div');
-    card.className = 'analytics-card';
-    card.innerHTML = `
-      <div class="analytics-header">
-        ${stats.mainImage ? `<img src="${stats.mainImage}" alt="${stats.species}" class="analytics-image" />` : ''}
-        <div class="analytics-title">
-          <h3>${stats.species}</h3>
-          ${stats.scientificName ? `<p class="species-scientific">${stats.scientificName}</p>` : ''}
+    container.innerHTML = `
+        <div class="dashboard-header">
+            <h2 class="dashboard-title">Species Analytics</h2>
+            <p class="dashboard-subtitle">Comprehensive species identification and distribution analysis</p>
         </div>
-      </div>
-      <div class="analytics-stats">
-        <div class="stat-item"><span class="stat-value">${stats.totalCount}</span><span class="stat-label">Sightings</span></div>
-        <div class="stat-item"><span class="stat-value">${stats.avgConfidence.toFixed(1)}%</span><span class="stat-label">Confidence</span></div>
-        <div class="stat-item"><span class="stat-value">${stats.uniqueLocations}</span><span class="stat-label">Locations</span></div>
-        <div class="stat-item"><span class="stat-value">${stats.geoSpread.toFixed(1)}km</span><span class="stat-label">Spread</span></div>
-      </div>
-      <div class="analytics-details">
-        <div class="detail-row"><span class="detail-label">Last Seen</span><span class="detail-value">${utils.fmtDate(stats.lastSeen)}</span></div>
-        <div class="detail-row"><span class="detail-label">First Seen</span><span class="detail-value">${utils.fmtDate(stats.firstSeen)}</span></div>
-        ${stats.avgLocation ? `<div class="detail-row"><span class="detail-label">Avg Location</span><span class="detail-value">${utils.fmtLatLng(stats.avgLocation)}</span></div>` : ''}
-        <div class="detail-row"><span class="detail-label">Risk Level</span><span class="detail-value"><span class="risk-badge ${utils.getRiskBadgeClass(stats.riskLevel)}">${stats.riskLevel}</span></span></div>
-      </div>`;
-    grid.appendChild(card);
-  });
+        <div id="species-analytics-grid"></div>`;
+
+    const grid = container.querySelector('#species-analytics-grid');
+    statsData.forEach(stats => {
+        const card = document.createElement('div');
+        card.className = 'analytics-card';
+        card.innerHTML = `
+            <div class="analytics-header">
+                ${stats.mainImage && typeof stats.mainImage === 'string' && (stats.mainImage.startsWith('/') || stats.mainImage.startsWith('http')) ?
+                    `<img src="${stats.mainImage}" alt="${stats.species}" class="analytics-image" onerror="this.style.display='none'" />` :
+                    `<div class="no-image-placeholder analytics-image"></div>`}
+                <div class="analytics-title">
+                    <h3>${stats.species}</h3>
+                    ${stats.scientificName ? `<p class="species-scientific">${stats.scientificName}</p>` : ''}
+                </div>
+            </div>
+            <div class="analytics-stats">
+                <div class="stat-item"><span class="stat-value">${stats.totalCount}</span><span class="stat-label">Sightings</span></div>
+                <div class="stat-item"><span class="stat-value">${stats.avgConfidence.toFixed(1)}%</span><span class="stat-label">Confidence</span></div>
+                <div class="stat-item"><span class="stat-value">${stats.uniqueLocations}</span><span class="stat-label">Locations</span></div>
+                <div class="stat-item"><span class="stat-value">${stats.geoSpread.toFixed(1)}km</span><span class="stat-label">Spread</span></div>
+            </div>
+            <div class="analytics-details">
+                <div class="detail-row"><span class="detail-label">Last Seen</span><span class="detail-value">${utils.fmtDate(stats.lastSeen)}</span></div>
+                <div class="detail-row"><span class="detail-label">First Seen</span><span class="detail-value">${utils.fmtDate(stats.firstSeen)}</span></div>
+                ${stats.avgLocation ? `<div class="detail-row"><span class="detail-label">Avg Location</span><span class="detail-value">${utils.fmtLatLng(stats.avgLocation)}</span></div>` : ''}
+                <div class="detail-row"><span class="detail-label">Risk Level</span><span class="detail-value"><span class="risk-badge ${utils.getRiskBadgeClass(stats.riskLevel)}">${stats.riskLevel}</span></span></div>
+            </div>`;
+        grid.appendChild(card);
+    });
 };
 
 const loadInvasiveDashboard = (sightings) => {
@@ -220,22 +222,21 @@ const loadTemporalAnalysis = (sightings) => {
     charts.generateTimelineChart(timePatterns, 'timeline-chart');
 };
 
-const loadRiskAssessment = (sightings) => {
+const loadRiskAssessment = async (sightings) => {
     const container = document.getElementById('risk-assessment-container');
-    const genAlerts = analytics.generateRiskAlerts(sightings);
     const recommendations = analytics.generateRecommendations(sightings);
-    
-    // Add generated alerts to notification system if they don't already exist
-    Object.values(genAlerts).flat().forEach(alert => {
-        const existing = notifications.getActiveNotifications('risk').find(n => n.title === alert.title);
-        if (!existing) {
-            notifications.addNotification('risk', alert);
-        }
-    });
 
-    const allNotifications = [...notifications.getActiveNotifications('risk'), ...notifications.getActiveNotifications('weather')];
+    // Refresh server-side alerts but keep existing analytics display
+    await notifications.refreshAlerts();
+
+    // Get server-managed alerts
+    const riskAlerts = notifications.getActiveNotifications('risk');
+    const weatherAlerts = notifications.getActiveNotifications('weather');
+    const allNotifications = [...riskAlerts, ...weatherAlerts];
+
+    // Sort alerts by priority
     const sortedAlerts = allNotifications.sort((a, b) => {
-        const order = { 'info': 2, 'warning': 1, 'critical': 0 };
+        const order = { 'critical': 0, 'warning': 1, 'info': 2 };
         return order[a.level] - order[b.level];
     });
 
@@ -244,7 +245,7 @@ const loadRiskAssessment = (sightings) => {
     <div class="metrics-grid">
       <div class="metric-card"><div class="metric-value">${sortedAlerts.filter(a => a.level==='critical').length}</div><div class="metric-label">Critical Alerts</div><div class="metric-change negative">Immediate action</div></div>
       <div class="metric-card"><div class="metric-value">${sortedAlerts.filter(a => a.level==='warning').length}</div><div class="metric-label">Warning Alerts</div><div class="metric-change negative">Monitor closely</div></div>
-      <div class="metric-card"><div class="metric-value">${allNotifications.length}</div><div class="metric-label">Active Notifications</div><div class="metric-change positive">Including weather</div></div>
+      <div class="metric-card"><div class="metric-value">${allNotifications.length}</div><div class="metric-label">Active Notifications</div><div class="metric-change positive">Server-managed</div></div>
       <div class="metric-card"><div class="metric-value">${recommendations.length}</div><div class="metric-label">Recommendations</div><div class="metric-change positive">For implementation</div></div>
     </div>
     <div class="alert-grid">
@@ -252,7 +253,7 @@ const loadRiskAssessment = (sightings) => {
         <div class="alert-card ${alert.level}" data-alert-id="${alert.id}">
           <div class="alert-header"><div class="alert-level ${alert.level}">${alert.level}</div><div class="alert-timestamp">${utils.fmtDate(alert.timestamp)}</div></div>
           <div class="alert-title">${alert.title}</div><div class="alert-description">${alert.description}</div>
-          ${alert.level !== 'info' ? `<div class="alert-actions"><button class="alert-action-btn" onclick="handleAlertAction('${alert.id}', '${alert.action || 'Take Action'}')">Acknowledge</button><button class="alert-action-btn secondary" onclick="handleAlertDismiss('${alert.id}')">Dismiss</button></div>` : ''}
+          <div class="alert-actions">${alert.title.includes('Weather') ? '' : '<button class="alert-action-btn secondary" onclick="handleAlertDismiss(\'' + alert.id + '\')">Dismiss</button>'}</div>
         </div>`).join('')}
     </div>
     <div class="chart-container"><div class="chart-header"><h3 class="chart-title">Management Recommendations</h3></div><div class="alert-recommendations">${recommendations.map(rec => `<div class="recommendation-card"><h4 class="recommendation-title">${rec.title}</h4><p class="recommendation-description">${rec.description}</p><div class="recommendation-meta"><span>Priority: ${rec.priority} | Impact: ${rec.impact}</span></div></div>`).join('')}</div></div>`;
@@ -377,8 +378,8 @@ export const switchTab = (tabName) => {
             'invasive-dashboard': loadInvasiveDashboard,
             'geographic-insights': loadGeographicInsights,
             'temporal-analysis': loadTemporalAnalysis,
-            'risk-assessment': (data) => {
-                loadRiskAssessment(data);
+            'risk-assessment': async (data) => {
+                await loadRiskAssessment(data);
                 notifications.updateNotificationBadges();
             }
         };
@@ -404,33 +405,33 @@ export const handleAlertAction = (alertId) => {
     if(alertCard) alertCard.style.opacity = '0.6';
 };
 
-export const handleAlertDismiss = (alertId) => {
+export const handleAlertDismiss = async (alertId) => {
     const alertCard = document.querySelector(`[data-alert-id="${alertId}"]`);
     const alertTitle = alertCard?.querySelector('.alert-title')?.textContent || '';
+
     if (alertTitle.includes('Weather')) {
         showNotificationToast('Weather alerts cannot be dismissed.', 'warning');
         return;
     }
-    if (alertCard) alertCard.remove();
-    notifications.dismissNotification('risk', alertId);
-    notifications.dismissNotification('weather', alertId);
-    showNotificationToast('Alert dismissed.', 'info');
+
+    // Determine alert type
+    const alertType = alertTitle.includes('Weather') ? 'weather' : 'risk';
+
+    // Dismiss alert via API
+    const success = await notifications.dismissNotification(alertType, alertId);
+
+    if (success) {
+        if (alertCard) alertCard.remove();
+        showNotificationToast('Alert dismissed.', 'info');
+    } else {
+        showNotificationToast('Failed to dismiss alert.', 'warning');
+    }
 };
 
-export const triggerWeatherAlert = () => {
-  const conditions = [
-    { condition: 'Severe Storm', temp: 18, level: 'critical', action: 'Suspend ops' },
-    { condition: 'High UV', temp: 32, level: 'warning', action: 'Use protection' },
-    { condition: 'Perfect Conditions', temp: 22, level: 'info', action: 'Optimal for surveys' }
-  ];
-  const weather = conditions[Math.floor(Math.random() * conditions.length)];
-  notifications.addNotification('weather', {
-    title: `Weather: ${weather.condition}`,
-    description: `Current: ${weather.temp}°C. ${weather.level} conditions.`,
-    level: weather.level,
-    action: weather.action
-  });
-  showNotificationToast(`New weather alert: ${weather.condition}`, weather.level);
+export const triggerWeatherAlert = async () => {
+  // Weather alerts are now generated server-side automatically
+  await notifications.refreshAlerts();
+  showNotificationToast('Weather alerts refreshed', 'info');
 };
 
 // === REMOVAL FUNCTIONALITY ===
@@ -489,7 +490,7 @@ export const load = async () => {
     const container = document.getElementById("sightings-container");
     const empty = document.getElementById("sightings-empty");
     container.innerHTML = "";
-    notifications.initializeNotifications();
+    await notifications.initializeNotifications();
 
     try {
         const { data } = await SightingsAPI.list("");

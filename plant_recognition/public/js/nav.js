@@ -22,12 +22,18 @@
       document.addEventListener("click", (e) => {
         if (!menu.classList.contains("hidden")) {
           const inside = menu.contains(e.target) || menuBtn.contains(e.target);
-          if (!inside) menu.classList.add("hidden");
+          if (!inside) {
+            menu.classList.add("hidden");
+            menu.setAttribute("aria-hidden", "true");
+          }
         }
       });
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") menu.classList.add("hidden");
+        if (e.key === "Escape") {
+          menu.classList.add("hidden");
+          menu.setAttribute("aria-hidden", "true");
+        }
       });
 
       // Close menu when any navigation link is clicked

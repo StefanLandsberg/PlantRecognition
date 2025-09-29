@@ -76,7 +76,7 @@ registerForm?.addEventListener('submit', async (e) => {
 });
 
 // Reusable password validation function
-function setupPasswordValidation(passwordInputId) {
+export function setupPasswordValidation(passwordInputId) {
     const passwordInput = document.getElementById(passwordInputId);
     const lengthRequirement = document.getElementById('length');
     const uppercaseRequirement = document.getElementById('uppercase');

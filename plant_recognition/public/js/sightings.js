@@ -1,5 +1,6 @@
 import { SightingsAPI } from "./api.js";
 
+
 function fmtDate(s) {
   try {
     return new Date(s).toLocaleString();
@@ -136,6 +137,12 @@ function createSightingLLMDropdown(sighting) {
 
 function showImageModal(imageUrl) {
   if (!imageUrl) return; // Don't show modal for null images
+
+  // Validate URL format
+  if (typeof imageUrl !== 'string' || (!imageUrl.startsWith('http') && !imageUrl.startsWith('/') && !imageUrl.startsWith('data:'))) {
+    console.warn('Invalid image URL format:', imageUrl);
+    return;
+  }
 
   const modal = document.createElement('div');
   modal.className = 'image-modal';
@@ -400,26 +407,7 @@ window.switchTab = function(tabName) {
   document.getElementById(`${tabName}-tab`).classList.add('active');
 
   // Load appropriate analytics
-  if (window.sightingsData) {
-    switch (tabName) {
-      case 'species-analytics':
-        loadSpeciesAnalytics(window.sightingsData);
-        break;
-      case 'invasive-dashboard':
-        loadInvasiveDashboard(window.sightingsData);
-        break;
-      case 'geographic-insights':
-        loadGeographicInsights(window.sightingsData);
-        break;
-      case 'temporal-analysis':
-        loadTemporalAnalysis(window.sightingsData);
-        break;
-      case 'risk-assessment':
-        loadRiskAssessment(window.sightingsData);
-        updateNotificationBadges(); // Refresh badge when viewing alerts
-        break;
-    }
-  }
+  // Note: Tab switching is now handled by ui.js module
 };
 
 function aggregateSpeciesData(sightings) {
@@ -493,8 +481,10 @@ function calculateStats(speciesData) {
       avgLocation = [avgLng, avgLat];
     }
 
-    // Extract risk level from LLM data
-    const riskLevel = data.llmData?.details?.risk_level || 'Unknown';
+    // Get risk level from most recent sighting - exactly like invasive dashboard
+    const mostRecentSighting = sortedSightings[0]; // Already sorted above
+
+    const riskLevel = mostRecentSighting?.analysis?.llm?.details?.risk_level || 'Medium';
 
     // Get scientific name from LLM data
     const scientificName = data.llmData?.details?.advisory_content?.species_identification?.scientific_name || '';
@@ -506,10 +496,10 @@ function calculateStats(speciesData) {
       firstSeen,
       geoSpread,
       avgLocation,
-      riskLevel,
       scientificName,
       uniqueLocations: data.locations.length,
-      mainImage: data.images[0] || null
+      mainImage: data.images[0] || null,
+      riskLevel // Place this last to ensure it's not overridden
     };
   });
 }
@@ -535,96 +525,7 @@ function getRiskBadgeClass(riskLevel) {
 }
 
 // === SPECIES ANALYTICS ===
-function loadSpeciesAnalytics(sightings) {
-  const container = document.getElementById('species-analytics-container');
-
-  if (!sightings || sightings.length === 0) {
-    container.innerHTML = '<p class="muted">No sightings data available for analytics.</p>';
-    return;
-  }
-
-  const speciesData = aggregateSpeciesData(sightings);
-  const statsData = calculateStats(speciesData);
-
-  // Sort by total count (most frequent first)
-  statsData.sort((a, b) => b.totalCount - a.totalCount);
-
-  container.innerHTML = `
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">Species Analytics</h2>
-      <p class="dashboard-subtitle">Comprehensive species identification and distribution analysis</p>
-    </div>
-    <div id="species-analytics-grid"></div>
-  `;
-
-  const grid = container.querySelector('#species-analytics-grid');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(350px, 1fr))';
-  grid.style.gap = '1.5rem';
-
-  statsData.forEach(stats => {
-    const card = document.createElement('div');
-    card.className = 'analytics-card';
-
-    card.innerHTML = `
-      <div class="analytics-header">
-        ${stats.mainImage ? `
-          <img src="${stats.mainImage}" alt="${stats.species}" class="analytics-image" onerror="this.style.display='none'" />
-        ` : `
-          <div class="no-image-placeholder analytics-image"></div>
-        `}
-        <div class="analytics-title">
-          <h3>${stats.species}</h3>
-          ${stats.scientificName ? `<p class="species-scientific">${stats.scientificName}</p>` : ''}
-        </div>
-      </div>
-
-      <div class="analytics-stats">
-        <div class="stat-item">
-          <span class="stat-value">${stats.totalCount}</span>
-          <span class="stat-label">Total Sightings</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">${stats.avgConfidence.toFixed(1)}%</span>
-          <span class="stat-label">Avg Confidence</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">${stats.uniqueLocations}</span>
-          <span class="stat-label">Locations</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">${stats.geoSpread.toFixed(1)}km</span>
-          <span class="stat-label">Geographic Spread</span>
-        </div>
-      </div>
-
-      <div class="analytics-details">
-        <div class="detail-row">
-          <span class="detail-label">Last Seen</span>
-          <span class="detail-value">${fmtDate(stats.lastSeen)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">First Seen</span>
-          <span class="detail-value">${fmtDate(stats.firstSeen)}</span>
-        </div>
-        ${stats.avgLocation ? `
-          <div class="detail-row">
-            <span class="detail-label">Avg Location</span>
-            <span class="detail-value">${fmtLatLng(stats.avgLocation)}</span>
-          </div>
-        ` : ''}
-        <div class="detail-row">
-          <span class="detail-label">Risk Level</span>
-          <span class="detail-value">
-            <span class="risk-badge ${getRiskBadgeClass(stats.riskLevel)}">${stats.riskLevel}</span>
-          </span>
-        </div>
-      </div>
-    `;
-
-    grid.appendChild(card);
-  });
-}
+// Note: Species Analytics is now implemented in ui.js module
 
 // === INVASIVE SPECIES DASHBOARD ===
 function loadInvasiveDashboard(sightings) {
@@ -1240,15 +1141,9 @@ async function load() {
       card.innerHTML = `
         <button class="remove-btn" onclick="removeSighting('${sighting._id}', '${sighting.analysis?.predictedSpecies || 'Unknown Species'}')">×</button>
         <div class="sighting-header">
-          ${(sighting.imageUrl || sighting.imagePath) ? `
-            <img src="${sighting.imageUrl || sighting.imagePath}"
-                 alt="${sighting.analysis?.predictedSpecies || 'Plant sighting'}"
-                 class="sighting-thumbnail"
-                 onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')"
-                 onerror="this.style.display='none'" />
-          ` : `
-            <div class="no-image-placeholder sighting-thumbnail"></div>
-          `}
+${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sighting.imagePath) === 'string' && ((sighting.imageUrl || sighting.imagePath).startsWith('/') || (sighting.imageUrl || sighting.imagePath).startsWith('http')) ?
+            `<img src="${sighting.imageUrl || sighting.imagePath}" alt="Plant" class="sighting-thumbnail" onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')" onerror="this.style.display='none'" />` :
+            `<div class="no-image-placeholder sighting-thumbnail"></div>`}
 
           <div class="sighting-info">
             <h3 class="sighting-species">
@@ -1301,15 +1196,9 @@ async function load() {
         card.innerHTML = `
           <button class="remove-btn" onclick="removeSighting('${sighting._id}', '${sighting.analysis?.predictedSpecies || 'Unknown Species'}')">×</button>
           <div class="sighting-header">
-            ${(sighting.imageUrl || sighting.imagePath) ? `
-              <img src="${sighting.imageUrl || sighting.imagePath}"
-                   alt="${sighting.analysis?.predictedSpecies || 'Plant sighting'}"
-                   class="sighting-thumbnail"
-                   onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')"
-                   onerror="this.style.display='none'" />
-            ` : `
-              <div class="no-image-placeholder sighting-thumbnail"></div>
-            `}
+${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sighting.imagePath) === 'string' && ((sighting.imageUrl || sighting.imagePath).startsWith('/') || (sighting.imageUrl || sighting.imagePath).startsWith('http')) ?
+            `<img src="${sighting.imageUrl || sighting.imagePath}" alt="Plant" class="sighting-thumbnail" onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')" onerror="this.style.display='none'" />` :
+            `<div class="no-image-placeholder sighting-thumbnail"></div>`}
 
             <div class="sighting-info">
               <h3 class="sighting-species">

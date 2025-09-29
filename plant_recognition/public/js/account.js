@@ -1,5 +1,6 @@
 // /public/js/account.js
 import { AuthAPI } from "./api.js";
+import { setupPasswordValidation } from "./auth.js";
 
 function setLoading(btn, on) {
   if (!btn) return;
@@ -141,17 +142,5 @@ async function onDeleteAccount(e) {
 
 document.addEventListener("DOMContentLoaded", boot);
 
-// Use the reusable password validation function from auth.js
-// Load auth.js functions if not already available
-if (typeof setupPasswordValidation === 'undefined') {
-    // Import the function from auth.js or define it here if needed
-    // For now, use a simplified inline version until proper module loading is set up
-    const script = document.createElement('script');
-    script.src = '/js/auth.js';
-    document.head.appendChild(script);
-    script.onload = () => {
-        setupPasswordValidation('pwd-new');
-    };
-} else {
-    setupPasswordValidation('pwd-new');
-}
+// Set up password validation for the new password field
+setupPasswordValidation('pwd-new');

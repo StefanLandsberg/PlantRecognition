@@ -12,7 +12,7 @@ export function addDetectionCard(container, det) {
       <div>Conf: ${(det.confidence*100).toFixed(1)}%</div>
     </div>
     ${det.imageUrl ?
-      `<img src="${det.imageUrl}" alt="detection" onerror="this.style.display='none'" />` :
+      `<img src="${det.imageUrl}" alt="detection" onerror="this.outerHTML='<div class=\\"no-image-placeholder\\"></div>'" />` :
       `<div class="no-image-placeholder"></div>`
     }
 

@@ -1155,6 +1155,109 @@
     color: var(--text);
 }
 
+/* Account Page Form Styles */
+.account-page .field {
+    margin-bottom: var(--space-lg);
+}
+
+.account-page .field label {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.account-page .field input,
+.account-page .field select {
+    width: 100%;
+    padding: var(--space-md);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.account-page .field input:focus,
+.account-page .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(103, 212, 167, 0.2);
+}
+
+.account-page .form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.account-page .row-actions {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.account-page .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.account-page .section-header {
+    color: var(--text);
+    margin: 0 0 var(--space-lg) 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.account-page .error {
+    color: #ef4444;
+    font-size: 0.9rem;
+    margin-top: var(--space-sm);
+}
+
+.account-page .helper {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 var(--space-md) 0;
+}
+
+.account-page .danger-card {
+    border-color: #dc2626;
+    background: rgba(220, 38, 38, 0.05);
+}
+
+.account-page .helper-password {
+    margin-top: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--background);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+
+.account-page .requirement {
+    margin: var(--space-xs) 0;
+    padding: var(--space-xs);
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.account-page .requirement.valid {
+    color: #16a34a;
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.account-page .requirement.invalid {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.1);
+}
+
 /* New Cluster Popup Styles */
 .cluster-popup {
     background: var(--surface);
