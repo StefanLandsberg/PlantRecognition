@@ -1,0 +1,40 @@
+Legal status refers to the listing of the species in the regulations under NEM:BA. See
+RESTRICTED SPECIES AND NEM:BA for the full regulations concerning the control,
+propagation and trading of these species.
+
+Invasive status will enable the reader to differentiate between the species based on
+different levels of invasiveness. This will also assist managers in deciding on priorities for
+weed control. See INVASIVE STATUS for a discussion of the terms used.
+
+Potential impacts or threats to biodiversity, water resources, fire regimes, agriculture,
+forestry, tourism and recreation give an indication of some of the negative effects which can
+result from invasions by the species. See IMPACTS OF INVASIVE SPECIES for more
+information on this subject.
+
+Poisonous, irritant and injurious properties to humans and animals provides further
+motivation for the control or eradication of invasive plants. The plant parts which are most
+poisonous or irritant are underlined and the human or animal parts that are affected are
+given in brackets.
+
+Biological control using natural pests and enemies is indicated for those species for which a
+control programme has been initiated. See BIOLOGICAL CONTROL AGENTS for a table of
+biological control agents which are established in South Africa and the damage which they
+inflict on their target host plants. For more information consult the literature and addresses
+given under OTHER SOURCES OF INFORMATION.
+<<COLBREAK>>
+The text includes the botanical name (and synonym where applicable), English common
+name, family, short diagnostic description with important features underlined, cultivated use,
+habitats invaded and region of origin. Species that are known to be poisonous or irritant are
+noted. Where two or more species are very similar one species is illustrated and their
+distinguishing features given in the text.
+
+Species distribution maps indicate all known sites where a species has been recorded
+according to information in the SAPIA database which includes surveys by the author dating
+back to 1979. Where there were obvious gaps, additional records were obtained from the
+literature and Botanical Database of Southern Africa (BODATSA) (http://posa.sanbi.org/
+sanbi). Some of these records predate 1979. Full details of the localities and dates of
+recording are available from BODATSA and the SAPIA Database (see OTHER SOURCES OF
+INFORMATION).
+
+Symbols indicate the legal and invasive status, potential impacts or threats, harmful
+properties and degree of biological control of each species.

@@ -1,0 +1,116 @@
+Target invasive plant &
+Degree of control
+Biological control agent
+Mode of feeding or damage
+& Type of
+organism
+
+Acacia longifolia
+(long-leaved wattle),
+Substantial
+
+Melanterius ventralis
+
+Acacia mearnsii
+(black wattle),
+Substantial
+
+Cylindrobasidium laeve,
+not released; occurs
+locally; developed as cut
+stump inoculant
+"Stumpout"
+
+Dasineura rubiformis
+
+Melanterius maculatus
+
+Acacia melanoxylon
+(Australian blackwood),
+Substantial
+
+Melanterius acaciae
+
+Acacia podalyriifolia
+(pearl acacia), Negligible
+Melanterius maculatus
+
+Acacia pycnantha
+(golden wattle),
+Substantial
+
+Cylindrobasidium laeve,
+not released; occurs
+locally; developed as cut
+stump inoculant
+"Stumpout"
+
+Melanterius maculatus
+
+Acacia saligna
+(Port Jackson),
+Substantial
+<<COLBREAK>>
+Damage
+inflicted
+
+seed feeder,
+snout beetle
+extensive
+
+Trichilogaster
+acaciaelongifoliae
+bud galler,
+wasp
+extensive
+
+causes wood rot,
+pathogen
+extensive
+when applied
+according to
+label
+instructions
+
+flower galler,
+midge
+extensive WC;
+moderate EC;
+trivial Mp &
+KZN
+
+seed feeder,
+snout beetle
+moderate
+
+seed feeder,
+snout beetle
+extensive
+
+seed feeder,
+snout beetle
+moderate but
+localised
+
+causes wood rot,
+pathogen
+extensive
+when applied
+according to
+label
+instructions
+
+seed feeder,
+snout beetle
+moderate
+
+Trichilogaster signiventris
+bud galler,
+wasp
+considerable/
+extensive
+
+Melanterius compactus
+seed feeder,
+snout beetle
+considerable

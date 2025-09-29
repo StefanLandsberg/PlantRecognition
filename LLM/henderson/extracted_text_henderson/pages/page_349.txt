@@ -1,0 +1,115 @@
+Opuntia engelmannii
+(small round-leaved
+prickly pear),
+Negligible to Substantial,
+depending on variety
+
+Opuntia ficus-indica
+(sweet prickly pear),
+Substantial
+
+Opuntia humifusa
+(creeping prickly pear),
+Complete
+
+Opuntia monacantha
+(cochineal prickly pear),
+Complete
+<<COLBREAK>>
+Target invasive plant &
+Degree of control
+Biological control agent
+Mode of feeding or damage
+& Type of
+organism
+
+Damage
+inflicted
+
+Dactylopius austrinus
+
+cladode sucker,
+cochineal/scale
+insect
+
+extensive
+
+Cactoblastis cactorum
+
+cladode borer,
+snout moth
+trivial on large
+plants; moderate on small
+plants
+
+Dactylopius opuntiae,
+‘ficus' biotype
+
+cladode sucker,
+cochineal/scale
+insect
+
+moderate to
+trivial depending on climate
+& plant variety
+
+Dactylopius opuntiae,
+‘stricta' biotype
+
+cladode sucker,
+cochineal/scale
+insect
+
+extensive in
+combination
+with pathogen
+
+cladode borer,
+snout moth
+extensive
+
+Cactoblastis cactorum
+
+Dactylopius opuntiae,
+‘ficus' biotype
+cladode sucker,
+cochineal/scale
+insect
+
+extensive
+
+Lagocheirus funestus [formerly in Archlagocheirus]
+stem borer,
+longhorn beetle
+trivial
+
+Metamasius spinolae
+stem borer
+extensive
+
+Dactylopius opuntiae,
+Australian (‘stricta')
+biotype
+
+cladode sucker,
+snout beetle
+considerable
+in hot, dry
+regions to
+moderate in
+cooler regions
+and highveld
+
+Cactoblastis cactorum
+
+cladode borer,
+snout moth
+considerable
+
+Dactylopius ceylonicus
+
+cladode sucker,
+cochineal/scale
+insect
+
+extensive

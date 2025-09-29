@@ -1,0 +1,136 @@
+Cylindropuntia fulgida
+var. fulgida (chain-fruit
+cholla), Complete
+
+Cylindropuntia
+fulgida var. mamillata
+(boxing-glove cactus),
+Complete
+
+Cylindropuntia
+imbricata (imbricate
+cactus), Substantial
+
+Cylindropuntia
+leptocaulis (pencil
+cactus), Complete
+
+Harrisia bonplandii
+(angular cactus),
+Substantial
+
+Harrisia martinii
+(harrisia cactus),
+Complete
+
+Harrisia pomanensis
+(devil's-rope cactus),
+Substantial
+
+Harrisia tortuosa
+(spiny snake cactus),
+Substantial
+
+Hylocereus undatus
+(creeping queen of the
+night), Not determined
+
+Opuntia aurantiaca
+(jointed cactus),
+Substantial
+<<COLBREAK>>
+Target invasive plant &
+Degree of control
+Biological control agent
+Mode of feeding or damage
+& Type of
+organism
+
+Damage
+inflicted
+
+Nealcidion cereicola
+[formerly in Alcidion]
+stem borer,
+longhorn beetle
+considerable
+
+Dactylopius tomentosus,
+‘cholla' biotype
+cladode sucker,
+cochineal/scale
+insect
+
+extensive
+
+Dactylopius tomentosus,
+‘cholla' biotype
+
+cladode sucker,
+cohineal/scale
+insect
+
+extensive
+
+Dactylopius tomentosus,
+‘imbricata' biotype
+
+cladode sucker,
+cochineal/scale
+insect
+
+considerable
+
+Dactylopius tomentosus,
+‘imbricata' biotype
+
+cladode sucker,
+cochineal/scale
+insect
+
+extensive
+
+Hypogeococcus
+festerianus
+stem sucker,
+mealybug
+considerable
+
+Hypogeococcus
+festerianus
+stem sucker,
+mealybug
+extensive
+
+Nealcidion cereicola
+[formerly in Alcidion]
+stem borer,
+longhorn beetle
+considerable
+
+Hypogeococcus
+festerianus
+
+stem sucker,
+mealybug
+considerable
+
+Hypogeococcus
+festerianus
+stem sucker,
+mealybug
+considerable
+
+Hypogeococcus
+festerianus
+
+stem sucker,
+mealybug
+
+unknown
+
+Cactoblastis cactorum
+
+cladode borer,
+snout moth
+moderate

@@ -1,0 +1,121 @@
+Paraserianthes
+lophantha
+(stink bean), Substantial
+
+Prosopis spp.
+(prosopis, mesquite),
+Negligible
+
+Solanum mauritianum
+(bugweed),
+Negligible
+
+Solanum sisymbriifolium
+(dense-thorned bitter
+apple), Substantial
+
+Tecoma stans
+(yellow bells),
+Under evaluation
+
+Tithonia rotundifolia
+(red sunflower),
+Under evaluation
+<<COLBREAK>>
+Target invasive plant &
+Degree of control
+Biological control agent
+Mode of feeding or damage
+& Type of
+organism
+
+Damage
+inflicted
+
+Melanterius servulus
+
+seed feeder,
+snout beetle
+considerable
+
+Uromycladium woodii
+gall former,
+pathogen
+unknown
+
+Algarobius prosopis
+seed feeder,
+beetle
+considerable
+
+Neltumius arizonensis
+
+seed feeder,
+beetle
+unknown
+
+Sesbania punicea
+(red sesbania), Complete
+Neodiplogrammus
+quadrivittatus
+stem borer,
+snout beetle
+extensive
+
+Rhyssomatus marginatus
+
+seed feeder,
+snout beetle
+extensive
+
+Trichapion lativentre
+
+flowerbud
+feeder,
+snout beetle
+
+extensive
+
+Anthonomus santacruzi
+
+flowerbud
+feeder,
+snout beetle
+
+trivial
+
+Gargaphia decoris
+leaf sucker,
+lace bug
+trivial,
+occasional
+outbreaks
+
+Gratiana spadicea
+
+leaf feeder,
+tortoise beetle
+extensive
+
+Mada polluta
+
+leaf feeder,
+ladybird beetle
+moderate
+
+Pseudonapomyza sp.
+leaf miner, fly
+trivial
+
+Zygogramma piceicollis
+leaf feeder,
+beetle
+considerable;
+localised
+
+Zygogramma
+signatipennis
+leaf feeder,
+beetle
+considerable;
+localised

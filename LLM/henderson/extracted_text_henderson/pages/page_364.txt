@@ -1,0 +1,56 @@
+1-6: Leaf shapes
+1. Linear
+2. Oblong
+3. Elliptic
+4. Ovate
+5. Obovate
+6. Lanceolate
+
+7-9: Leaf parts
+a. Apex
+b. Blade
+c. Stipule
+d. Vein
+e. Midrib
+f. Margin
+g. Base
+h. Petiole
+i. Rhachis
+
+8-10: Compound leaves
+8. Pinnate
+9. Bipinnate
+10. Trifoliate
+
+11-14: Inflorescences
+11. Umbel
+12. Spike
+13. Raceme
+14. Panicle
+
+15-16: Flower parts
+a. Stamen
+b. Pistil
+c. Petal
+d. Corolla
+e. Sepal
+f. Calyx
+g. Pedicel
+h. Anther
+i. Filament
+j. Stamen
+k. Stigma
+l. Style
+m. Ovary
+n. Pistil
+
+17: Grass spikelet:
+a. Awn
+b. Bracts
+c. Anther on slender filament
+d. Feathery stigma on style
+<<COLBREAK>>
+KEY TO BOTANICAL TERMS
+
+Leaf shapes (1–6); Leaf parts (7–9); Compound leaves (8–10);
+Inflorescences (11–14); Flower parts (15–16); Grass spikelet (17).
