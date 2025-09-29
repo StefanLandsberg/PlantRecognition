@@ -1,0 +1,41 @@
+Southern African Plant Invaders Atlas (SAPIA)
+Many thanks to all SAPIA participants and assistants over the past three decades of this
+mapping project. Special thanks to Pitta Joffe, Hildegard Klein and Lin Besaans for their
+assistance with roadside surveys across the length and breadth of South Africa which have
+provided the bulk of the data in the SAPIA database
+<<COLBREAK>>
+biennis, Parkinsonia aculeata, Parthenium hysterophorus,
+Pennisetum purpureum, Phytolacca dioica, Pittosporum undulatum, Populus deltoides,
+P. nigra var italica, Rivina humilis, Rubus cuneifolius, Rubus fruticosus, Schinus molle,
+Senna bicapsularis, Senna corymbosa, S. didymobotrya, S. hirsuta, S. multiglandulosa,
+S. occidentalis, S. pendula, S. septemtrionalis, Sorghum halepense, Sphagneticola
+trilobata, Syzygium cumini, Tipuana tipu, Toxicodendron succedaneum, Trichocereus
+spachianus, Triplaris americana.
+
+Most photos are by Lesley Henderson and the remainder by the SANBI personnel already
+mentioned and the following people whose names appear next to their photos:
+Special thanks to Geoff Nichols who contributed photos of 83 species.
+Rob Anderson, Tom Anderson, Joe Balciunas, Ignacio Barbara, Michail Belov, Richard
+Boon, Nollie Bosman, Ivan Boyd, Pat Breen, Paul Champion, Carina Cilliers, Krissie
+Clark, Francois de Wet, Lyn Fish, Sipke Gonggrijp, Niek Gremmen, Adriaan Grobler,
+John Hoffmann, John Hosking, Fiona Impson, Invasive Species South Africa (ISSA),
+Trevor James, Jesse Kalwij, Jan-Hendrik Keet, Hildegard Klein, Donovan Kotze, Louise
+Kritzinger, Volker Kummer, Peter le Roux, Vusi Lubisi, Grant Martin, Peter Meininger,
+Cliff Moran, Stefan Neser, Tessa Oliver, Lukas Otto, Petr Pyšek, RG & FJ Richardson,
+Willie Riemsma, Geoff Sainty, Ros Shepherd, Cedric Singo, Louise Stafford, Adrie van
+Heerden, Kasey Voges, Philip Weyl, Alan Wood, Helmuth Zimmermann.
+
+The following photographers made their photos available through Wikimedia Commons:
+P Clarke, Fibonacci, Christian Fischer, Jerzy Opiola, Pancrat, Sten, Thesurvived99,
+Samuelistok, Frank Vincentz.
+
+Thanks to Petros Ngwenya and Henry Hlela, for providing some isiZulu names, and
+Kanyisa Jama for providing some isiXhosa names; Graham and David Harding for their
+contribution towards the chapter on ‘Control'; David Le Maitre for his contribution towards
+the chapter on ‘Impacts'; Hildegard Klein for information and advice on biological control;
+Costas Zachariades for providing the 2018 updated catalogue of biological control agents
+and their host plants, and Philip Ivey for comments on the manuscript.
+
+Thanks to the sponsor who made this publication possible:
+Department of Environment, Forestry and Fisheries of South Africa: Natural Resources
+Management Programmes (DEFF: NRMP)

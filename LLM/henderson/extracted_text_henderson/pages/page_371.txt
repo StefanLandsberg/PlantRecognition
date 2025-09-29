@@ -1,0 +1,265 @@
+French tamarisk 178, 341
+
+false lebbeck 300, 313
+
+fringed water lily 53, 330
+
+famine weed 12, 92, 332, 345
+
+fringed wattle 232, 311
+
+fanwort, Carolina 315
+
+Furcraea foetida 148, 323
+
+feathertop 28, 333
+
+Furcraea selloa 148
+
+fern, Australian tree 304
+
+garden canna 78
+
+fern, Boston sword 69
+
+garingboom 140
+
+fern, erect sword 68
+
+gaspeldoring 342
+
+fern, ladder sword 68
+
+gaura, wavy-leaf 330
+
+fern, rabbit's-foot 69, 333
+
+Gaura lindheimeri 90
+
+fern, sword 69
+
+Gaura sinuata 90, 330
+
+fescue, red 33, 323
+
+Gaura spp. 90
+
+fescue, red creeping 33, 323
+
+Festuca rubra 33, 323
+
+gebrokehartjieboom 325
+
+Ficus carica 210
+
+geel iris 325
+
+geel waterlelie 330
+
+field bindweed 130, 318
+
+geelblom-bloudissel 314
+
+fig, edible 210
+
+geelbranddoring 336
+
+firethorn, broad-leaf 193, 336
+
+geelgemmerlelie 324
+
+firethorn, Chinese 193, 336
+
+geelklits 312
+
+firethorn, Formosa 193, 336
+
+geelklokkies 341
+
+firethorn, Himalayan 190, 336
+
+geel-oleander 341
+
+firethorn, red 193, 336
+
+gemmerlelie, geel- 324
+
+firethorn, yellow 190, 336
+
+gemmerlelie, kahili- 324
+
+flame creeper, Chilean 133
+
+gemmerlelie, rooi- 324
+
+flame nasturtium 133, 342
+
+gemmerlelie, wit- 324
+
+flame tree, African 340
+
+Genista monspessulana 276,
+
+Flaveria bidentis 99, 323
+
+floating-heart, yellow 330
+
+Genista scoparia 166, 319
+
+FLORIDEOPHYCEAE 54
+
+gewone dodder 319
+
+fluweelprosopis 335
+
+gewone liguster 327
+
+forest inkberry 105, 333
+
+gewone moerbei 328
+
+forest red gum 222, 322
+
+gewone stinkblaar 319
+
+forget-me-not tree 182, 320
+
+gewone-opklim 342
+
+Formosa firethorn 193, 336
+
+giant devil's fig 200, 339
+
+Formosa lelie 327
+
+giant knotweed 274, 336
+
+Formosa lily 88, 327
+
+giant milkweed 238, 316
+
+fountain grass 11, 26, 333
+
+giant reed 10, 20, 314
+
+four-o'clock 88, 328
+
+giant sensitive plant 186, 328
+
+foxtail, marsh 31, 313
+
+giant taro 48
+
+foxtail, water 31, 313
+
+ginger lily, kahili 80, 324
+
+Franse tamarisk 341
+
+Fraxinus americana 292, 323
+
+ginger lily, red 78, 324
+
+Fraxinus angustifolia 293, 323
+
+ginger lily, white 78, 324
+
+Fraxinus excelsior 293
+
+ginger lily, yellow 80, 324
+
+Fraxinus pennsylvanica 292
+
+gladde sumak 336
+
+Gleditsia triacanthos 182, 323,
+
+Fraxinus velutina 293
+<<COLBREAK>>
+GLOIOSIPHONIACEAE 55
+
+glory bush, purple 270
+
+Glyceria aquatica 323
+
+Glyceria maxima 22, 323
+
+golden pothos 131
+
+golden wattle 214, 311, 350
+
+goldenrods 108
+
+goose foot 128, 340
+
+gooseberry, Barbados 126, 333
+
+gorse, European 181, 342
+
+goudwilger 312
+
+gouewattel 311
+
+granadilla, purple 332
+
+granadina 124, 332
+
+gras, Johnson- 340
+
+gras, Kikoejoe- 333
+
+gras, nassella-pol- 329
+
+gras, olifants- 333
+
+gras, Pampas- 318
+
+gras, pronk- 333
+
+gras, silwer- 22, 318
+
+gras, veer- 333
+
+gras, witpol- 329
+
+grass, Aleppo 28, 340
+
+grass, bent 30, 312
+
+grass, black bent 30, 313
+
+grass, couch 33, 321
+
+grass, creeping bent 31, 313
+
+grass, elephant 26, 333
+
+grass, fountain 11, 26, 333
+
+grass, Johnson 28, 340
+
+grass, Kentucky blue- 335
+
+grass, Kikuyu 26, 333
+
+grass, Marram 20, 313
+
+grass, Napier 26, 333
+
+grass, Pampas 22, 318
+
+grass, purple Pampas 318
+
+grass, reed meadow 22, 323
+
+grass, reed sweet 22, 323
+
+grass, salt-water cord- 28, 340
+
+grass, smooth cord- 28, 340
+
+greater periwinkle 72, 342
+
+green ash 292
+
+green mother of millions 58, 315

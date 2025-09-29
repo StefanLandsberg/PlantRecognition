@@ -1,0 +1,261 @@
+taro, giant 48
+
+sunflower, red 270, 341, 353
+
+Surinam cherry 248, 323
+
+tea tree, red-flowering 273, 328
+
+suring, steenbok- 337
+
+tea tree, white 236, 326
+
+Tecoma stans 288, 341, 353
+
+suurturksvy 332
+
+swaardvaring 329, 330
+
+teddy-bear cactus 136, 331
+
+Tephrocactus articulatus 138,
+
+swarthout, Australiese 311
+
+swartkersie 335
+
+swartwattel 311
+
+Thelechitonia trilobata 70, 340
+
+sweet hakea 170, 324
+
+Thevetia peruviana 230, 341
+
+sweet pittosporum 335
+
+thistle, nodding 60, 316
+
+sweet prickly pear 156, 331, 346
+
+thistle, Scotch 318
+
+sweetbriar 194, 337
+
+thistle, spear 62, 318, 345
+
+sword fern 69, 330
+
+thorn apple, common 64, 319
+
+sword fern, Boston 69, 330
+
+thorn apple, downy 62, 319
+
+sword fern, erect 68, 329
+
+thorn apple, large 62, 319
+
+sword fern, ladder 68, 329
+
+Thunbergia grandiflora 133
+
+swordplant, Amazon 50, 324
+
+Tibouchina urvilleana 270
+
+syerige hakea 324
+
+tickberry 326
+
+Syngonium podophyllum 128,
+
+tickseed 86, 318
+
+tipoeboom 341
+
+Syzygium australe 268
+
+Tipton weed 325
+
+Syzygium cumini 230, 340
+
+tipu tree 290, 341
+
+Syzygium guineense
+
+Tipuana speciosa 341
+
+(indigenous) 230
+
+Tipuana tipu 290, 341
+
+Syzygium jambos 230, 340
+
+Tithonia diversifolia 208, 341
+
+Syzygium paniculatum 268
+
+Tithonia rotundifolia 270, 341,
+
+tabak, wilde- 330
+
+tabaka bume 330
+
+tjirden 334
+
+tajoe 333
+
+toadflax, broad-leaf 101 327
+
+tall kangaroo paw 76
+
+toadflax, common 102, 327
+
+tall verbena 92, 342
+
+toadflax, Dalmatian 101, 327
+
+TAMARICACEAE 178, 179
+
+tobacco, wild 258, 330
+
+tamarisk, Chinese 178, 341
+
+tongblaar, Oos-Afrikaanse 337
+
+tamarisk, desert 178, 341
+
+toon tree 290, 341
+
+tamarisk, Franse 341
+
+Toona ciliata 290, 341
+
+tamarisk, French 178 341
+
+toonboom 341
+
+tamarisk, pers 341
+
+torch cactus 162, 342
+
+tamarisk, pink 179, 341
+
+toukaktus 324
+
+tamarisk, woestyn- 341
+
+Tamarix aphylla 178, 341
+
+Toxicodendron succedaneum
+
+Tamarix chinensis 178, 341
+
+290, 341
+
+Tamarix gallica 178, 341
+
+Tradescantia fluminensis 70, 341
+
+Tamarix ramosissima 179, 341
+
+Tradescantia zebrina 72, 342
+
+Tamarix usneoides (indigenous)
+
+tree daisy 328
+
+178, 341
+
+tree fern, Australian 304
+
+taro 48
+
+tree mallow 206, 327
+<<COLBREAK>>
+tree of heaven 280, 313
+
+tree tomato 268, 339
+
+treurden 334
+
+treurperdestert 316
+
+Trichocereus pachanoi 165
+
+Trichocereus spachianus 162,
+
+triffid weed 244, 317
+
+triplaris 270, 342
+
+Triplaris americana 270, 342
+
+TROPAEOLACEAE 133
+
+Tropaeolum speciosum 133,
+
+tropical red water fern 36, 314
+
+tropiese rooiwatervaring 314
+
+trosden 334
+
+tumbleweed 338
+
+tumbleweed, Russian 64, 338
+
+tuna, orange 154, 330
+
+turksvy, boere- 331
+
+turksvy, grootrondeblaar- 331
+
+turksvy, kabel- 319
+
+turksvy, kleinrondeblaar- 331
+
+turksvy, kruipende 331
+
+turksvy, luisies- 331
+
+turksvy, robusta 331
+
+turksvy, suur- 332
+
+tussock, nassella 24, 329
+
+tussock, white 24, 329
+
+tussock paspalum 24, 332
+
+tutsan 325
+
+ubhici 326
+
+ubhicilwesalukazi 326
+
+ubhongabhonga 339
+
+ubhubha 327
+
+ubobo 315
+
+ubukhwebezane, obungesibo
+
+obendabuko 326
+
+udabulamaxhaphozi 316
+
+ugamthilini 322
+
+ugigane 316
+
+ugomu 322
+
+uhalibhoma 312
+
+ujongila 327
+
+ujongilanga 327

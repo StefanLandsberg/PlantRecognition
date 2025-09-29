@@ -1,0 +1,259 @@
+braam 337
+
+black cherry 264, 335
+
+black locust 194, 337
+
+braam, Amerikaanse sand- 337
+
+black mulberry 256
+
+bramble, American 194, 337
+
+black wattle 10, 298, 311, 350
+
+bramble, hybrid 198, 337
+
+blackberry, European 196
+
+branched broomrape 104
+
+blackwood, Australian 214, 311,
+
+branddoring, geel- 336
+
+branddoring, rooi- 336
+
+blasiesoutbos 314
+
+Brasiliaanse koejawel 336
+
+bleeding-heart tree 248, 325
+
+Brasiliaanse peperboom 338
+
+bloedbessie 337
+
+BRASSICACEAE 42, 100
+
+bloekom, rooi- 322
+
+Brazilian guava 266, 336
+
+bloekom, saligna- 322
+
+Brazilian pepper tree 282, 338
+
+bloekom, ‘spinnekop-' 322
+
+Brazilian verbena 342
+
+bloekom, suiker- 322
+
+brem, Montpellier- 323
+
+bloodberry 92, 337
+
+brem, Skotse 319
+
+bloudissel, geelblom- 314
+
+briar, sweet- 337
+
+bloudissel, witblom- 314
+
+bridal wreath 110
+
+blouduiwel 332
+
+Brisbane wattle 232, 311
+
+bloudwergmispel 318
+
+brittle willow 228
+
+blou-echium 320
+
+broad-leaf firethorn 193, 336
+
+bloukomo 322
+
+broad-leaf paperbark 237, 328
+
+blouwaterbossie 342
+
+broad-leaf toadflax 101, 327
+
+blue broomrape 104
+
+bromes 32
+
+blue echium 86, 320
+
+Bromus catharticus 32
+
+blue passion flower 122, 332
+
+Bromus commutatus 32
+
+blue snakeweed 108, 340
+
+Bromus diandrus 32
+
+blue trumpetvine 133
+
+Bromus hordeaceus 32
+
+bluebell creeper 130, 315
+
+Bromus spp. 32
+
+blue-leaf cactus 159, 331
+
+bronkors 329
+
+bobbejaandruif 333
+
+broom, Montpellier 276, 323
+
+bobbejaandruifboom 333
+
+broomrape, blue 104, 332
+
+boereturksvy 331
+
+broomrape, branched 104, 332
+
+boetebossie 342
+
+broomrape, clover 104, 332
+
+bohome 312
+
+broomrape, lesser 332
+
+bohomenyana 320
+
+broom, Scotch 166, 319
+
+boobialla, common 224
+
+broom, Spanish 166, 340
+
+boomtamatie 339
+
+BORAGINACEAE 86, 275
+
+brush-cherry, Australian 268
+
+Bryophyllum daigremontianum
+
+Boston sword fern 69, 330
+
+bottlebrush, lemon 216, 316
+
+Bryophyllum delagoense 56,
+
+bottlebrush, stiff-leaved 216, 316
+
+bottlebrush, weeping 218, 316
+
+bottle-brush tree 328
+
+Bryophyllum fedtschenkoi 58
+
+box elder 292, 312
+
+Bryophyllum gastonis-bonnieri
+
+boxing-glove cactus 15, 146,
+
+Bryophyllum pinnatum 56, 315
+
+319, 346
+<<COLBREAK>>
+Bryophyllum proliferum 58, 315
+
+Bryophyllum spp. 58
+
+Bryophyllum tubiflorum 315
+
+Buddleja davidii 234, 315
+
+Buddleja madagascariensis 235,
+
+BUDDLEJACEAE 234, 235
+
+bugweed 13, 268, 339, 353
+
+bunny-ears, yellow 331
+
+bur cactus 138, 331, 348
+
+bur cactus, velvet 136, 331
+
+burgan 236, 326
+
+burhead, creeping 49, 320
+
+butter and eggs 102, 327
+
+butterfly orchid tree 204, 315
+
+cabbage tree, Australian 338
+
+cabomba 38, 315
+
+Cabomba caroliniana 38, 315
+
+CABOMBACEAE 38
+
+CACTACEAE 118, 126, 134,
+
+136, 138, 142, 144, 146, 148,
+
+150, 152, 154, 156, 158, 160,
+
+162, 164, 165
+
+cactus, angular 118, 324, 346
+
+cactus, bilberry 152, 329
+
+cactus, blue-leaf 159, 331
+
+cactus, boxing-glove 15, 146,
+
+319, 346
+
+cactus, bur 138 331, 348
+
+cactus, cane 142, 314
+
+cactus, devil's-rope 150, 324,
+
+cactus, harrisia 150, 324, 343
+
+cactus, imbricate 319, 346
+
+cactus, jointed 134, 330, 346
+
+cactus, long-spine 142, 314, 345
+
+cactus, mamillate 319
+
+cactus, moon 150, 324
+
+cactus, pencil 164, 319, 346
+
+cactus, pine-cone 138, 341
+
+cactus, rosea 146, 319
+
+cactus, San Pedro 165
+
+cactus, saucepan 331
+
+cactus, serpent 162, 333
+
+cactus, snake 162, 333, 348

@@ -1,0 +1,66 @@
+PE
+Prince Edward Isles only
+
+T; Pt
+Transformer; Potential transformer
+
+Biodiversity
+
+Soil erosion
+
+Human and animal health
+<<COLBREAK>>
+KEY TO SYMBOLS
+
+LEGAL STATUS
+
+NEMBA category 1a: Requiring immediate compulsory control
+
+NEMBA category1b: throughout South Africa/in part of South Africa
+
+Must be controlled or eradicated where possible
+
+NEMBA category 2: throughout South Africa/in part of South Africa
+
+Allowed only in specified areas under controlled conditions
+
+NEMBA category 3: throughout South Africa/in part of South Africa
+
+Must be controlled within riparian areas; no further cultivation allowed
+
+INVASIVE STATUS
+
+S; E; R Special effect weed; Emerging weed; Ruderal and agrestal
+
+BIOLOGICAL CONTROL
+
+Effective biological control agents available; control complete
+
+Biological control agents available; control substantial
+
+Biological conrol agents available; control negligible
+
+Biological control agents available; control not determined or under evaluation
+
+Degree of biological control after Klein (2011) and updated 2018
+Complete: no other control measures are needed to reduce the weed to acceptable
+levels, at least in areas where the agents have been established
+Substantial: other methods are needed to reduce the weed to acceptable levels, but
+less effort is required (e.g. less frequent herbicide application or less herbicide needed
+per unit area)
+Negligible: in spite of damage inflicted by the agents, control of the weed remains
+entirely reliant on the implementation of the other control measures
+Not determined: either the release of the agents has been too recent for the meaningful
+evaluation, or the programme has not been evaluated
+
+POTENTIAL THREAT OR IMPACT
+
+Water resources
+
+Fire
+
+Agriculture
+
+Forestry
+
+Tourism, recreation

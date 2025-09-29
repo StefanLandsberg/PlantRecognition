@@ -1,0 +1,255 @@
+cactus, spiny blue-leaf 158
+
+cactus, spiny snake 152, 324,
+
+cactus, strangler 118, 324
+
+cactus, teddy-bear 136, 331
+
+cactus, torch 162, 342
+
+cactus, velvet bur 136
+
+Caesalpinia decapetala 112,
+
+315, 348
+
+Caesalpinia gilliesii 300, 315
+
+Caesalpinia sepiaria 315
+
+Californian privet 254, 326
+
+Callisia repens 58, 315
+
+Callistemon citrinus 216, 316
+
+Callistemon linearis 216, 316
+
+Callistemon rigidus 216, 316
+
+Callistemon rugulosus 216
+
+Callistemon viminalis 218, 316
+
+calotropis 238, 316
+
+Calotropis procera 238, 316
+
+camel thorn bush 166, 313
+
+camphor tree 244, 318
+
+Campuloclinium macroceph-
+
+alum 9, 84, 316, 344
+
+Canadian elder 280, 338
+
+Canadian water weed 40, 320
+
+Canary ivy 132, 324
+
+Canary pine 172, 333
+
+canarybird bush 276, 318
+
+cane cactus 142, 314
+
+cane cholla 164, 319
+
+canna, garden 78
+
+Canna x generalis 78
+
+Canna indica 76, 316
+
+CANNABACEAE 240, 241
+
+CANNACEAE 76, 78
+
+CAPRIFOLIACEAE 97, 122
+
+cardaria, hoary 100, 326
+
+Cardaria draba 326
+
+Cardiospermum grandiflorum
+
+15, 114, 316, 348
+
+Cardiospermum halicacabum
+
+114, 316
+
+Carduus macrocephalus 316
+
+Carduus nutans 60, 316
+<<COLBREAK>>
+Cereus jamacaru 144, 317, 345,
+
+Carolina fanwort 38, 315
+
+CARYOPHYLLACEAE 74, 75
+
+Cereus peruvianus 317
+
+Cascabela thevetia 230, 341
+
+Cereus uruguayanus 144, 317
+
+cascade wattle 232, 311
+
+cestrum, Chilean 218, 317
+
+cassia, climbing 128, 339
+
+cestrum, crimson 242, 317
+
+cassia, Easter 128, 339
+
+cestrum, orange 242, 317
+
+cassia, peanut butter 284, 339
+
+Cestrum aurantiacum 242, 317
+
+cassia, rambling 126, 339
+
+Cestrum elegans 242, 317
+
+Cassia bicapsularis 339
+
+Cestrum fasciculatum 242
+
+Cassia coluteoides 339
+
+Cestrum laevigatum 242, 317
+
+Cassia corymbosa 284
+
+Cestrum parqui 218, 317
+
+Cassia didymobotrya 339
+
+Cestrum purpureum 317
+
+Cassia floribunda 339
+
+Cestrum species 317
+
+Cassia hirsuta 339
+
+Cassia laevigata 339
+
+cestrums 317
+
+Cassia occidentalis 339
+
+Ceylon raspberry 198, 337
+
+Cassia tomentosa 286
+
+chain-fruit cholla 146, 319, 346
+
+chameleon plant 74, 325
+
+castor-oil plant 208, 337
+
+Casuarina cunninghamiana 168,
+
+chandelier plant 56, 315
+
+cheesewood, Australian 226,
+
+Casuarina equisetifolia 168, 316
+
+CASUARINACEAE 168
+
+cheesewood, stiff-leaved 237,
+
+Catharanthus roseus 97, 316
+
+CHENOPODIACEAE 64
+
+cathedral bells 56, 315
+
+cherry, black 264, 335
+
+cat's-claw creeper 118, 320, 349
+
+cherry, Jerusalem 107, 339
+
+cayenne snakeweed 340
+
+cherry pie 326
+
+cedar, red 172, 326
+
+Cedrela odorata 290
+
+chickweed, common 75, 340
+
+Cedrela toona 341
+
+chickweed, common mouse-ear
+
+Celtis africana (indigenous) 240
+
+74, 317
+
+Celtis australis 240, 317
+
+Chilean cestrum 218, 317
+
+Celtis occidentalis 240, 317
+
+Chilean flame creeper 133, 342
+
+Celtis sinensis 241
+
+Chileense inkbessie 317
+
+Centranthus ruber 97, 317
+
+Chinese ahorn 312
+
+Chinese barberry 202
+
+century-plant, spreading 140,
+
+Chinese blinkliguster 326
+
+Ceratophyllum demersum
+
+Chinese elm 275
+
+(indigenous) 38
+
+Chinese firethorn 193, 336
+
+Cerastium fontanum 74, 317
+
+Chinese hollygrape 293
+
+Chinese liguster 326
+
+cereus, night-blooming 325
+
+Cereus hexagonus 144, 317
+
+Chinese maple 210, 312
+
+Cereus hildmannianus 317, 345,
+
+Chinese nettle tree 241
+
+Chinese privet 252, 326
+
+Cereus hildmannianus subsp.
+
+Chinese sagewood 234, 315
+
+uruguayanus 144
+
+Chinese saliehout 315
