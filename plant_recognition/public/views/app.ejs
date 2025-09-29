@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<%- include('partials/head', { title: 'BotanicaVision' , styles: ['/css/app.css'] }) %>
+<%- include('partials/head', { title: 'BotanicaVision' , styles: ['/css/variables.css', '/css/themes.css', '/css/layout.css', '/css/components.css', '/css/scrollbars.css', '/css/popups.css', '/css/map.css', '/css/analytics.css'] }) %>
 
   <body>
     <script src="/config.js"></script>
@@ -29,7 +29,7 @@
           <button id="btn-upload">Upload Image</button>
         </footer>
     </div>
-    <svg style="display:none">
+    <svg class="hidden-svg">
       <defs>
         <filter id="protanopia">
           <feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0" />
@@ -42,28 +42,11 @@
         </filter>
       </defs>
     </svg>
+    <script src="/js/modal.js"></script>
+    <script src="/js/ui.js" type="module"></script>
+    <script src="/js/map.js" type="module"></script>
     <script type="module" src="/js/main.js"></script>
     <script async id="maps-loader"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const body = document.body;
-        const savedDarkMode = localStorage.getItem('darkMode');
-        const savedColorBlindMode = localStorage.getItem('colorBlindMode');
-
-        if (savedDarkMode === 'true') {
-          body.classList.remove('light-mode');
-          body.classList.add('dark-mode');
-        } else {
-          body.classList.remove('dark-mode');
-          body.classList.add('light-mode');
-        }
-
-        body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
-        if (savedColorBlindMode && savedColorBlindMode !== 'none') {
-          body.classList.add(savedColorBlindMode);
-        }
-      });
-    </script>
   </body>
 
 </html>

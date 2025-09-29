@@ -7,4 +7,5 @@ r.post('/register', C.register);
 r.post('/login', C.login);
 r.post('/logout', C.logout);
 r.get('/me', requireAuth, C.me);
+r.delete('/cleanup', C.cleanup);
 export default r;

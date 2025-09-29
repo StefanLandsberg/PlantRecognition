@@ -46,44 +46,28 @@ def initialize_components():
         return True
     
     try:
-        print("Initializing RAG system...")
-        print(f"Looking for ChromaDB directory: {CHROMA_DIR}")
-        start_time = time.time()
-        
-        # Validate ChromaDB directory exists
+        # Fast directory check - no verbose logging
         if not os.path.exists(CHROMA_DIR):
-            print(f"Directory does not exist: {CHROMA_DIR}")
-            print(f"Current working directory: {os.getcwd()}")
-            print(f"Script directory: {SCRIPT_DIR}")
             raise FileNotFoundError(f"ChromaDB directory not found: {CHROMA_DIR}")
-        else:
-            print(f"ChromaDB directory found: {CHROMA_DIR}")
         
-        # Initialize ChromaDB client
+        # Initialize ChromaDB client (minimal operations)
         client = chromadb.PersistentClient(path=CHROMA_DIR)
+        collection = client.get_collection(name=COLLECTION_NAME)
         
-        # Validate collection exists
-        try:
-            collection = client.get_collection(name=COLLECTION_NAME)
-            # Test collection access
-            collection.count()
-        except Exception as e:
-            raise RuntimeError(f"Failed to access collection '{COLLECTION_NAME}': {e}")
-        
-        # Initialize Sentence Transformer model with GPU optimization
-        try:
-            model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
-            if torch.cuda.is_available():
-                model.half()  # Use half precision for faster inference
-                torch.backends.cudnn.benchmark = True
-                print(f"Model loaded on {DEVICE} with half precision")
-            else:
-                print(f"Model loaded on {DEVICE}")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load Sentence Transformer model: {e}")
-        
-        init_time = time.time() - start_time
-        print(f"RAG system initialized in {init_time:.2f}s")
+        # Initialize Sentence Transformer model with maximum speed optimizations
+        model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
+        if torch.cuda.is_available():
+            model.half()  # Use FP16 for 2x speed
+            model.eval()  # Set to eval mode
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.deterministic = False
+            # Warm up the model with a dummy embedding for faster first query
+            model.encode(["dummy"], convert_to_tensor=True, device=DEVICE)
+        else:
+            # CPU optimizations
+            model.eval()
+            # Warm up CPU model
+            model.encode(["dummy"], convert_to_numpy=True)
         _initialized = True
         return True
         
@@ -92,56 +76,78 @@ def initialize_components():
         return False
 
 # === QUERY ===
-# Cache for embeddings to avoid recomputation
-@lru_cache(maxsize=1000)
-def _cached_embedding(plant_name_tuple):
-    """Cached embedding computation for plant names."""
-    plant_name = plant_name_tuple[0]  # Extract from tuple for caching
+# Cache for embeddings to avoid recomputation - use direct dict for speed
+_embedding_cache = {}
+
+def _cached_embedding(plant_name):
+    """Ultra-fast cached embedding computation for plant names."""
+    if plant_name in _embedding_cache:
+        return _embedding_cache[plant_name]
+
     with torch.inference_mode():  # Disable gradients for faster inference
         if torch.cuda.is_available():
             with torch.cuda.amp.autocast():  # Mixed precision
-                embedding = model.encode([plant_name], convert_to_tensor=True, device=DEVICE)
-                return embedding.cpu().numpy().tolist()
+                embedding = model.encode([plant_name], convert_to_tensor=True, device=DEVICE, show_progress_bar=False)
+                result = embedding.cpu().numpy().tolist()
         else:
-            embedding = model.encode([plant_name], convert_to_numpy=True)
-            return embedding.tolist()
+            embedding = model.encode([plant_name], convert_to_numpy=True, show_progress_bar=False)
+            result = embedding.tolist()
+
+    # Cache management - keep only most recent 500 entries
+    if len(_embedding_cache) > 500:
+        # Remove oldest 100 entries
+        for key in list(_embedding_cache.keys())[:100]:
+            del _embedding_cache[key]
+
+    _embedding_cache[plant_name] = result
+    return result
 
 def query_plants(plant_name):
-    """Query the RAG system for plant information."""
+    """Ultra-fast RAG query with minimal overhead."""
     if not collection or not model:
-        print("RAG system not initialized")
         return None
     
     if not plant_name or not isinstance(plant_name, str):
-        print("Invalid plant name provided")
         return None
     
     try:
-        # Clean and validate plant name
-        plant_name = plant_name.strip().lower()  # Normalize for caching
+        # Minimal processing - just strip and lowercase
+        plant_name = plant_name.strip().lower()
         if not plant_name:
-            print("Empty plant name provided")
             return None
         
-        # Use cached embedding computation
-        query_embedding = _cached_embedding((plant_name,))  # Tuple for caching
+        # Use cached embedding computation with optimizations
+        query_embedding = _cached_embedding(plant_name)
         
-        # Query ChromaDB
+        # Ultra-fast ChromaDB query with absolute minimal results
         results = collection.query(
             query_embeddings=query_embedding,
-            n_results=TOP_K
+            n_results=1,  # Only get the top result
+            include=['documents']  # Only include documents, not metadata/distances
         )
         return results
     except Exception as e:
-        print(f"Error querying RAG system: {e}")
         return None
 
-# Compile regex patterns for faster processing
+# Pre-compiled regex patterns for maximum speed
 _ID_PATTERN = re.compile(r"(?:Not to be confused with|Identification)[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE)
 _SENTENCE_PATTERN = re.compile(r'(?<=[.!?])\s+')
-_POISON_KEYWORDS = {
+_POISON_KEYWORDS = frozenset([  # Use frozenset for faster lookups
     "poison", "toxic", "irritant", "irritation", "rash", "allergic", "reaction",
     "not edible", "noxious", "harmful", "respiratory tract"
+])
+
+# Pre-compile all field extraction patterns for maximum speed
+_FIELD_PATTERNS = {
+    "Family": re.compile(r"^\s*Family[\s:]*\n*(.*?)(?=\n(?:Common names|Origin|Where found|Treatment|Uses|Identification|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Common names": re.compile(r"^\s*Common names[\s:]*\n*(.*?)(?=\n(?:Family|Origin|Where found|Treatment|Uses|Identification|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Where found": re.compile(r"^\s*Where found[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Treatment|Uses|Identification|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Treatment": re.compile(r"^\s*Treatment[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Uses|Identification|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Uses": re.compile(r"^\s*Uses[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Identification|Notes|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Notes": re.compile(r"^\s*Notes[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Identification|Leaf|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Leaf": re.compile(r"^\s*Leaf[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Identification|Notes|Habitat|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Habitat": re.compile(r"^\s*Habitat[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Identification|Notes|Leaf|Description)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE),
+    "Description": re.compile(r"^\s*Description[\s:]*\n*(.*?)(?=\n(?:Family|Common names|Origin|Where found|Treatment|Uses|Identification|Notes|Leaf|Habitat)[\s:]*|\Z)", re.IGNORECASE | re.DOTALL | re.MULTILINE)
 }
 
 @lru_cache(maxsize=100)
@@ -169,23 +175,19 @@ _ORIGIN_PATTERN = re.compile(
 
 @lru_cache(maxsize=50)
 def extract_fields(text):
-    """Extract structured information from plant text."""
+    """Extract structured information from plant text using pre-compiled patterns."""
     text = _WHITESPACE_PATTERN.sub("\n", text.strip())
 
-    # Pre-compiled patterns for common field extractions
-    _stop_labels = [
-        "Family", "Common names", "Origin", "Where found", "Treatment",
-        "Uses", "Identification", "Notes", "Leaf", "Habitat", "Description"
-    ]
-    
-    def multiline_extract(label):
-        stop_pattern = "|".join([rf"^\s*{l}[\s:]*" for l in _stop_labels if l.lower() != label.lower()])
-        pattern = rf"^\s*{label}[\s:]*\n*(.*?)(?=\n(?:{stop_pattern})|\Z)"
-        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
-        return re.sub(r"\s+", " ", match.group(1)).strip() if match else "Not found"
+    # Use pre-compiled patterns for maximum speed
+    def fast_extract(field_name):
+        pattern = _FIELD_PATTERNS.get(field_name)
+        if pattern:
+            match = pattern.search(text)
+            return re.sub(r"\s+", " ", match.group(1)).strip() if match else "Not found"
+        return "Not found"
 
+    # Handle Origin specially (as before)
     origin_match = _ORIGIN_PATTERN.search(text)
-
     if origin_match:
         origin_block = origin_match.group(1).strip()
         split = re.split(r"[.\n]", origin_block, maxsplit=1)
@@ -196,12 +198,12 @@ def extract_fields(text):
         description = "Not found"
 
     return {
-        "Family": multiline_extract("Family"),
-        "Common Names": multiline_extract("Common names"),
+        "Family": fast_extract("Family"),
+        "Common Names": fast_extract("Common names"),
         "Origin": origin,
         "Description": description,
-        "Where Found": multiline_extract("Where found"),
-        "Treatment": multiline_extract("Treatment"),
+        "Where Found": fast_extract("Where found"),
+        "Treatment": fast_extract("Treatment"),
         "Identification": extract_identification(text),
         "Poisonous": extract_poisonous(text),
     }
@@ -266,32 +268,53 @@ def determine_invasive_status(fields, plant_name):
 # Result cache for analyze_plant function
 _analysis_cache = {}
 
+def create_fast_fallback(species_name, confidence, image_path=None):
+    """Ultra-fast fallback analysis for timeout situations."""
+    confidence_percent = (float(confidence) * 100) if confidence else 0.0
+
+    return {
+        "classification": "timeout_fallback",
+        "invasive_status": False,
+        "advisory_content": {
+            "species_identification": {
+                "scientific_name": species_name,
+                "common_names": "Analysis timeout - check manually",
+                "family": "Unknown"
+            },
+            "legal_status": {
+                "nemba_category": "Unknown",
+                "legal_requirements": "Analysis timeout - manual verification required"
+            }
+        },
+        "confidence_score": confidence,
+        "data_sources": [],
+        "species": species_name,
+        "confidence_level": f"Timeout fallback ({confidence_percent:.1f}%)",
+        "risk_level": "Unknown",
+        "description": "Analysis timeout - please retry or consult experts",
+        "action_required": "Manual verification required due to timeout",
+        "timestamp": datetime.now().isoformat(),
+        "image_path": image_path
+    }
+
 def analyze_plant(species_name, confidence, image_path=None):
-    """Analyze a detected plant species using RAG system."""
-    start_time = time.time()
-    
-    # Validate input parameters
-    if not species_name or not isinstance(species_name, str):
+    """Ultra-fast plant analysis with aggressive caching."""
+    start_time = time.time()  # Track analysis time
+
+    # Minimal validation
+    if not species_name:
         raise ValueError("Invalid species name provided")
-    
-    if not isinstance(confidence, (int, float)) or confidence < 0 or confidence > 1:
-        raise ValueError("Confidence must be a number between 0 and 1")
-    
-    # Clean species name for querying
-    query_name = species_name.lower().replace(' ', '_')
-    
-    # Check cache first (cache key includes species and confidence range)
-    confidence_bucket = round(confidence, 1)  # Round to nearest 0.1 for caching
+
+    # Clean species name for querying (keep underscores, they're faster)
+    query_name = species_name.lower()
+
+    # Ultra-aggressive caching - round confidence to nearest 0.5 for maximum cache hits
+    confidence_bucket = round(confidence * 2) / 2 if confidence else 0.0
     cache_key = f"{query_name}_{confidence_bucket}"
-    
+
     if cache_key in _analysis_cache:
-        cached_result = _analysis_cache[cache_key]
-        # Update timestamp and image path
-        cached_result["timestamp"] = datetime.now().isoformat()
-        cached_result["image_path"] = image_path
-        print(f"LLM analysis completed from cache in {time.time() - start_time:.3f}s")
-        return cached_result
-    
+        return _analysis_cache[cache_key]
+
     # Query the RAG system
     results = query_plants(query_name)
     
@@ -299,14 +322,14 @@ def analyze_plant(species_name, confidence, image_path=None):
         # Found information in RAG system
         plant_text = results['documents'][0][0]  # Get the first document
         fields = extract_fields(plant_text)
-        
+
         # Determine invasive status and NEMBA category
         is_invasive = determine_invasive_status(fields, species_name)
         nemba_category = determine_nemba_category(fields, species_name)
-        
+
         # Generate classification (species name if invasive, "unknown" if not)
         classification = species_name if is_invasive else "unknown"
-        
+
         # Generate risk assessment
         if confidence > 0.8:
             confidence_level = "High confidence detection"
@@ -317,7 +340,7 @@ def analyze_plant(species_name, confidence, image_path=None):
         else:
             confidence_level = "Low confidence detection"
             action_required = "Manual verification required"
-        
+
         # Create advisory content
         advisory_content = {
             "species_identification": {
@@ -336,7 +359,7 @@ def analyze_plant(species_name, confidence, image_path=None):
             "poisonous_properties": safe_extract(fields, "Poisonous"),
             "monitoring_requirements": "Regular follow-up required for effective control" if is_invasive else "No monitoring required"
         }
-        
+
         analysis = {
             "classification": classification,
             "invasive_status": is_invasive,
@@ -490,21 +513,22 @@ def run_server_mode():
             try:
                 # Parse request
                 request = json.loads(line.strip())
+                request_id = request.get('id')
                 species_name = request.get('species')
                 confidence = request.get('confidence')
                 image_path = request.get('image_path')
-                
+
                 if not species_name or confidence is None:
-                    response = {"error": "Missing required fields: species, confidence"}
+                    response = {"id": request_id, "error": "Missing required fields: species, confidence"}
                 else:
                     # Analyze the plant
                     analysis = analyze_plant(species_name, confidence, image_path)
                     if analysis:
-                        response = {"success": True, "analysis": analysis}
+                        response = {"id": request_id, "success": True, "analysis": analysis}
                     else:
-                        response = {"error": "Analysis failed"}
-                
-                # Send response
+                        response = {"id": request_id, "error": "Analysis failed"}
+
+                # Send response with immediate flush for faster communication
                 print(json.dumps(response))
                 sys.stdout.flush()
                 

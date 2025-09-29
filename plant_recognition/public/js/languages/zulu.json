@@ -1,0 +1,53 @@
+{
+  "title": "Ukubona Izitshalo",
+  "login": {
+    "header": "Ngena",
+    "username_label": "Igama lomsebenzisi",
+    "password_label": "Iphasiwedi",
+    "signin_button": "Ngena",
+    "new_here_link": "Lapha okusha? Dala i-akhawunti"
+  },
+  "register": {
+    "username_label": "Igama lomsebenzisi",
+    "email_label": "I-imeyili",
+    "password_label": "Iphasiwedi",
+    "confirm_password_label": "Qinisekisa Iphasiwedi",
+    "register_button": "Dala I-akhawunti",
+    "already_account_link": "Usunayo i-akhawunti? Ngena",
+    "length_req": "Okungenani izinhlamvu ezi-8",
+    "uppercase_req": "Okungenani uhlamvu olulodwa olukulu",
+    "number_req": "Okungenani inombolo eyodwa",
+    "special_req": "Okungenani uhlamvu olulodwa olukhethekile"
+  },
+  "account": {
+    "title": "Izilungiselelo Ze-akhawunti",
+    "header": "Ulwazi Lwephrofayela",
+    "display_name_label": "Igama Lokubonisa",
+    "display_name_placeholder": "Faka igama lakho lokubonisa",
+    "email_label": "Ikheli le-imeyili",
+    "email_placeholder": "Faka i-imeyili yakho",
+    "save_button": "Londoloza Izinguquko",
+    "reset_button": "Setha Kabusha",
+    "password_header": "Shintsha Iphasiwedi",
+    "current_password_label": "Iphasiwedi Yamanje",
+    "new_password_label": "Iphasiwedi Entsha",
+    "confirm_password_label": "Qinisekisa Iphasiwedi Entsha",
+    "update_password_button": "Buyekeza Iphasiwedi",
+    "danger_zone_header": "Indawo Eyingozi",
+    "danger_zone_helper": "Lezi zenzo azikwazi ukubuyiselwa emuva.",
+    "delete_account_button": "Susa I-akhawunti"
+  },
+  "settings": {
+    "title": "Izilungiselelo",
+    "header": "Izilungiselelo Zohlelo Lokusebenza",
+    "dark_mode_label": "Imodi Emnyama",
+    "color_blind_mode_label": "Imodi Yokungaboni Umbala",
+    "color_blind_off_option": "Kuvaliwe",
+    "language_label": "Ulimi",
+    "language_en_option": "IsiNgisi",
+    "language_afr_option": "IsiBhunu",
+    "language_zulu_option": "isiZulu",
+    "cancel_button": "Khansela",
+    "apply_button": "Sebenzisa Izilungiselelo"
+  }
+}

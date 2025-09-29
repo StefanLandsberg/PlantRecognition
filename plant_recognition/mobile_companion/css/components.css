@@ -1,0 +1,255 @@
+/* UI Components */
+
+/* Buttons */
+.primary-btn, .control-btn, .capture-btn, .stream-btn, .disconnect-btn {
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.primary-btn {
+    background: var(--accent);
+    color: var(--bg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    width: 100%;
+    margin: var(--spacing-sm) 0;
+}
+
+.primary-btn:hover {
+    background: #5bc499;
+    transform: translateY(-1px);
+}
+
+.primary-btn:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.control-btn {
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--text);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    transition: all var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.control-btn:hover, .control-btn:active {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.stream-btn {
+    background: rgba(245, 158, 11, 0.9);
+    color: var(--bg);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    font-size: 0.7rem;
+    font-weight: 600;
+    min-width: 68px;
+    min-height: 48px;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    backdrop-filter: blur(8px);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stream-btn:hover, .stream-btn:active {
+    background: rgba(245, 158, 11, 1);
+    border-color: rgba(245, 158, 11, 0.8);
+}
+
+.stream-btn.streaming {
+    background: rgba(239, 68, 68, 0.9);
+    border-color: rgba(239, 68, 68, 0.5);
+    animation: pulse 2s infinite;
+}
+
+.capture-btn {
+    background: rgba(0, 0, 0, 0.6);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    backdrop-filter: blur(8px);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.capture-btn:hover, .capture-btn:active {
+    border-color: var(--accent);
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.capture-circle {
+    width: 44px;
+    height: 44px;
+    background: var(--accent);
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+}
+
+.capture-btn:hover .capture-circle {
+    background: #5bc499;
+    transform: scale(0.9);
+}
+
+.disconnect-btn {
+    background: var(--error);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.875rem;
+}
+
+.disconnect-btn:hover {
+    background: #dc2626;
+}
+
+/* Input Fields */
+.input-group {
+    margin: var(--spacing-md) 0;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--text);
+}
+
+.input-group input, .setting-select {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color var(--transition-fast);
+}
+
+.input-group input:focus, .setting-select:focus {
+    border-color: var(--accent);
+}
+
+/* Status Messages */
+.status-message {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin: var(--spacing-sm) 0;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.status-message.info {
+    background: rgba(103, 212, 167, 0.1);
+    color: var(--accent);
+    border: 1px solid rgba(103, 212, 167, 0.3);
+}
+
+.status-message.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-message.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Classification Notification */
+.classification-notification {
+    position: fixed;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    max-width: 200px;
+}
+
+.classification-notification.show {
+    transform: translateX(0);
+}
+
+.notification-content {
+    background: var(--panel);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--accent);
+    backdrop-filter: blur(10px);
+}
+
+.notification-content .species-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.2;
+}
+
+.notification-content .confidence-text {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: right;
+}
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.screen.active {
+    animation: fadeIn var(--transition-normal);
+}

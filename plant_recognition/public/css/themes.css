@@ -1,0 +1,70 @@
+/* Theme and Accessibility Styles */
+/* This file contains light/dark mode overrides and color blindness filters */
+
+@import './variables.css';
+
+/* Light Mode Overrides */
+.light-mode {
+    --bg: #f5f5f5;
+    --panel: #ffffff;
+    --accent: #198754;
+    --text: #333;
+    --muted: #666;
+    --border: #e0e0e0;
+}
+
+body.light-mode {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.light-mode .app-header,
+.light-mode .drawer,
+.light-mode .menu-dropdown,
+.light-mode .container {
+    background: var(--panel);
+    border-color: var(--border);
+}
+
+.light-mode h1,
+.light-mode .menu-dropdown ul li a:hover {
+    color: var(--accent);
+}
+
+.light-mode .app-header button {
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.light-mode .app-main .video-panel {
+    background: var(--panel);
+    border-color: var(--border);
+}
+
+.light-mode .action-bar {
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid var(--border);
+}
+
+.light-mode .action-bar button {
+    background: var(--accent);
+    color: #fff;
+}
+
+.light-mode #menu-btn {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* Color Blindness Accessibility Filters */
+.protanopia {
+    filter: url(#protanopia);
+}
+
+.deuteranopia {
+    filter: url(#deuteranopia);
+}
+
+.tritanopia {
+    filter: url(#tritanopia);
+}

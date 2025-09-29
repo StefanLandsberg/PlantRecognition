@@ -1,0 +1,443 @@
+/* Map Components CSS for Plant Recognition App */
+/* This file contains all styles for map-related components */
+
+@import './variables.css';
+
+/* Map Container */
+#map {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* Cluster Selector */
+.cluster-selector {
+  display: none;
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  min-width: 300px;
+  max-width: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all var(--transition-normal);
+  pointer-events: none;
+}
+
+.cluster-selector.show {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.cluster-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+  text-align: center;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cluster-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.cluster-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cluster-close:hover {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff4444;
+}
+
+.cluster-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid rgba(36, 48, 74, 0.3);
+}
+
+.cluster-item:last-child {
+  border-bottom: none;
+}
+
+.cluster-item:hover {
+  background: var(--border);
+}
+
+.cluster-item-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid white;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.cluster-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cluster-item-species {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.cluster-item-details {
+  font-size: 0.65rem;
+  color: var(--muted);
+  line-height: 1.1;
+}
+
+.cluster-count-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--accent);
+  color: var(--surface);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 50%;
+  top: 1rem;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+/* Sighting Items in Cluster Selector */
+.sighting-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  margin-bottom: var(--space-sm);
+}
+
+.sighting-item:hover {
+  background: var(--hover-overlay);
+}
+
+.sighting-item:last-child {
+  margin-bottom: 0;
+}
+
+.sighting-item img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.sighting-info {
+  flex: 1;
+}
+
+.sighting-info h4 {
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.sighting-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* Map Markers */
+.map-marker {
+  position: relative;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.map-marker:hover {
+  transform: scale(1.1);
+}
+
+/* Location Marker */
+.location-marker {
+  width: 12px;
+  height: 12px;
+  background: #4285F4;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Sighting Marker */
+.sighting-marker {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--surface);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+/* Cluster Marker */
+.cluster-marker {
+  background: var(--accent);
+  color: var(--surface);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.8rem;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.cluster-marker:hover {
+  transform: scale(1.1);
+}
+
+/* Species Risk Colors */
+.risk-low { background-color: var(--success); }
+.risk-moderate { background-color: var(--warning); }
+.risk-high { background-color: var(--error); }
+.risk-unknown { background-color: var(--text-secondary); }
+
+/* Statistics Cards in Stats Popup */
+.stats-card {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-md);
+  background: var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+}
+
+.stats-card:last-child {
+  margin-bottom: var(--space-lg);
+}
+
+.stats-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.stats-value {
+  font-weight: 700;
+}
+
+.stats-value.detections { color: var(--error); }
+.stats-value.removals { color: var(--success); }
+.stats-value.active { color: var(--warning); }
+.stats-value.confidence { color: var(--text); }
+.stats-value.date { color: var(--text); }
+
+/* Nearby Species List */
+.nearby-species {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.nearby-species-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.nearby-species-item:last-child {
+  border-bottom: none;
+}
+
+.species-name {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.species-count {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+/* Timeline Chart Container */
+#timeline-chart-container {
+  min-height: 200px;
+  width: 100%;
+}
+
+/* Legend for Timeline */
+.timeline-legend {
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: center;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-detections { background: var(--error); }
+.legend-removals { background: var(--success); }
+
+/* Tidbit Content */
+.tidbit-content h4 {
+  margin: 0 0 var(--space-sm) 0;
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.tidbit-content p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Map Controls */
+.map-controls {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.map-control-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: background-color var(--transition-fast);
+}
+
+.map-control-btn:hover {
+  background: var(--hover-overlay);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cluster-selector {
+    min-width: 280px;
+    max-width: 90vw;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(-10px);
+  }
+
+  .cluster-selector.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .timeline-popup,
+  .stats-popup {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    max-height: 40vh;
+    margin-bottom: var(--space-md);
+  }
+
+  .tidbit-popup {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .analysis-popup {
+    width: 95%;
+    max-height: 80vh;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .cluster-selector,
+  .analysis-popup,
+  .timeline-popup,
+  .stats-popup,
+  .tidbit-popup,
+  .modal-backdrop,
+  .multi-popup-backdrop {
+    display: none !important;
+  }
+}

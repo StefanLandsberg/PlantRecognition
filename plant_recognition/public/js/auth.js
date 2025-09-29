@@ -21,15 +21,37 @@ showLoginLink?.addEventListener('click', (e) => {
 
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  console.log('Login form submitted');
+  
+  const submitBtn = loginForm.querySelector('button[type="submit"]');
+  if (submitBtn.disabled) {
+    console.log('Login already in progress, ignoring');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in...';
+  
   const formData = new FormData(loginForm);
   const username = formData.get('username'); 
   const password = formData.get('password');
   const err = document.getElementById('login-error');
+  err.textContent = '';
+
+  console.log('Login attempt:', { username, password: password ? '[HIDDEN]' : 'empty' });
 
   try {
-    await AuthAPI.login(username, password);
+    console.log('Calling AuthAPI.login...');
+    const result = await AuthAPI.login(username, password);
+    console.log('Login successful:', result);
     location.href = '/app';
-  } catch (e) { err.textContent = 'Login failed. ' + e; }
+  } catch (e) { 
+    console.error('Login failed:', e);
+    err.textContent = 'Login failed. ' + e; 
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
 });
 
 registerForm?.addEventListener('submit', async (e) => {
@@ -53,53 +75,59 @@ registerForm?.addEventListener('submit', async (e) => {
   }catch (e) { err.textContent = 'Passwords did not match'; }
 });
 
-//code for password recommendations
-// Get a reference to the input field and all requirement elements
-const passwordInput = document.getElementById('pwd');
-const lengthRequirement = document.getElementById('length');
-const uppercaseRequirement = document.getElementById('uppercase');
-const numberRequirement = document.getElementById('number');
-const specialRequirement = document.getElementById('special');
+// Reusable password validation function
+function setupPasswordValidation(passwordInputId) {
+    const passwordInput = document.getElementById(passwordInputId);
+    const lengthRequirement = document.getElementById('length');
+    const uppercaseRequirement = document.getElementById('uppercase');
+    const numberRequirement = document.getElementById('number');
+    const specialRequirement = document.getElementById('special');
 
-// Add an event listener for the 'keyup' event
-passwordInput.addEventListener('keyup', () => {
-    const password = passwordInput.value;
+    if (!passwordInput) return; // Exit if input not found
 
-    // 1. Check for password length
-    if (password.length >= 8) {
-        lengthRequirement.classList.remove('invalid');
-        lengthRequirement.classList.add('valid');
-    } else {
-        lengthRequirement.classList.remove('valid');
-        lengthRequirement.classList.add('invalid');
-    }
+    // Add an event listener for the 'keyup' event
+    passwordInput.addEventListener('keyup', () => {
+        const password = passwordInput.value;
 
-    // 2. Check for at least one uppercase letter (A-Z)
-    if (/[A-Z]/.test(password)) {
-        uppercaseRequirement.classList.remove('invalid');
-        uppercaseRequirement.classList.add('valid');
-    } else {
-        uppercaseRequirement.classList.remove('valid');
-        uppercaseRequirement.classList.add('invalid');
-    }
+        // 1. Check for password length
+        if (password.length >= 8) {
+            lengthRequirement.classList.remove('invalid');
+            lengthRequirement.classList.add('valid');
+        } else {
+            lengthRequirement.classList.remove('valid');
+            lengthRequirement.classList.add('invalid');
+        }
 
-    // 3. Check for at least one number (0-9)
-    if (/\d/.test(password)) {
-        numberRequirement.classList.remove('invalid');
-        numberRequirement.classList.add('valid');
-    } else {
-        numberRequirement.classList.remove('valid');
-        numberRequirement.classList.add('invalid');
-    }
+        // 2. Check for at least one uppercase letter (A-Z)
+        if (/[A-Z]/.test(password)) {
+            uppercaseRequirement.classList.remove('invalid');
+            uppercaseRequirement.classList.add('valid');
+        } else {
+            uppercaseRequirement.classList.remove('valid');
+            uppercaseRequirement.classList.add('invalid');
+        }
 
-    // 4. Check for at least one special character
-    // This regular expression matches common special characters
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) {
-        specialRequirement.classList.remove('invalid');
-        specialRequirement.classList.add('valid');
-    } else {
-        specialRequirement.classList.remove('valid');
-        specialRequirement.classList.add('invalid');
-    }
-});
+        // 3. Check for at least one number (0-9)
+        if (/\d/.test(password)) {
+            numberRequirement.classList.remove('invalid');
+            numberRequirement.classList.add('valid');
+        } else {
+            numberRequirement.classList.remove('valid');
+            numberRequirement.classList.add('invalid');
+        }
+
+        // 4. Check for at least one special character
+        // This regular expression matches common special characters
+        if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) {
+            specialRequirement.classList.remove('invalid');
+            specialRequirement.classList.add('valid');
+        } else {
+            specialRequirement.classList.remove('valid');
+            specialRequirement.classList.add('invalid');
+        }
+    });
+}
+
+// Setup password validation for registration form
+setupPasswordValidation('pwd');
 

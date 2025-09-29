@@ -14,8 +14,17 @@ export async function register(username, email, password) {
 }
 
 export async function login(username, password) {
+  if (!username || !password) {
+    throw new Error('Username and password are required');
+  }
+  
   const user = await User.findOne({ username });
   if (!user) throw new Error('Invalid credentials. No User found');
+  
+  if (!user.passwordHash) {
+    throw new Error('User account is corrupted - no password hash found');
+  }
+  
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) throw new Error('Invalid credentials. Wrong password');
   const token = jwt.sign(

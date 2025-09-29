@@ -1,0 +1,74 @@
+/* Base Styles and Reset */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for mobile */
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, Arial, sans-serif;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    /* Add safe area support for mobile devices */
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure safe area support for the app container */
+@supports (padding: max(0px)) {
+    html, body {
+        padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    }
+}
+
+.app-container {
+    height: 100vh;
+    height: 100dvh;
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Screen Management */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* Common Layout Classes */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--panel);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.container {
+    padding: var(--spacing-md);
+    flex: 1;
+    overflow-y: auto;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.hidden {
+    display: none !important;
+}

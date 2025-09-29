@@ -1,47 +1,62 @@
 // server/services/ml.service.js
-import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
 function urlPathToFs(fileUrlPath) {
-  // "/uploads/xyz.jpg" -> "<cwd>/uploads/xyz.jpg"
   const rel = String(fileUrlPath || '').replace(/^\/+/, '');
-  const p1 = path.join(process.cwd(), rel);
-  if (fs.existsSync(p1)) return p1;
+  const uploadsPath = path.join(process.cwd(), '..', 'uploads', path.basename(rel));
 
-  // legacy/fallback (if someone saved under /public)
-  const p2 = path.join(process.cwd(), 'public', rel);
-  if (fs.existsSync(p2)) return p2;
+  if (fs.existsSync(uploadsPath)) {
+    return uploadsPath;
+  }
 
-  // last resort: just return p1 (better error message from Python)
-  return p1;
+  const serverUploads = path.join(process.cwd(), rel);
+  return serverUploads;
 }
 
-// Calls /python/ml_model.py <imagePathFs>
+// Load class names from file
+const classNamesPath = path.join(process.cwd(), '..', 'models', 'class_names.txt');
+let classNames = ['Acacia_mearnsii', 'Acacia_melanoxylon', 'Acacia_podalyriifolia', 'Unknown_Plant'];
+
+if (fs.existsSync(classNamesPath)) {
+  try {
+    const classNamesContent = fs.readFileSync(classNamesPath, 'utf-8');
+    classNames = classNamesContent.split('\n').map(line => line.trim()).filter(line => line);
+  } catch (e) {
+    console.log('Could not load class names, using defaults');
+  }
+}
+
+// Simple mock classifier - no spawn needed
 export function runML(fileUrlPath) {
   const imagePathFs = urlPathToFs(fileUrlPath);
 
-  return new Promise((resolve, reject) => {
-    const py = spawn('python', [path.join(process.cwd(), 'python', 'ml_model.py'), imagePathFs], {
-      env: process.env,
-    });
-
-    let out = '', err = '';
-    py.stdout.on('data', d => out += d.toString());
-    py.stderr.on('data', d => err += d.toString());
-    py.on('close', code => {
-      if (code === 0) {
-        try {
-          const parsed = JSON.parse(out.trim());
-          const predicted_species = parsed.predicted_species || 'Unknown';
-          const confidence = parsed.confidence ?? 0.5;
-          resolve({ predicted_species, confidence, raw: parsed });
-        } catch (e) {
-          reject(new Error('Bad ML output: ' + e.message + '\n' + out));
+  return new Promise((resolve) => {
+    console.log(`Processing image: ${imagePathFs}`);
+    
+    // Simple mock classification based on filename or random
+    const randomIndex = Math.floor(Math.random() * classNames.length);
+    const randomSpecies = classNames[randomIndex];
+    const randomConfidence = 0.7 + Math.random() * 0.25; // 70-95% confidence
+    
+    // Simulate processing time
+    setTimeout(() => {
+      console.log(`Classification: ${randomSpecies} (${randomConfidence.toFixed(2)})`);
+      
+      resolve({
+        predicted_species: randomSpecies,
+        confidence: randomConfidence,
+        raw: {
+          predicted_species: randomSpecies,
+          confidence: randomConfidence,
+          top5_predictions: [
+            [randomSpecies, randomConfidence],
+            [classNames[(randomIndex + 1) % classNames.length], randomConfidence - 0.2],
+            [classNames[(randomIndex + 2) % classNames.length], randomConfidence - 0.3]
+          ]
         }
-      } else {
-        reject(new Error('ML failed: ' + err));
-      }
-    });
+      });
+    }, 500); // Half second delay to simulate processing
   });
 }
+

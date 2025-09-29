@@ -1,0 +1,53 @@
+{
+  "title": "Plantherkenning",
+  "login": {
+    "header": "Meld Aan",
+    "username_label": "Gebruikernaam",
+    "password_label": "Wagwoord",
+    "signin_button": "Meld Aan",
+    "new_here_link": "Nuut hier? Skep 'n rekening"
+  },
+  "register": {
+    "username_label": "Gebruikernaam",
+    "email_label": "E-pos",
+    "password_label": "Wagwoord",
+    "confirm_password_label": "Bevestig Wagwoord",
+    "register_button": "Skep Rekening",
+    "already_account_link": "Het jy reeds 'n rekening? Meld aan",
+    "length_req": "Minstens 8 karakters",
+    "uppercase_req": "Minstens een hoofletter",
+    "number_req": "Minstens een nommer",
+    "special_req": "Minstens een spesiale karakter"
+  },
+  "account": {
+    "title": "Rekening Instellings",
+    "header": "Profiel Inligting",
+    "display_name_label": "Vertoon Naam",
+    "display_name_placeholder": "Voer jou vertoon naam in",
+    "email_label": "E-pos Adres",
+    "email_placeholder": "Voer jou e-pos in",
+    "save_button": "Stoor Veranderinge",
+    "reset_button": "Herstel",
+    "password_header": "Verander Wagwoord",
+    "current_password_label": "Huidige Wagwoord",
+    "new_password_label": "Nuwe Wagwoord",
+    "confirm_password_label": "Bevestig Nuwe Wagwoord",
+    "update_password_button": "Dateer Wagwoord Op",
+    "danger_zone_header": "Gevaar Sone",
+    "danger_zone_helper": "Hierdie aksies kan nie ongedaan gemaak word nie.",
+    "delete_account_button": "Skrap Rekening"
+  },
+  "settings": {
+    "title": "Instellings",
+    "header": "Toepassing Instellings",
+    "dark_mode_label": "Donker Modus",
+    "color_blind_mode_label": "Kleurblind Modus",
+    "color_blind_off_option": "Af",
+    "language_label": "Taal",
+    "language_en_option": "Engels",
+    "language_afr_option": "Afrikaans",
+    "language_zulu_option": "isiZulu",
+    "cancel_button": "Kanselleer",
+    "apply_button": "Pas Instellings Toe"
+  }
+}

@@ -1,0 +1,115 @@
+/* Custom Scrollbar Styles */
+/* This file contains all custom scrollbar styling for different components */
+
+@import './variables.css';
+
+/* Global Scrollbar Styles for Light and Dark Mode */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+/* Webkit scrollbars (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+    background: var(--accent);
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Special scrollbar for dropdown content */
+.llm-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.llm-content::-webkit-scrollbar-thumb {
+    background: rgba(103, 212, 167, 0.3);
+    border-radius: 3px;
+}
+
+.llm-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(103, 212, 167, 0.5);
+}
+
+.llm-content::-webkit-scrollbar-thumb:active {
+    background: var(--accent);
+}
+
+/* Sightings container scrollbar */
+.sightings-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+.sightings-container::-webkit-scrollbar-track {
+    background: var(--background);
+    border-radius: 5px;
+    margin: 4px;
+}
+
+.sightings-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    border: 2px solid var(--background);
+}
+
+.sightings-container::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Detection panel scrollbar */
+.detection-panel::-webkit-scrollbar,
+#detection-cards::-webkit-scrollbar {
+    width: 8px;
+}
+
+.detection-panel::-webkit-scrollbar-thumb,
+#detection-cards::-webkit-scrollbar-thumb {
+    background: rgba(103, 212, 167, 0.4);
+    border-radius: 4px;
+}
+
+.detection-panel::-webkit-scrollbar-thumb:hover,
+#detection-cards::-webkit-scrollbar-thumb:hover {
+    background: rgba(103, 212, 167, 0.6);
+}
+
+/* Modal and popup scrollbars */
+.analysis-popup::-webkit-scrollbar,
+.cluster-selector::-webkit-scrollbar {
+    width: 6px;
+}
+
+.analysis-popup::-webkit-scrollbar-thumb,
+.cluster-selector::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.analysis-popup::-webkit-scrollbar-thumb:hover,
+.cluster-selector::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}

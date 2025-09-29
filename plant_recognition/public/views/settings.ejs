@@ -1,12 +1,20 @@
 <!doctype html>
 <html lang="en">
-<%- include('partials/head', { title: text.settings.title, styles: ['/css/app.css'] }) %>
+<%- include('partials/head', { title: text.settings.title, styles: ['/css/variables.css', '/css/themes.css', '/css/layout.css', '/css/components.css', '/css/app.css'] }) %>
+  <script>
+    try {
+      var dark = localStorage.getItem('darkMode') !== 'false';
+      document.documentElement.classList.add(dark ? 'dark-mode' : 'light-mode');
+      var cb = localStorage.getItem('colorBlindMode');
+      if (cb && cb !== 'none') document.documentElement.classList.add(cb);
+    } catch(e) {}
+  </script>
 
-<body>
+<body class="settings-page">
   <%- include('partials/nav') %>
 
-  <div class="container" style="max-width:720px;margin:2rem auto;">
-    <h1><%= text.settings.header %></h1>
+  <div class="container container-narrow">
+    <h1 class="page-header"><%= text.settings.header %></h1>
 
     <div class="setting-item">
       <label for="theme-toggle"><%= text.settings.dark_mode_label %></label>
@@ -26,29 +34,36 @@
     <div class="setting-item">
       <label for="language-select"><%= text.settings.language_label %></label>
       <select id="language-select">
-        
-        <option value="en" <%= currentLang === 'en' ? 'selected' : '' %>>
-          <%= text.settings.language_en_option %>
-        </option>
-
-        <option value="afr" <%= currentLang === 'afr' ? 'selected' : '' %>>
-          <%= text.settings.language_afr_option %>
-        </option>
-
-        <option value="zulu" <%= currentLang === 'zulu' ? 'selected' : '' %>>
-          <%= text.settings.language_zulu_option %>
-        </option>
-
+        <option value="en" <%= currentLang === 'en' ? 'selected' : '' %>><%= text.settings.language_en_option %></option>
+        <option value="afr" <%= currentLang === 'afr' ? 'selected' : '' %>><%= text.settings.language_afr_option %></option>
+        <option value="zulu" <%= currentLang === 'zulu' ? 'selected' : '' %>><%= text.settings.language_zulu_option %></option>
       </select>
     </div>
 
-    <div class="button-group" style="gap:.5rem;display:flex;justify-content:flex-end;margin-top:1rem;">
+
+    <div class="setting-item storage-preference">
+      <label for="storage-preference">Image Storage</label>
+      <select id="storage-preference">
+        <option value="server">Server Storage (2GB total, 90 days retention, backed up)</option>
+        <option value="local">Local Storage (Unlimited, device only)</option>
+      </select>
+      <div class="setting-help">
+        <p id="storage-description">Choose how your plant images are stored:</p>
+        <ul>
+          <li><strong>Server Storage:</strong> Images saved to server with 2GB total storage. Kept for 90 days, backed up and accessible from any device.</li>
+          <li><strong>Local Storage:</strong> Images stored only on this device. Unlimited space but not backed up.</li>
+        </ul>
+        <p id="storage-warning" class="warning hidden">WARNING: Switching to local storage will delete all your server-stored images.</p>
+      </div>
+    </div>
+
+    <div class="button-group button-group-end">
       <button id="cancel-btn" type="button"><%= text.settings.cancel_button %></button>
       <a class="button" href="/app" id="apply-btn"><%= text.settings.apply_button %></a>
     </div>
   </div>
 
+  <script src="/js/modal.js"></script>
   <script src="/js/settings.js"></script>
 </body>
-
 </html>

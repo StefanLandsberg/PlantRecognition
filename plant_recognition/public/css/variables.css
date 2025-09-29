@@ -1,0 +1,122 @@
+/* CSS Variables for Plant Recognition App */
+/* This file contains all global CSS custom properties used throughout the application */
+
+:root {
+  /* Core Colors */
+  --bg: #0b1020;
+  --panel: #151a2b;
+  --accent: #67d4a7;
+  --text: #e9eef5;
+  --text-secondary: #9aa7bd;
+  --muted: #9aa7bd;
+
+  /* Semantic Colors */
+  --background: var(--bg);
+  --surface: var(--panel);
+  --primary: var(--accent);
+  --border: #24304a;
+
+  /* Status Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #dc2626;
+  --info: #3b82f6;
+
+  /* Interactive States */
+  --hover-overlay: rgba(103, 212, 167, 0.1);
+  --active-overlay: rgba(103, 212, 167, 0.2);
+  --disabled-opacity: 0.5;
+
+  /* Z-Index Scale */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 1000;
+  --z-modal: 1001;
+  --z-toast: 1002;
+
+  /* Spacing Scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Dark mode variables (default) */
+.dark-mode {
+  --bg: #0b1020;
+  --panel: #151a2b;
+  --accent: #67d4a7;
+  --text: #e9eef5;
+  --text-secondary: #9aa7bd;
+  --muted: #9aa7bd;
+  --border: #24304a;
+  --background: var(--bg);
+  --surface: var(--panel);
+  --primary: var(--accent);
+}
+
+/* Light mode variables */
+.light-mode {
+  --bg: #ffffff;
+  --panel: #f8f9fa;
+  --accent: #28a745;
+  --text: #212529;
+  --text-secondary: #6c757d;
+  --muted: #6c757d;
+  --border: #dee2e6;
+  --background: var(--bg);
+  --surface: var(--panel);
+  --primary: var(--accent);
+}
+
+/* Global Text Color Classes */
+.text-primary { color: var(--text); }
+.text-secondary { color: var(--text-secondary); }
+.text-accent { color: var(--accent); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-info { color: var(--info); }
+
+/* Global Background Classes */
+.bg-primary { background-color: var(--background); }
+.bg-surface { background-color: var(--surface); }
+.bg-accent { background-color: var(--accent); }
+
+/* Global Border Classes */
+.border-default { border-color: var(--border); }
+.border-accent { border-color: var(--accent); }
+
+/* Common Layout Classes */
+.container-narrow { max-width: 720px; margin: 2rem auto; }
+.container-wide { max-width: 1200px; margin: 2rem auto; }
+.page-header { margin-bottom: 1.5rem; }
+.section-header { margin: 0 0 .75rem; }
+.form-section { margin-top: .5rem; }
+.card-section { margin-top: 1.5rem; }
+.button-group-end { gap: .5rem; display: flex; justify-content: flex-end; margin-top: 1rem; }
+.auth-link { margin-top: .5rem; }
+.welcome-text { margin-right: .75rem; font-weight: 700; }
+.empty-state { margin: .5rem 0; display: none; }
+.notification-badge-hidden { display: none; }
+.hidden-svg { display: none; }
+.relative-position { position: relative; }

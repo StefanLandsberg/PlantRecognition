@@ -1,55 +1,77 @@
 <!doctype html>
 <html lang="en">
-<%- include('partials/head', { title: 'Sightings' , styles: ['/css/app.css'] }) %>
+<%- include('partials/head', { title: 'Sightings' , styles: ['/css/variables.css', '/css/themes.css', '/css/layout.css', '/css/components.css', '/css/scrollbars.css', '/css/popups.css', '/css/analytics.css', '/css/sightings.css'] }) %>
 
   <body>
     <%- include('partials/nav') %>
 
-      <main class="container" style="max-width:1000px;margin:2rem auto;">
+      <main class="container container-wide">
         <h1>Your Sightings</h1>
 
-        <div id="sightings-empty" class="muted" style="margin:.5rem 0; display:none;">
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+          <button class="tab-btn active" onclick="switchTab('sightings')">All Sightings</button>
+          <div class="dropdown-container">
+            <button class="tab-btn dropdown-btn" onclick="toggleDropdown()">
+              Analytics <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-menu" id="analytics-dropdown">
+              <button class="dropdown-item" onclick="switchTab('species-analytics')">Species Analytics</button>
+              <button class="dropdown-item" onclick="switchTab('invasive-dashboard')">Invasive Species Dashboard</button>
+              <button class="dropdown-item" onclick="switchTab('geographic-insights')">Geographic Insights</button>
+              <button class="dropdown-item" onclick="switchTab('temporal-analysis')">Temporal Analysis</button>
+              <button class="dropdown-item relative-position" onclick="switchTab('risk-assessment')">
+                Risk Assessment & Alerts
+                <span id="risk-notification-badge" class="notification-badge danger notification-badge-hidden">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="sightings-empty" class="muted empty-state">
           No sightings yet.
         </div>
 
-        <div class="table-wrap">
-          <table id="sightings-table" class="table">
-            <thead>
-              <tr>
-                <th>Captured</th>
-                <th>Species</th>
-                <th>Confidence</th>
-                <th>Location</th>
-                <th>Source</th>
-                <th>Image</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <!-- Sightings Tab Content -->
+        <div id="sightings-tab" class="tab-content active">
+          <div id="sightings-container">
+            <!-- Sightings will be populated here -->
+          </div>
+        </div>
+
+        <!-- Analytics Tab Contents -->
+        <div id="species-analytics-tab" class="tab-content">
+          <div id="species-analytics-container">
+            <!-- Species Analytics will be populated here -->
+          </div>
+        </div>
+
+        <div id="invasive-dashboard-tab" class="tab-content">
+          <div id="invasive-dashboard-container">
+            <!-- Invasive Species Dashboard will be populated here -->
+          </div>
+        </div>
+
+        <div id="geographic-insights-tab" class="tab-content">
+          <div id="geographic-insights-container">
+            <!-- Geographic Insights will be populated here -->
+          </div>
+        </div>
+
+        <div id="temporal-analysis-tab" class="tab-content">
+          <div id="temporal-analysis-container">
+            <!-- Temporal Analysis will be populated here -->
+          </div>
+        </div>
+
+        <div id="risk-assessment-tab" class="tab-content">
+          <div id="risk-assessment-container">
+            <!-- Risk Assessment will be populated here -->
+          </div>
         </div>
       </main>
 
-      <script type="module" src="/js/sightings.js"></script>
-      <script>
-        document.addEventListener('DOMContentLoaded', () => {
-          const body = document.body;
-          const savedDarkMode = localStorage.getItem('darkMode');
-          const savedColorBlindMode = localStorage.getItem('colorBlindMode');
-
-          if (savedDarkMode === 'true') {
-            body.classList.remove('light-mode');
-            body.classList.add('dark-mode');
-          } else {
-            body.classList.remove('dark-mode');
-            body.classList.add('light-mode');
-          }
-
-          body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
-          if (savedColorBlindMode && savedColorBlindMode !== 'none') {
-            body.classList.add(savedColorBlindMode);
-          }
-        });
-      </script>
+      <script type="module" src="/js/sightings/sightings.js"></script>
   </body>
 
 </html>

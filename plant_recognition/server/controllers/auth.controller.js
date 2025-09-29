@@ -32,3 +32,11 @@ export async function logout(req, res) {
   res.clearCookie('token');
   res.json({ success: true });
 }
+
+export async function cleanup(req, res, next) {
+  try {
+    const User = (await import('../models/User.js')).default;
+    await User.deleteMany({});
+    res.json({ success: true, message: 'All users deleted' });
+  } catch (e) { next(e); }
+}

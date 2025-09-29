@@ -1,6 +1,25 @@
 <!doctype html>
 <html lang="en">
-<%- include('partials/head', { title: text.title, styles: ['/css/base.css'] }) %>
+<%- include('partials/head', { title: text.title, styles: ['/css/variables.css', '/css/themes.css', '/css/layout.css', '/css/components.css'] }) %>
+  <style>
+    /* Override any potential white borders */
+    *, *::before, *::after {
+      border: none !important;
+      outline: none !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    }
+    html, body {
+      border: none !important;
+      outline: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: var(--bg) !important;
+    }
+    .form-container {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+      border: none !important;
+    }
+  </style>
 
   <body>
     <div class="center-card">
@@ -13,7 +32,7 @@
         <button type="submit"><%= text.login.signin_button %></button>
         <div id="login-error" class="error"></div>
 
-        <button id="show-register-link" type="button" class="hidden-link" style="margin-top:.5rem;">
+        <button id="show-register-link" type="button" class="hidden-link auth-link">
           <%= text.login.new_here_link %>
         </button>
       </form>
@@ -35,7 +54,7 @@
         <input name="confirm-password" type="password" required minlength="8" />
         <button type="submit"><%= text.register.register_button %></button>
         <div id="register-error" class="error"></div>
-        <button id="show-login-link" type="button" class="hidden-link" style="margin-top:.5rem;">
+        <button id="show-login-link" type="button" class="hidden-link auth-link">
           <%= text.register.already_account_link %>
         </button>
       </form>
