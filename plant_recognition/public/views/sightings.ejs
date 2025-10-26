@@ -11,6 +11,7 @@
         <!-- Tab Navigation -->
         <div class="tab-navigation">
           <button class="tab-btn active" onclick="switchTab('sightings')">All Sightings</button>
+          <button class="tab-btn" onclick="switchTab('video-review')">Video Review</button>
           <div class="dropdown-container">
             <button class="tab-btn dropdown-btn" onclick="toggleDropdown()">
               Analytics <span class="dropdown-arrow">▼</span>
@@ -19,6 +20,8 @@
               <button class="dropdown-item" onclick="switchTab('species-analytics')">Species Analytics</button>
               <button class="dropdown-item" onclick="switchTab('invasive-dashboard')">Invasive Species Dashboard</button>
               <button class="dropdown-item" onclick="switchTab('geographic-insights')">Geographic Insights</button>
+              <button class="dropdown-item" onclick="switchTab('cluster-map')">Cluster Map</button>
+
               <button class="dropdown-item" onclick="switchTab('temporal-analysis')">Temporal Analysis</button>
               <button class="dropdown-item relative-position" onclick="switchTab('risk-assessment')">
                 Risk Assessment & Alerts
@@ -36,6 +39,39 @@
         <div id="sightings-tab" class="tab-content active">
           <div id="sightings-container">
             <!-- Sightings will be populated here -->
+          </div>
+        </div>
+
+        <!-- Video Review Tab Content -->
+        <div id="video-review-tab" class="tab-content">
+          <div id="video-review-container">
+            <div id="video-sessions-list" class="video-sessions-grid">
+              <!-- Video sessions will be populated here -->
+            </div>
+            
+            <!-- Video Review Modal -->
+            <div id="video-review-modal" class="video-review-modal hidden">
+              <div class="video-review-overlay" onclick="closeVideoPlayer()"></div>
+              <div class="video-review-content">
+                <div class="video-review-header">
+                  <h3 id="video-review-title">Video Session Review</h3>
+                  <button class="video-review-close" onclick="closeVideoPlayer()">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="video-review-body">
+                  <div id="video-display" class="video-display">
+                    <!-- Video frames will be displayed here -->
+                  </div>
+                  <div id="video-timeline-container" class="video-timeline-container">
+                    <!-- Timeline will be populated here -->
+                  </div>
+                  <div id="video-info" class="video-info">
+                    <!-- Video info will be populated here -->
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -58,6 +94,14 @@
           </div>
         </div>
 
+        <div id="cluster-map-tab" class="tab-content">
+          <div id="cluster-map-container">
+            <!-- Cluster Map will be populated here -->
+          </div>
+        </div>
+
+
+
         <div id="temporal-analysis-tab" class="tab-content">
           <div id="temporal-analysis-container">
             <!-- Temporal Analysis will be populated here -->
@@ -71,6 +115,7 @@
         </div>
       </main>
 
+      <script src="/config.js"></script>
       <script type="module" src="/js/sightings/sightings.js"></script>
   </body>
 

@@ -1,254 +1,388 @@
-# Plant Recognition Application
+# Plant Recognition System
 
-A comprehensive plant recognition system with AI-powered detection, real-time analytics, and interactive mapping capabilities.
+A comprehensive plant species identification platform with real-time analysis, invasive species detection, and mobile companion support.
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Mobile Companion](#mobile-companion)
+- [API Reference](#api-reference)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+
+## Features
+
+### Core Functionality
+- **Real-time Plant Identification**: Advanced machine learning classification with confidence scoring
+- **AI-Powered Analysis**: Comprehensive species information using LLM integration
+- **Invasive Species Detection**: Specialised risk assessment for environmental protection
+- **Geospatial Mapping**: Interactive maps with clustering and location-based insights
+- **Dual Storage System**: Flexible server (2GB, 90-day retention) or unlimited local storage
+
+### Advanced Analytics
+- **Temporal Analysis**: Time-based pattern recognition with calculated insights
+- **Species Analytics**: Comprehensive statistics and distribution analysis
+- **Risk Assessment**: Automated alerts for high-risk invasive species
+- **Geographic Insights**: Spatial distribution and clustering analysis
+
+### User Experience
+- **Mobile Companion App**: Live video capture with QR code pairing
+- **Multi-language Support**: English, Afrikaans, and Zulu localisation
+- **Accessibility**: Colour-blind support with multiple vision modes
+- **Responsive Design**: Optimised for desktop and mobile devices
+
+## Architecture
+
+### Technology Stack
+- **Frontend**: Vanilla JavaScript (ES6+), CSS Custom Properties, WebRTC
+- **Backend**: Node.js, Express.js, WebSocket for real-time communication
+- **Database**: MongoDB Atlas with Mongoose ODM
+- **Authentication**: JWT with httpOnly cookies for security
+- **File Storage**: Multer with configurable local/server storage
+- **Maps**: Google Maps API integration
+
+### Project Structure
+```
+plant_recognition/
+├── server/                 # Backend application
+│   ├── models/            # MongoDB data models
+│   ├── routes/            # API endpoint definitions
+│   ├── services/          # Business logic services
+│   ├── middleware/        # Authentication & file handling
+│   └── utils/             # Configuration & utilities
+├── public/                # Frontend application
+│   ├── js/               # JavaScript modules
+│   ├── css/              # Stylesheets with theming
+│   └── views/            # EJS templates
+├── mobile_companion/      # Mobile companion app
+├── python/               # ML model integration
+└── uploads/              # File storage directory
+```
 
 ## Quick Start
 
 ### Prerequisites
-- **Node.js** (v16 or higher)
-- **MongoDB Atlas** account
-- **MongoDB Compass** (optional but recommended)
+- Node.js 16+ and npm
+- MongoDB Atlas account
+- Google Maps API key
+- Python 3.8+ (for ML model integration)
 
-## Setup Instructions
+### Installation
 
-### 1. Install Node.js
-1. Download Node.js from [nodejs.org](https://nodejs.org/)
-2. Install with default settings
-3. Verify installation:
+1. **Clone the repository**
    ```bash
-   node --version
-   npm --version
+   git clone <repository-url>
+   cd plant_recognition
    ```
 
-### 2. MongoDB Atlas Setup
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-#### Step 1: Create MongoDB Atlas Account
-1. Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
-2. Click "Try Free" and create an account
-3. Choose "Free" tier (M0) for development
+3. **Environment configuration**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` with your credentials:
+   ```env
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/plantdb
+   JWT_SECRET=your-secure-jwt-secret-key
+   GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+   PORT=3000
+   ```
 
-#### Step 2: Create a Cluster
-1. Click "Build a Database"
-2. Choose "FREE" tier (M0)
-3. Select your preferred cloud provider (AWS, Google Cloud, or Azure)
-4. Choose a region close to you
-5. Click "Create"
+4. **Start the application**
+   ```bash
+   npm run dev
+   ```
 
-#### Step 3: Set Up Database Access
-1. In the left sidebar, click "Database Access"
-2. Click "Add New Database User"
-3. Choose "Password" authentication
-4. Create a username and password (save these!)
-5. Select "Read and write to any database"
-6. Click "Add User"
+5. **Access the application**
+   - Main app: `http://localhost:3000`
+   - Mobile companion: `http://localhost:3000/mobile-companion`
 
-#### Step 4: Set Up Network Access
-1. In the left sidebar, click "Network Access"
-2. Click "Add IP Address"
-3. For development: Click "Allow Access from Anywhere" (0.0.0.0/0)
-4. For production: Add your specific IP addresses
-5. Click "Confirm"
+## Configuration
 
-#### Step 5: Get Connection String
-1. Click "Database" in the left sidebar
-2. Click "Connect" on your cluster
-3. Choose "Connect your application"
-4. Copy the connection string (it looks like: `mongodb+srv://username:password@cluster.mongodb.net/`)
+### Environment Variables
 
-### 3. MongoDB Compass Setup (Optional)
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MONGODB_URI` | MongoDB Atlas connection string | Yes |
+| `JWT_SECRET` | Secret key for JWT token generation | Yes |
+| `GOOGLE_MAPS_API_KEY` | Google Maps API key for mapping | Yes |
+| `PORT` | Server port (default: 3000) | No |
+| `NODE_ENV` | Environment mode (development/production) | No |
 
-#### Install MongoDB Compass
-1. Download from [MongoDB Compass](https://www.mongodb.com/products/compass)
-2. Install with default settings
+### Storage Configuration
 
-#### Connect to Atlas
-1. Open MongoDB Compass
-2. Paste your Atlas connection string
-3. Replace `<password>` with your actual password
-4. Click "Connect"
-5. You should see your cluster and databases
+The system supports two storage modes:
 
-### 4. Environment Configuration
+- **Server Storage**: 2GB total capacity, 90-day retention, automatic backups
+- **Local Storage**: Unlimited capacity, device-only storage, no backups
 
-#### Step 1: Copy Environment Template
+Configure via user settings or programmatically through the storage service.
+
+## Mobile Companion
+
+### Features
+- **Live Video Streaming**: Continuous video frame streaming to main app for real-time classification
+- **Manual Image Capture**: Single image capture for individual analysis
+- **QR Code Pairing**: Instant connection to main application via same network
+- **Resolution Control**: Configurable quality from 512p to 1080p
+- **Storage Preferences**: Choose between server and local storage
+- **Multi-camera Support**: Front and rear camera switching
+
+### Network Requirements
+**IMPORTANT**: The mobile companion and main app must be on the **same network** to function:
+- **Local Network**: Both devices connected to same Wi-Fi network
+- **Field Usage**: Requires mobile data hotspot on tablet/edge device running main app
+- **No Internet**: Connection lost if network is interrupted
+
+### Setup Instructions
+
+1. **Access the companion app**
+   ```
+   http://localhost:3000/mobile-companion
+   ```
+
+2. **Connection Methods**
+   - **Manual**: Enter 6-digit code from main app
+   - **QR Code**: Scan QR code for instant pairing
+
+3. **Permissions**
+   - Camera access for live video capture
+   - Location services for GPS tagging (optional)
+
+### Live Video Streaming
+
+The mobile companion app provides **two modes of operation**:
+
+#### 1. Live Video Streaming Mode
+- **Continuous classification**: Streams video frames every 3 seconds to main app
+- **Real-time analysis**: Results appear on main app as mobile moves around
+- **Hands-free operation**: No need to manually capture individual images
+- **Field survey optimised**: Perfect for continuous monitoring while walking
+
+#### 2. Manual Capture Mode
+- **Single image capture**: Tap to capture individual images
+- **Gallery upload**: Upload existing photos from device
+- **Precise targeting**: For detailed analysis of specific plants
+
+#### Technical Implementation
+- `getUserMedia()` API for camera access
+- WebSocket communication for frame streaming
+- Canvas-based frame extraction every 3 seconds
+- Automatic quality adjustment based on network conditions
+
+### Field Usage Setup
+
+For **field work** without Wi-Fi access:
+
+1. **Equipment needed:**
+   - Tablet or edge device (runs main app)
+   - Mobile phone (runs companion app)
+   - Mobile data plan on tablet
+
+2. **Setup process:**
+   - Enable mobile hotspot on tablet/edge device
+   - Connect mobile phone to tablet's hotspot
+   - Run main app on tablet: `http://localhost:3000`
+   - Access companion on phone: `http://[tablet-ip]:3000/mobile-companion`
+   - Pair devices using QR code or 6-digit code
+
+3. **Operation:**
+   - Tablet displays map and receives classifications
+   - Mobile phone streams live video for continuous analysis
+   - All data syncs to main app for analysis and storage
+
+## API Reference
+
+### Authentication Endpoints
+
+#### `POST /auth/register`
+Register a new user account.
+
+**Request Body:**
+```json
+{
+  "username": "string",
+  "email": "string",
+  "password": "string"
+}
+```
+
+#### `POST /auth/login`
+Authenticate user and receive JWT token.
+
+**Request Body:**
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+
+### Sightings API
+
+#### `GET /api/sightings`
+Retrieve user's plant sightings with filtering options.
+
+**Query Parameters:**
+- `species`: Filter by species name
+- `startDate`: Filter from date (ISO format)
+- `endDate`: Filter to date (ISO format)
+- `invasive`: Boolean filter for invasive species
+
+#### `POST /api/sightings`
+Create new plant sighting from image upload.
+
+**Request Body:** `multipart/form-data`
+- `image`: Image file (JPEG, PNG, WebP, GIF)
+- `lat`: Latitude (optional)
+- `lng`: Longitude (optional)
+- `storagePreference`: "server" or "local"
+
+### Analytics Endpoints
+
+#### `GET /api/analytics/species`
+Retrieve species distribution analytics.
+
+#### `GET /api/analytics/temporal`
+Get temporal analysis with trend calculations.
+
+#### `GET /api/analytics/risk-assessment`
+Invasive species risk assessment data.
+
+### Storage Management
+
+#### `GET /api/storage/status`
+Retrieve current storage usage and limits.
+
+#### `POST /api/storage/cleanup`
+Trigger manual storage cleanup process.
+
+## Development
+
+### Local Development Setup
+
+1. **Install development dependencies**
+   ```bash
+   npm install --include=dev
+   ```
+
+2. **Start with automatic reload**
+   ```bash
+   npm run dev
+   ```
+
+3. **Run tests**
+   ```bash
+   npm test
+   ```
+
+### Code Style Guidelines
+
+- **JavaScript**: ES6+ modules, async/await patterns
+- **CSS**: Custom properties for theming, BEM methodology
+- **File Naming**: kebab-case for files, camelCase for variables
+- **Comments**: JSDoc format for functions, inline for complex logic
+
+### Testing
+
 ```bash
-cp env.example .env
+# Run all tests
+npm test
+
+# Run specific test suite
+npm run test:api
+npm run test:frontend
+
+# Coverage report
+npm run test:coverage
 ```
-
-#### Step 2: Configure Environment Variables
-Edit the `.env` file with your settings:
-
-```env
-# MongoDB Configuration
-MONGODB_URI=mongodb+srv://your_username:your_password@your_cluster.mongodb.net/plant_recognition?retryWrites=true&w=majority
-
-# Replace with your actual values:
-# - your_username: The username you created in Atlas
-# - your_password: The password you created in Atlas
-# - your_cluster: Your cluster name from Atlas
-
-# Application Settings
-PORT=3000
-NODE_ENV=development
-
-# File Upload Settings
-MAX_FILE_SIZE=10485760
-UPLOAD_PATH=./uploads
-
-# JWT Settings
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRES_IN=24h
-
-# Optional: Weather API (for weather notifications)
-WEATHER_API_KEY=your_weather_api_key_here
-```
-
-### 5. Install Dependencies
-
-#### Install Frontend Dependencies
-```bash
-cd plant_recognition/frontend
-npm install
-```
-
-#### Install Database Dependencies
-```bash
-cd plant_recognition/database
-npm install
-```
-
-### 6. Start the Application
-
-#### Option 1: Start Both Services (Recommended)
-From the root directory:
-```bash
-# Start database service
-cd plant_recognition/database
-npm start
-
-# In a new terminal, start frontend service
-cd plant_recognition/frontend
-npm start
-```
-
-#### Option 2: Start Individually
-```bash
-# Terminal 1 - Database
-cd plant_recognition/database
-npm start
-
-# Terminal 2 - Frontend  
-cd plant_recognition/frontend
-npm start
-```
-
-### 7. Access the Application
-- **Frontend**: http://localhost:3000
-- **Database API**: http://localhost:3001 (if running separately)
-
-## Project Structure
-
-```
-PlantRecognition/
-├── plant_recognition/
-│   ├── frontend/           # React/Node.js frontend
-│   │   ├── public/         # Static files
-│   │   ├── package.json    # Frontend dependencies
-│   │   └── server.js       # Frontend server
-│   ├── database/           # MongoDB backend
-│   │   ├── config/         # Database configuration
-│   │   ├── controllers/    # API controllers
-│   │   ├── models/         # MongoDB models
-│   │   ├── routes/         # API routes
-│   │   └── package.json    # Database dependencies
-│   ├── models/             # ML models
-│   └── .env               # Environment variables
-├── data_preprocessing/     # Data preparation scripts
-├── LLM/                   # Language model integration
-├── modeltraining/         # Model training scripts
-└── README.md             # This file
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### 1. MongoDB Connection Failed
-- **Error**: "MongoServerSelectionError"
-- **Solution**: 
-  - Check your connection string in `.env`
-  - Verify username/password are correct
-  - Ensure your IP is whitelisted in Atlas
-  - Check if cluster is running
-
-#### 2. Port Already in Use
-- **Error**: "EADDRINUSE"
-- **Solution**:
-  ```bash
-  # Find process using port 3000
-  netstat -ano | findstr :3000
-  
-  # Kill the process
-  taskkill /PID <process_id> /F
-  ```
-
-#### 3. Node Modules Missing
-- **Error**: "Cannot find module"
-- **Solution**:
-  ```bash
-  cd plant_recognition/frontend
-  rm -rf node_modules package-lock.json
-  npm install
-  ```
-
-#### 4. Environment Variables Not Loading
-- **Error**: "undefined" values
-- **Solution**:
-  - Ensure `.env` file is in the correct location
-  - Check for typos in variable names
-  - Restart the application after changes
-
-### Database Verification
-To verify your MongoDB connection is working:
-
-1. Open MongoDB Compass
-2. Connect to your Atlas cluster
-3. You should see a `plant_recognition` database created automatically
-4. Collections will be created as you use the application
-
-## Features
-
-- **AI Plant Recognition**: Upload images for instant plant identification
-- **Interactive Map**: View detection locations with custom pins
-- **Real-time Analytics**: Track detection trends and species distribution
-- **Species Encyclopedia**: Browse and search plant information
-- **Weather Integration**: Current weather data for detection context
-- **Admin Dashboard**: Comprehensive management interface
-
-## Security Notes
-
-- Never commit `.env` files to version control
-- Use strong passwords for database access
-- Regularly update dependencies
-- For production, use environment-specific configurations
-
-## Support
-
-If you encounter issues:
-1. Check the troubleshooting section above
-2. Verify all prerequisites are installed
-3. Ensure MongoDB Atlas cluster is running
-4. Check console logs for error messages
 
 ## Deployment
 
-For production deployment:
-1. Set `NODE_ENV=production` in `.env`
-2. Use a production MongoDB Atlas cluster
-3. Configure proper security groups and IP whitelisting
-4. Set up SSL certificates
-5. Use a process manager like PM2
+### Production Deployment
+
+1. **Environment preparation**
+   ```bash
+   NODE_ENV=production
+   PORT=80
+   ```
+
+2. **Build optimisation**
+   ```bash
+   npm run build
+   ```
+
+3. **Start production server**
+   ```bash
+   npm start
+   ```
+
+### Docker Deployment
+
+```dockerfile
+FROM node:16-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+### MongoDB Atlas Configuration
+
+Ensure your MongoDB Atlas cluster:
+- Allows connections from your deployment IP
+- Has appropriate user permissions
+- Includes necessary database indexes for performance
+
+## Contributing
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/new-feature`)
+3. Commit changes with descriptive messages
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Create a Pull Request
+
+### Code Standards
+
+- Follow existing code style and conventions
+- Add tests for new functionality
+- Update documentation for API changes
+- Ensure all tests pass before submitting
+
+### Bug Reports
+
+Include the following information:
+- Steps to reproduce the issue
+- Expected vs actual behaviour
+- Browser/device information
+- Console error messages
+- Screenshots if applicable
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For technical support or questions:
+- Create an issue on GitHub
+- Check existing documentation
+- Review the API reference
 
 ---
 
-**Happy Plant Recognition!** 
+**Version:** 2.0.0
+**Last Updated:** January 2025
+**Compatibility:** Node.js 16+, MongoDB 4.4+, Modern browsers with WebRTC support

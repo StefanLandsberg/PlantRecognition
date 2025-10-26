@@ -22,7 +22,7 @@ from functools import lru_cache
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CHROMA_DIR = os.path.join(SCRIPT_DIR, "vector_db")  # Absolute path to vector_db
 COLLECTION_NAME = "plants"
-EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBED_MODEL = "sentence-transformers/paraphrase-MiniLM-L3-v2"
 TOP_K = 3
 SOURCE = "Source: Invasive Alien & Problem Plants on The Witwatersrand & Magaliesberg. Field Guide by Karin Spottiswoode"
 
@@ -42,7 +42,7 @@ def initialize_components():
     
     # Prevent multiple initializations
     if _initialized:
-        print("RAG system already initialized, skipping...")
+        print("RAG system already initialized, skipping...", file=sys.stderr)
         return True
     
     try:
@@ -56,23 +56,26 @@ def initialize_components():
         
         # Initialize Sentence Transformer model with maximum speed optimizations
         model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
+        warm_batch = [
+            "dummy", "acacia", "kudzu", "unknown species",
+            "invasive plant", "alien plant", "riverbank weed", "garden shrub"
+        ]
         if torch.cuda.is_available():
-            model.half()  # Use FP16 for 2x speed
+            model.half()  # Use FP16 for speed
             model.eval()  # Set to eval mode
             torch.backends.cudnn.benchmark = True
             torch.backends.cudnn.deterministic = False
-            # Warm up the model with a dummy embedding for faster first query
-            model.encode(["dummy"], convert_to_tensor=True, device=DEVICE)
+            # Batch warm up to initialize kernels and allocator
+            _ = model.encode(warm_batch, convert_to_tensor=True, device=DEVICE, show_progress_bar=False)
         else:
-            # CPU optimizations
+            # CPU batch warm-up to trigger thread pools
             model.eval()
-            # Warm up CPU model
-            model.encode(["dummy"], convert_to_numpy=True)
+            _ = model.encode(warm_batch, convert_to_numpy=True, show_progress_bar=False)
         _initialized = True
         return True
         
     except Exception as e:
-        print(f"Error initializing RAG system: {e}")
+        print(f"Error initializing RAG system: {e}", file=sys.stderr)
         return False
 
 # === QUERY ===
@@ -430,7 +433,7 @@ def analyze_plant(species_name, confidence, image_path=None):
         }
     
     total_time = time.time() - start_time
-    print(f"LLM analysis completed in {total_time:.3f}s")
+    print(f"LLM analysis completed in {total_time:.3f}s", file=sys.stderr)
     
     # Cache the result for future use
     _analysis_cache[cache_key] = analysis.copy()  # Store a copy to avoid mutations
@@ -487,12 +490,12 @@ def main():
             
             if analysis:
                 # Output JSON result
-                print(json.dumps(analysis, indent=2))
+                print(json.dumps(analysis))
             else:
-                print(json.dumps({"error": "Analysis failed"}, indent=2))
+                print(json.dumps({"error": "Analysis failed"}))
                 
         except Exception as e:
-            print(json.dumps({"error": f"Analysis error: {str(e)}"}, indent=2))
+            print(json.dumps({"error": f"Analysis error: {str(e)}"}))
             sys.exit(1)
     else:
         print("Invalid mode. Use 'analyze' or 'server'")

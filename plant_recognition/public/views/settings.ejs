@@ -5,8 +5,7 @@
     try {
       var dark = localStorage.getItem('darkMode') !== 'false';
       document.documentElement.classList.add(dark ? 'dark-mode' : 'light-mode');
-      var cb = localStorage.getItem('colorBlindMode');
-      if (cb && cb !== 'none') document.documentElement.classList.add(cb);
+
     } catch(e) {}
   </script>
 
@@ -21,15 +20,7 @@
       <input type="checkbox" id="theme-toggle">
     </div>
 
-    <div class="setting-item">
-      <label for="color-blindness"><%= text.settings.color_blind_mode_label %></label>
-      <select id="color-blindness">
-        <option value="none"><%= text.settings.color_blind_off_option %></option>
-        <option value="protanopia">Protanopia</option>
-        <option value="deuteranopia">Deuteranopia</option>
-        <option value="tritanopia">Tritanopia</option>
-      </select>
-    </div>
+
 
     <div class="setting-item">
       <label for="language-select"><%= text.settings.language_label %></label>
@@ -42,18 +33,32 @@
 
 
     <div class="setting-item storage-preference">
-      <label for="storage-preference">Image Storage</label>
+      <label for="storage-preference">File Storage</label>
       <select id="storage-preference">
-        <option value="server">Server Storage (2GB total, 90 days retention, backed up)</option>
+        <option value="server">Server Storage (2GB total, 90 days retention)</option>
         <option value="local">Local Storage (Unlimited, device only)</option>
       </select>
       <div class="setting-help">
-        <p id="storage-description">Choose how your plant images are stored:</p>
+        <p id="storage-description">Choose how your files (images, videos, frames) are stored:</p>
         <ul>
-          <li><strong>Server Storage:</strong> Images saved to server with 2GB total storage. Kept for 90 days, backed up and accessible from any device.</li>
-          <li><strong>Local Storage:</strong> Images stored only on this device. Unlimited space but not backed up.</li>
+          <li><strong>Server Storage:</strong> Files saved to server with 2GB total storage. Kept for 90 days and accessible from any device.</li>
+          <li><strong>Local Storage:</strong> Files stored only on this device. Unlimited space.</li>
         </ul>
-        <p id="storage-warning" class="warning hidden">WARNING: Switching to local storage will delete all your server-stored images.</p>
+        <p id="storage-warning" class="warning hidden">NOTE: Switching to local storage will keep your server files for 90 days, then they will be automatically removed.</p>
+      </div>
+    </div>
+
+    <div class="setting-item local-storage-options hidden" id="local-storage-options">
+      <label>Local Storage Location</label>
+      <div class="storage-location-info">
+        <p>Current location: <span id="current-storage-location">Browser Storage</span></p>
+        <button type="button" id="select-storage-folder" class="button button-secondary">
+          Select Folder
+        </button>
+        <div class="setting-help">
+          <p><strong>Browser Storage:</strong> Files stored in browser's internal storage (IndexedDB)</p>
+          <p><strong>Custom Folder:</strong> Choose a folder on your device (requires modern browser support)</p>
+        </div>
       </div>
     </div>
 
@@ -64,6 +69,6 @@
   </div>
 
   <script src="/js/modal.js"></script>
-  <script src="/js/settings.js"></script>
+  <script type="module" src="/js/settings.js"></script>
 </body>
 </html>

@@ -154,6 +154,17 @@
     transition: border-color var(--transition-fast);
 }
 
+.setting-display {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-style: italic;
+}
+
 .input-group input:focus, .setting-select:focus {
     border-color: var(--accent);
 }
@@ -197,9 +208,10 @@
     top: var(--spacing-md);
     right: var(--spacing-md);
     z-index: 1000;
-    transform: translateX(100%);
+    transform: translateX(120%);
     transition: transform 0.3s ease-in-out;
-    max-width: 200px;
+    max-width: 260px;
+    pointer-events: none;
 }
 
 .classification-notification.show {
@@ -210,23 +222,68 @@
     background: var(--panel);
     border-radius: var(--radius-md);
     padding: var(--spacing-md);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     border: 1px solid var(--accent);
     backdrop-filter: blur(10px);
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.notification-content.duplicate {
+    border-color: var(--warning);
+}
+
+.notification-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
 }
 
 .notification-content .species-name {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--accent);
-    margin-bottom: var(--spacing-xs);
     line-height: 1.2;
 }
 
 .notification-content .confidence-text {
     font-size: 0.8rem;
     color: var(--muted);
-    text-align: right;
+    white-space: nowrap;
+}
+
+.notification-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: rgba(103, 212, 167, 0.12);
+    color: var(--accent);
+}
+
+.status-pill.success {
+    background: rgba(103, 212, 167, 0.12);
+    color: var(--accent);
+}
+
+.status-pill.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
 }
 
 /* Animations */

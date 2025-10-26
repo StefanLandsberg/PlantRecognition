@@ -141,14 +141,12 @@
                 </div>
 
                 <div class="setting-group">
-                    <label for="storage-select">Image Storage</label>
-                    <select id="storage-select" class="setting-select">
-                        <option value="server">Server Storage (2GB total, 90 days, backed up)</option>
-                        <option value="local">Local Storage (Unlimited, device only)</option>
-                    </select>
+                    <label>Image Storage</label>
+                    <div class="setting-display">
+                        <span id="storage-display">Inherited from main app</span>
+                    </div>
                     <div class="setting-help">
-                        <strong>Server Storage:</strong> Images saved to server with backup.<br>
-                        <strong>Local Storage:</strong> Images stored only on this device.
+                        Storage preference is automatically set by the main app when you connect via QR code.
                     </div>
                 </div>
 

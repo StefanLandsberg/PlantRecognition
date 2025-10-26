@@ -1574,3 +1574,259 @@
 .relative-position {
     position: relative;
 }
+/* 
+=== CLUSTER MARKER STYLES === */
+
+.marker-cluster {
+    position: relative;
+}
+
+.cluster-count-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent);
+    color: var(--background);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border: 2px solid var(--background);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+/* Ensure cluster markers have proper styling */
+.marker-cluster > div {
+    position: relative;
+}
+
+/* Hover effects for cluster markers */
+.marker-cluster:hover .cluster-count-badge {
+    transform: scale(1.1);
+    background: #5bc195;
+}
+
+.marker-cluster:hover > div {
+    transform: scale(1.05);
+}/* Vi
+deo Timeline Styles */
+.timeline-segment {
+    position: absolute;
+    width: 8px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timeline-segment.pending {
+    background-color: #fbbf24; /* Yellow for pending */
+}
+
+.timeline-segment.invasive {
+    background-color: #ef4444; /* Red for invasive */
+}
+
+.timeline-segment.unknown {
+    background-color: #6b7280; /* Gray for unknown */
+}
+
+.timeline-segment.active {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.timeline-segment:hover {
+    transform: scale(1.1);
+}
+/* Local Storage Options */
+.local-storage-options {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--panel-secondary, rgba(255, 255, 255, 0.05));
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.storage-location-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.storage-location-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+#current-storage-location {
+  font-weight: 600;
+  color: var(--text);
+}
+
+#select-storage-folder {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.local-storage-options .setting-help {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.local-storage-options .setting-help p {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+}
+
+/* Hide/show local storage options based on selection */
+.local-storage-options.hidden {
+  display: none;
+}
+
+/* Storage preference specific styling */
+.storage-preference .setting-help {
+  margin-top: 0.75rem;
+}
+
+.storage-preference .warning {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.storage-preference .warning.hidden {
+  display: none;
+}
+
+.card.duplicate-highlight {
+  outline: 2px solid var(--warning, #f59e0b);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+  animation: duplicateHighlightPulse 1s ease-in-out 2;
+}
+
+@keyframes duplicateHighlightPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    transform: scale(1.01);
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.15);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.05);
+  }
+}
+
+/* Video Session Thumbnails */
+.video-sessions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.video-session-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.video-session-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.session-thumbnail {
+    width: 100%;
+    height: 160px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.session-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-thumbnail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    gap: 0.5rem;
+}
+
+.no-thumbnail i {
+    font-size: 2rem;
+    opacity: 0.6;
+}
+
+.no-thumbnail.local-video {
+    color: var(--accent);
+}
+
+.no-thumbnail.local-video i {
+    color: var(--accent);
+    opacity: 0.8;
+}
+
+.session-info {
+    padding: 1rem;
+}
+
+.session-type {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.session-date {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.session-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.session-stats span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}

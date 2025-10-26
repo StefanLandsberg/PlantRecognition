@@ -380,12 +380,6 @@
   color: var(--success);
 }
 
-.previous-detection-label {
-  color: var(--warning);
-  font-weight: bold;
-  font-size: 0.75rem;
-}
-
 .warning-button {
   background: var(--warning);
   color: var(--background);
@@ -685,4 +679,163 @@
 .analysis-section.disclaimer p {
     color: var(--text);
     font-size: 0.8rem;
+}
+
+/* Removal Modal Styles */
+.removal-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+}
+
+.modal-content {
+    background: var(--surface);
+    padding: var(--space-xl);
+    border-radius: var(--radius-md);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    color: var(--text);
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: var(--error);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-lg);
+    justify-content: center;
+    margin-top: var(--space-xl);
+}
+
+.btn-cancel {
+    background: #6b7280;
+    color: var(--surface);
+    border: none;
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.btn-confirm {
+    background: var(--error);
+    color: var(--surface);
+    border: none;
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color var(--transition-fast);
+}
+
+.btn-cancel:hover {
+    background: #4b5563;
+}
+
+.btn-confirm:hover {
+    background: #b91c1c;
+}
+
+/* Analysis Popup Styles */
+.analysis-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.analysis-popup.show {
+    opacity: 1;
+}
+
+.popup-content {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border);
+}
+
+.popup-header h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.25rem;
+}
+
+.popup-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text);
+    padding: var(--space-xs);
+    transition: color var(--transition-fast);
+}
+
+.popup-close:hover {
+    color: var(--accent);
+}
+
+.popup-body {
+    flex: 1;
+    overflow-y: auto;
+    color: var(--text);
+}
+
+.modal-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+
+.sighting-details {
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--panel);
+    border-radius: var(--radius-md);
+}
+
+.sighting-details p {
+    margin: var(--space-xs) 0;
+    color: var(--text);
+}
+
+.llm-analysis h4 {
+    color: var(--accent);
+    margin-bottom: var(--space-sm);
 }
