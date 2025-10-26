@@ -1,6 +1,7 @@
-import { AuthAPI, AnalyzeAPI, SightingsAPI } from "./api.js";
+import { AuthAPI, AnalyzeAPI, SightingsAPI, VideoSessionAPI } from "./api.js";
 import { startVideo, stopVideo } from "./video.js";
 import { pickFile } from "./upload.js";
+import { storageAwareUpload, pickFileWithStorage } from "./storageAwareUpload.js";
 import { startSSE } from "./sse.js";
 import { addDetectionCard, setLLMCompleted, showClassificationLoading, showLLMLoading } from "./ui.js";
 // Import the singleton instance directly
@@ -17,8 +18,35 @@ function saveSessionDetection(detection) {
   }
 }
 
+function upsertSessionDetection(detection) {
+  try {
+    const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
+    const index = sessionDetections.findIndex((d) => d.sightingId === detection.sightingId);
+    if (index === -1) {
+      sessionDetections.push(detection);
+    } else {
+      sessionDetections[index] = detection;
+    }
+    sessionStorage.setItem('sessionDetections', JSON.stringify(sessionDetections));
+  } catch (error) {
+    console.warn('Failed to persist detection:', error);
+  }
+}
+
+function setSessionDetectionCache(detections) {
+  try {
+    sessionStorage.setItem('sessionDetections', JSON.stringify(detections));
+  } catch (error) {
+    console.warn('Failed to update detection cache:', error);
+  }
+}
+
 function restoreSessionDetections() {
   try {
+    const container = document.getElementById('detections-list');
+    if (!container) return;
+    container.innerHTML = '';
+
     const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
 
     // Filter out incomplete temp detections that are still "Analyzing..."
@@ -33,14 +61,17 @@ function restoreSessionDetections() {
     });
 
     completedDetections.forEach(detection => {
-      // Check if a card with this ID already exists
-      const existingCard = document.getElementById(`det-${detection.sightingId}`);
-      if (!existingCard) {
-        addDetectionCard(els.list, detection);
-        if (detection.llmCompleted) {
-          setTimeout(() => setLLMCompleted(detection.sightingId, detection.llm), 100);
+      addDetectionCard(container, detection);
+      // Always add LLM dropdown for all restored detections
+      setTimeout(() => {
+        if (detection.llm) {
+          // If we have LLM data, show it (regardless of llmCompleted flag)
+          setLLMCompleted(detection.sightingId, detection.llm);
+        } else {
+          // If no LLM data, still add the dropdown but show it's pending
+          setLLMCompleted(detection.sightingId, null);
         }
-      }
+      }, 100);
     });
 
     // Update session storage to only keep completed detections
@@ -59,6 +90,9 @@ function updateSessionDetection(oldId, newDetection) {
     if (index !== -1) {
       sessionDetections[index] = newDetection;
       sessionStorage.setItem('sessionDetections', JSON.stringify(sessionDetections));
+    } else {
+      sessionDetections.push(newDetection);
+      sessionStorage.setItem('sessionDetections', JSON.stringify(sessionDetections));
     }
   } catch (error) {
     console.warn('Failed to update session detection:', error);
@@ -71,6 +105,60 @@ function clearSessionDetections() {
   } catch (error) {
     console.warn('Failed to clear session detections:', error);
   }
+}
+
+function removeSessionDetection(sightingId) {
+  if (!sightingId) return;
+  try {
+    const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
+    const filtered = sessionDetections.filter(d => d.sightingId !== sightingId);
+    sessionStorage.setItem('sessionDetections', JSON.stringify(filtered));
+  } catch (error) {
+    console.warn('Failed to remove session detection:', error);
+  }
+}
+
+function removeDetectionCard(cardId) {
+  if (!cardId) return;
+  const domId = cardId.startsWith('det-') ? cardId : `det-${cardId}`;
+  const card = document.getElementById(domId);
+  if (card) {
+    card.remove();
+  }
+}
+
+function highlightExistingDetection(sightingId) {
+  if (!sightingId) return false;
+  const card = document.getElementById(`det-${sightingId}`);
+  if (!card) return false;
+
+  if (els.list && card !== els.list.firstChild) {
+    els.list.insertBefore(card, els.list.firstChild);
+  }
+
+  card.classList.add('duplicate-highlight');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => card.classList.remove('duplicate-highlight'), 2000);
+  return true;
+}
+
+function handleDuplicateDetection(tempSightingId, res) {
+  removeDetectionCard(tempSightingId);
+  removeSessionDetection(tempSightingId);
+
+  const foundExisting = highlightExistingDetection(res.originalDetection?.id);
+  if (mapProxy && typeof mapProxy.showNotification === 'function') {
+    const days = res.originalDetection?.daysAgo;
+    const relative = typeof days === 'number'
+      ? `${days} day${days === 1 ? '' : 's'} ago`
+      : 'recently';
+    const message = foundExisting
+      ? `${res.predictedSpecies} already logged nearby. Showing the earlier sighting.`
+      : `${res.predictedSpecies} was already logged ${relative} within the duplicate window.`;
+    mapProxy.showNotification(message, 'warning');
+  }
+
+  return foundExisting;
 }
 
 
@@ -97,6 +185,39 @@ console.log('Elements found:', {
 
 let userLoc = null;
 let videoAbortController = null; // Track active video analysis requests
+let currentVideoSession = null; // Track current video session
+let pendingVideoDetections = 0; // Frames currently being analyzed
+let waitingToEndVideoSession = false;
+
+function logVideoSessionWaitStatus() {
+  if (waitingToEndVideoSession && pendingVideoDetections > 0) {
+    console.log(`Waiting for ${pendingVideoDetections} pending frame(s) before ending video session`);
+  }
+}
+
+async function finalizeVideoSessionIfNeeded() {
+  if (!waitingToEndVideoSession) return;
+  if (pendingVideoDetections > 0) {
+    logVideoSessionWaitStatus();
+    return;
+  }
+
+  if (!currentVideoSession) {
+    waitingToEndVideoSession = false;
+    return;
+  }
+
+  try {
+    await VideoSessionAPI.end(currentVideoSession);
+    console.log('Ended video session:', currentVideoSession);
+  } catch (error) {
+    console.error('Failed to end video session:', error);
+    return;
+  }
+
+  currentVideoSession = null;
+  waitingToEndVideoSession = false;
+}
 
 async function geolocate() {
   return new Promise((res) => {
@@ -201,12 +322,19 @@ async function boot() {
             const existingCardDelayed = document.getElementById(`det-${msg.sighting._id}`);
             if (!existingCardDelayed) {
               console.log('Creating delayed detection card via SSE for:', msg.sighting._id);
-              addDetectionCard(els.list, {
+              const newDetection = {
                 sightingId: msg.sighting._id,
                 predictedSpecies: msg.sighting.analysis?.predictedSpecies || "Unknown Species",
                 confidence: msg.sighting.analysis?.confidence || 0,
                 imageUrl: msg.sighting.imagePath || msg.sighting.imageUrl,
-              });
+                llmCompleted: false,
+                llm: null
+              };
+              
+              addDetectionCard(els.list, newDetection);
+
+              // Save to session storage for persistence
+              saveSessionDetection(newDetection);
 
               // Show LLM loading for the new detection only if it's a known species with confidence > 0
               if (msg.sighting.analysis?.predictedSpecies !== 'Unknown Species' &&
@@ -222,12 +350,19 @@ async function boot() {
         if (!existingCard) {
           // Only add detection card if it doesn't already exist
           console.log('Creating new detection card via SSE for:', msg.sighting._id);
-          addDetectionCard(els.list, {
+          const newDetection = {
             sightingId: msg.sighting._id,
             predictedSpecies: msg.sighting.analysis?.predictedSpecies || "Unknown Species",
             confidence: msg.sighting.analysis?.confidence || 0,
             imageUrl: msg.sighting.imagePath || msg.sighting.imageUrl,
-          });
+            llmCompleted: false,
+            llm: null
+          };
+          
+          addDetectionCard(els.list, newDetection);
+
+          // Save to session storage for persistence
+          saveSessionDetection(newDetection);
 
           // Show LLM loading for all new detections
           showLLMLoading(msg.sighting._id);
@@ -243,21 +378,50 @@ async function boot() {
             data: { sightingId: msg.sighting._id, sighting: msg.sighting }
           });
         }
+      } else if (msg.type === "video_session_updated") {
+        console.log('Video session updated:', msg.sessionId, 'sighting:', msg.sightingId, 'status:', msg.newStatus);
+        
+        // If we're currently viewing this video session, refresh the timeline
+        if (window.currentVideoSessionId === msg.sessionId) {
+          console.log('Refreshing current video session timeline');
+          // Trigger a refresh of the video review if it's open
+          if (window.refreshVideoReview) {
+            window.refreshVideoReview();
+          }
+        }
       }
     });
 
     els.btnVideo.addEventListener("click", async () => {
       els.videoPanel.classList.remove("hidden");
 
+      waitingToEndVideoSession = false;
+      pendingVideoDetections = 0;
+
       // Create new abort controller for this video session
       videoAbortController = new AbortController();
 
-      await startVideo(async (blob) => {
+      // Start video session recording
+      try {
+        const sessionResponse = await VideoSessionAPI.start('live_video', userLoc.lat, userLoc.lng);
+        currentVideoSession = sessionResponse.sessionId;
+        console.log('Started video session:', currentVideoSession);
+      } catch (error) {
+        console.error('Failed to start video session:', error);
+      }
+
+      await startVideo(async (blob, timestamp) => {
         // Check if video session has been stopped
-        if (videoAbortController?.signal.aborted) {
+        if (videoAbortController?.signal.aborted || els.videoPanel.classList.contains("hidden")) {
           console.log('Video session stopped, skipping frame analysis');
           return;
         }
+        if (!currentVideoSession) {
+          console.warn('No active video session ID, skipping frame analysis');
+          return;
+        }
+        const frameSessionId = currentVideoSession;
+        pendingVideoDetections += 1;
         const tempSightingId = 'temp-' + Date.now();
 
         try {
@@ -295,11 +459,34 @@ async function boot() {
             }
           }, 10000); // 10s timeout
 
-          const res = await AnalyzeAPI.analyze(blob, {
-            lat: userLoc.lat,
-            lng: userLoc.lng,
-            fromVideo: true,
-          }, { signal: videoAbortController.signal });
+          // Handle storage-aware frame processing
+          let frameResult = null;
+          try {
+            frameResult = await storageAwareUpload(blob, {
+              originalName: 'video-frame.jpg',
+              uploadType: 'video_frame',
+              sessionId: frameSessionId,
+              timestamp: timestamp
+            });
+          } catch (error) {
+            console.warn('Storage-aware upload failed, using server upload:', error);
+          }
+
+          const formData = new FormData();
+          formData.append('image', blob, 'video-frame.jpg');
+          formData.append('lat', userLoc.lat);
+          formData.append('lng', userLoc.lng);
+          formData.append('fromVideo', 'true');
+          formData.append('videoSessionId', frameSessionId || '');
+          formData.append('videoTimestamp', typeof timestamp === 'number' ? Math.round(timestamp) : '');
+          
+          // Add storage information if using local storage
+          if (frameResult && frameResult.storageType === 'local') {
+            formData.append('localFileId', frameResult.fileId);
+            formData.append('storageType', 'local');
+          }
+
+          const res = await AnalyzeAPI.analyzeOnce(formData, { signal: videoAbortController.signal });
 
           clearTimeout(timeoutId);
           console.log('Video frame response:', res);
@@ -316,87 +503,8 @@ async function boot() {
 
           // Check if this is a duplicate detection
           if (res.duplicate) {
-            // Check if there's already a duplicate card for this species
-            const existingDuplicateCard = findExistingDuplicateCard(res.predictedSpecies);
-
-            if (existingDuplicateCard) {
-              // Remove the new detection card and move existing duplicate to top
-              const newDetectionCard = document.getElementById(`det-${tempSightingId}`);
-              if (newDetectionCard) {
-                newDetectionCard.remove();
-              }
-
-              // Move existing duplicate card to top of the list
-              const firstCard = els.list.firstChild;
-              if (firstCard && firstCard !== existingDuplicateCard) {
-                els.list.insertBefore(existingDuplicateCard, firstCard);
-              }
-
-              // Update the "days ago" text to reflect the most recent detection
-              const confDiv = existingDuplicateCard.querySelector('.badges div:last-child');
-              if (confDiv) {
-                confDiv.textContent = `${res.originalDetection.daysAgo} days ago`;
-              }
-
-              return; // Exit early since we're reusing existing duplicate card
-            }
-
-            // Handle new duplicate detection (first duplicate for this species)
-            const detectionCard = document.getElementById(`det-${tempSightingId}`);
-            if (detectionCard) {
-              detectionCard.id = `det-${res.sightingId}-duplicate`;
-
-              // Update card to show "Previously Detected" status
-              const speciesDiv = detectionCard.querySelector('.detection-species');
-              const confDiv = detectionCard.querySelector('.badges div:last-child');
-              const imgContainer = detectionCard.querySelector('img') ? detectionCard.querySelector('img').parentNode : detectionCard;
-
-              if (speciesDiv) {
-                speciesDiv.innerHTML = `Species: ${res.predictedSpecies} <span class="previous-detection-label">[PREVIOUSLY DETECTED]</span>`;
-                // Link to original detection
-                speciesDiv.setAttribute('onclick', `viewOriginalDetection('${res.originalDetection.id}')`);
-                speciesDiv.style.cursor = 'pointer';
-              }
-              if (confDiv) {
-                confDiv.textContent = `${res.originalDetection.daysAgo} days ago`;
-                confDiv.style.color = '#f59e0b';
-              }
-
-              // Add current image if available
-              if (res.imageUrl && !detectionCard.querySelector('img')) {
-                const img = document.createElement('img');
-                img.src = res.imageUrl;
-                img.alt = 'duplicate detection';
-                img.style.filter = 'grayscale(0.3) opacity(0.8)'; // Slightly faded to indicate duplicate
-                imgContainer.insertBefore(img, detectionCard.querySelector('.classification-loading'));
-              }
-
-              // Hide classification loading and show duplicate status
-              const loadingDiv = detectionCard.querySelector('.classification-loading');
-              if (loadingDiv) {
-                loadingDiv.style.display = 'none';
-              }
-
-              // Add "View Original" button
-              const duplicateInfo = document.createElement('div');
-              duplicateInfo.className = 'duplicate-info';
-              duplicateInfo.style.cssText = `
-                padding: 0.5rem;
-                background: rgba(245, 158, 11, 0.1);
-                border-radius: 6px;
-                margin-top: 0.5rem;
-                font-size: 0.75rem;
-                color: #f59e0b;
-                text-align: center;
-              `;
-              duplicateInfo.innerHTML = `
-                <div>Original: ${(res.originalDetection.confidence * 100).toFixed(1)}% confidence</div>
-                <button onclick="viewOriginalDetection('${res.originalDetection.id}')" class="warning-button">
-                  View Original
-                </button>
-              `;
-              detectionCard.appendChild(duplicateInfo);
-            }
+            handleDuplicateDetection(tempSightingId, res);
+            return;
           } else {
             // Handle normal (new) detection with optimized updates
             updateDetectionCardFromResponse(tempSightingId, res);
@@ -408,6 +516,19 @@ async function boot() {
               confidence: res.confidence,
               imageUrl: res.imageUrl,
             });
+
+            // Add detection to video session
+            if (frameSessionId) {
+              try {
+                console.log(`Adding detection to video session: ${frameSessionId}, sightingId: ${res.sightingId}, timestamp: ${timestamp}`);
+                const result = await VideoSessionAPI.addDetection(frameSessionId, timestamp, res.imageUrl, res.sightingId);
+                console.log(`✓ Detection added to video session:`, result);
+              } catch (error) {
+                console.error('✗ Failed to add detection to video session:', error);
+              }
+            } else {
+              console.log('No captured video session ID - detection not added to session');
+            }
           }
 
           // Only add map marker for new detections (not duplicates)
@@ -434,38 +555,64 @@ async function boot() {
           }
         } catch (error) {
           // Don't show error for intentionally aborted video analysis
-          if (error.name === 'AbortError' && videoAbortController?.signal.aborted) {
+          if (error.name === 'AbortError') {
             console.log('Video analysis aborted by user');
             // Remove the temp detection card since analysis was cancelled
             const tempCard = document.getElementById(`det-${tempSightingId}`);
             if (tempCard) {
               tempCard.remove();
             }
+            return; // Don't log this as an error
           } else {
             handleAnalysisError(tempSightingId, error);
           }
+        } finally {
+          pendingVideoDetections = Math.max(0, pendingVideoDetections - 1);
+          finalizeVideoSessionIfNeeded();
         }
       });
     });
 
-    els.btnStop.addEventListener("click", () => {
-      console.log('Stopping video and aborting all analysis requests');
+    els.btnStop.addEventListener("click", async () => {
+      console.log('Stopping video capture - allowing all pending analysis to complete');
 
-      // Abort all ongoing video analysis requests
+      // Stop video capture and get recorded video
+      const videoBlob = await stopVideo();
+      els.videoPanel.classList.add("hidden");
+
+      // Upload the recorded video if available
+      if (videoBlob && currentVideoSession) {
+        console.log('Uploading recorded video for session:', currentVideoSession);
+        try {
+          const { uploadVideoFile } = await import('./video.js');
+          const videoUrl = await uploadVideoFile(videoBlob, currentVideoSession);
+          if (videoUrl) {
+            console.log('Video uploaded successfully:', videoUrl);
+          } else {
+            console.warn('Video upload failed');
+          }
+        } catch (error) {
+          console.error('Error uploading video:', error);
+        }
+      }
+
+      waitingToEndVideoSession = true;
+      await finalizeVideoSessionIfNeeded();
+
+      // Reset the abort controller to prevent new analysis requests
+      // but don't abort existing ones - let them complete naturally
       if (videoAbortController) {
-        videoAbortController.abort();
         videoAbortController = null;
       }
 
-      // Stop video capture
-      stopVideo();
-      els.videoPanel.classList.add("hidden");
-
-      console.log('Video stopped and all requests aborted');
+      console.log('Video stopped - all pending analysis will complete naturally');
     });
 
     els.btnUpload.addEventListener("click", () => {
-      pickFile("file-input", async (file) => {
+      pickFileWithStorage("file-input", async (fileOrResult) => {
+        // Handle both regular files and storage-aware results
+        const file = fileOrResult.file || fileOrResult;
+        const isLocalStorage = fileOrResult.storageType === 'local';
         const tempSightingId = 'temp-' + Date.now();
 
         try {
@@ -495,97 +642,29 @@ async function boot() {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for uploads
 
-          const res = await AnalyzeAPI.analyze(file, {
-            lat: userLoc.lat,
-            lng: userLoc.lng,
-            fromVideo: false,
-          }, { signal: controller.signal });
+          const formData = new FormData();
+          formData.append('image', file);
+          formData.append('lat', userLoc.lat);
+          formData.append('lng', userLoc.lng);
+          formData.append('fromVideo', 'false');
+          formData.append('videoSessionId', '');
+          formData.append('videoTimestamp', '');
+          
+          // Add storage information if using local storage
+          if (isLocalStorage && fileOrResult.fileId) {
+            formData.append('localFileId', fileOrResult.fileId);
+            formData.append('storageType', 'local');
+          }
+
+          const res = await AnalyzeAPI.analyzeOnce(formData, { signal: controller.signal });
 
           clearTimeout(timeoutId);
           console.log('Upload response:', res);
 
           // Check if this is a duplicate detection (same logic as video)
           if (res.duplicate) {
-            // Check if there's already a duplicate card for this species
-            const existingDuplicateCard = findExistingDuplicateCard(res.predictedSpecies);
-
-            if (existingDuplicateCard) {
-              // Remove the new detection card and move existing duplicate to top
-              const newDetectionCard = document.getElementById(`det-${tempSightingId}`);
-              if (newDetectionCard) {
-                newDetectionCard.remove();
-              }
-
-              // Move existing duplicate card to top of the list
-              const firstCard = els.list.firstChild;
-              if (firstCard && firstCard !== existingDuplicateCard) {
-                els.list.insertBefore(existingDuplicateCard, firstCard);
-              }
-
-              // Update the "days ago" text to reflect the most recent detection
-              const confDiv = existingDuplicateCard.querySelector('.badges div:last-child');
-              if (confDiv) {
-                confDiv.textContent = `${res.originalDetection.daysAgo} days ago`;
-              }
-
-              return; // Exit early since we're reusing existing duplicate card
-            }
-
-            // Handle new duplicate detection (first duplicate for this species)
-            const detectionCard = document.getElementById(`det-${tempSightingId}`);
-            if (detectionCard) {
-              detectionCard.id = `det-${res.sightingId}-duplicate`;
-
-              // Update card to show "Previously Detected" status
-              const speciesDiv = detectionCard.querySelector('.detection-species');
-              const confDiv = detectionCard.querySelector('.badges div:last-child');
-              const imgContainer = detectionCard.querySelector('img') ? detectionCard.querySelector('img').parentNode : detectionCard;
-
-              if (speciesDiv) {
-                speciesDiv.innerHTML = `Species: ${res.predictedSpecies} <span class="previous-detection-label">[PREVIOUSLY DETECTED]</span>`;
-                speciesDiv.setAttribute('onclick', `viewOriginalDetection('${res.originalDetection.id}')`);
-                speciesDiv.style.cursor = 'pointer';
-              }
-              if (confDiv) {
-                confDiv.textContent = `${res.originalDetection.daysAgo} days ago`;
-                confDiv.style.color = '#f59e0b';
-              }
-
-              // Add current image if available (with duplicate styling)
-              if (res.imageUrl && !detectionCard.querySelector('img')) {
-                const img = document.createElement('img');
-                img.src = res.imageUrl;
-                img.alt = 'duplicate detection';
-                img.style.filter = 'grayscale(0.3) opacity(0.8)'; // Slightly faded to indicate duplicate
-                imgContainer.insertBefore(img, detectionCard.querySelector('.classification-loading'));
-              }
-
-              // Hide classification loading and show duplicate status
-              const loadingDiv = detectionCard.querySelector('.classification-loading');
-              if (loadingDiv) {
-                loadingDiv.style.display = 'none';
-              }
-
-              // Add "View Original" button
-              const duplicateInfo = document.createElement('div');
-              duplicateInfo.className = 'duplicate-info';
-              duplicateInfo.style.cssText = `
-                padding: 0.5rem;
-                background: rgba(245, 158, 11, 0.1);
-                border-radius: 6px;
-                margin-top: 0.5rem;
-                font-size: 0.75rem;
-                color: #f59e0b;
-                text-align: center;
-              `;
-              duplicateInfo.innerHTML = `
-                <div>Original: ${(res.originalDetection.confidence * 100).toFixed(1)}% confidence</div>
-                <button onclick="viewOriginalDetection('${res.originalDetection.id}')" class="warning-button">
-                  View Original
-                </button>
-              `;
-              detectionCard.appendChild(duplicateInfo);
-            }
+            handleDuplicateDetection(tempSightingId, res);
+            return;
           } else {
             // Handle normal (new) detection
             console.log('Upload response received for:', tempSightingId, '->', res.sightingId);
@@ -677,39 +756,23 @@ function handleAnalysisError(tempId, error) {
 
   const detectionCard = document.getElementById(`det-${tempId}`);
   if (detectionCard) {
+    if (error.name === 'AbortError') {
+      // For abort errors, just remove the card instead of showing timeout
+      detectionCard.remove();
+      return;
+    }
+    
     requestAnimationFrame(() => {
       const speciesDiv = detectionCard.querySelector('.detection-species');
       const loadingDiv = detectionCard.querySelector('.classification-loading');
 
       if (speciesDiv) {
-        if (error.name === 'AbortError') {
-          speciesDiv.innerHTML = 'Species: Request Timeout';
-        } else {
-          speciesDiv.innerHTML = 'Species: Analysis Failed';
-        }
+        speciesDiv.innerHTML = 'Species: Analysis Failed';
       }
       if (loadingDiv) loadingDiv.style.display = 'none';
     });
   }
 }
-
-// Helper function to find existing duplicate card for a species
-function findExistingDuplicateCard(species) {
-  const allCards = document.querySelectorAll('[id^="det-"][id$="-duplicate"]');
-  for (const card of allCards) {
-    const speciesDiv = card.querySelector('.detection-species');
-    if (speciesDiv && speciesDiv.textContent.includes(species)) {
-      return card;
-    }
-  }
-  return null;
-}
-
-// Global function to view original detection (for duplicate detection buttons)
-window.viewOriginalDetection = function(sightingId) {
-  // Navigate to sightings page with the specific sighting highlighted
-  window.location.href = `/sightings#${sightingId}`;
-};
 
 boot().then(() => {
   // Restore any session detections after the page loads

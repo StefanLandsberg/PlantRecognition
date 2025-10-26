@@ -1,12 +1,25 @@
-import { AuthAPI, AccountAPI } from './api.js';
+// Import APIs dynamically to avoid module issues
+let AuthAPI, AccountAPI;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load API modules dynamically
+    try {
+        const apiModule = await import('./api.js');
+        AuthAPI = apiModule.AuthAPI;
+        AccountAPI = apiModule.AccountAPI;
+    } catch (error) {
+        console.error('Failed to load API module:', error);
+        return;
+    }
     // 1. Get all the necessary elements from the page
     const themeToggle = document.getElementById('theme-toggle');
-    const colorBlindnessSelect = document.getElementById('color-blindness');
+
     const languageSelect = document.getElementById('language-select');
     const storagePreferenceSelect = document.getElementById('storage-preference');
     const storageWarning = document.getElementById('storage-warning');
+    const localStorageOptions = document.getElementById('local-storage-options');
+    const currentStorageLocation = document.getElementById('current-storage-location');
+    const selectStorageFolderBtn = document.getElementById('select-storage-folder');
     const applyBtn = document.getElementById('apply-btn');
     const cancelBtn = document.getElementById('cancel-btn');
     const body = document.body;
@@ -25,15 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body.classList.add('light-mode');
         }
 
-        // Apply Color Blindness filter
-        // First, remove any existing filter classes
-        body.classList.remove('protanopia', 'deuteranopia', 'tritanopia');
-        
-        // Then, add the selected one (if it's not 'none')
-        const selectedFilter = colorBlindnessSelect.value;
-        if (selectedFilter !== 'none') {
-            body.classList.add(selectedFilter);
-        }
+
     }
 
     // 2. Load and display the current saved settings when the page opens
@@ -50,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isDarkModeSaved = !body.classList.contains('light-mode');
         }
 
-        const colorBlindModeSaved = localStorage.getItem('colorBlindMode') || 'none';
+
         const languageSaved = localStorage.getItem('language') || 'en';
 
         // Load user data for storage preference
@@ -65,21 +70,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update the controls on the page to reflect the saved settings
         themeToggle.checked = isDarkModeSaved;
-        colorBlindnessSelect.value = colorBlindModeSaved;
+
         languageSelect.value = languageSaved;
+
+        // Initialize storage preference display
+        handleStoragePreferenceChange();
 
         // Apply the current settings to the settings page itself for consistency
         applySettings();
     }
 
-    // Handle storage preference change to show warning
+    // Handle storage preference change to show warning and local options
     function handleStoragePreferenceChange() {
         const newPreference = storagePreferenceSelect.value;
 
+        // Show/hide warning
         if (originalStoragePreference === 'server' && newPreference === 'local') {
             storageWarning.classList.remove('hidden');
         } else {
             storageWarning.classList.add('hidden');
+        }
+
+        // Show/hide local storage options
+        if (newPreference === 'local') {
+            localStorageOptions.classList.remove('hidden');
+            updateStorageLocationDisplay();
+        } else {
+            localStorageOptions.classList.add('hidden');
+        }
+    }
+
+    // Update the storage location display
+    function updateStorageLocationDisplay() {
+        const currentLocation = localStorage.getItem('localStorageDirectory') || 'Browser Storage';
+        currentStorageLocation.textContent = currentLocation;
+    }
+
+    // Handle folder selection
+    async function handleFolderSelection() {
+        try {
+            // Import the storage service dynamically
+            const { StorageAwareUploadService } = await import('./storageAwareUpload.js');
+            const storageService = new StorageAwareUploadService();
+            
+            const dirHandle = await storageService.selectLocalStorageDirectory();
+            if (dirHandle) {
+                updateStorageLocationDisplay();
+                await showModal.success(
+                    'Folder Selected',
+                    `Local storage will use: ${dirHandle.name}`
+                );
+            }
+        } catch (error) {
+            console.error('Folder selection failed:', error);
+            await showModal.error(
+                'Folder Selection Failed',
+                'Unable to select folder. Your browser may not support this feature or you cancelled the selection.'
+            );
         }
     }
     
@@ -91,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Save other settings (like dark mode) to localStorage as before
         localStorage.setItem('darkMode', themeToggle.checked);
-        localStorage.setItem('colorBlindMode', colorBlindnessSelect.value);
+
 
         // Get the newly selected language from the dropdown
         const selectedLanguage = languageSelect.value;
@@ -105,9 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (originalStoragePreference === 'server' && newStoragePreference === 'local') {
                     const confirmed = await showModal.confirm(
                         'Switch to Local Storage',
-                        'This will delete all your server-stored images permanently. Your images will only be stored on this device going forward. Are you sure?',
+                        'Your server-stored files will remain accessible for 90 days, then be automatically removed. New files will be stored locally on this device. Continue?',
                         {
-                            danger: true,
                             confirmText: 'Switch to Local',
                             cancelText: 'Keep Server Storage'
                         }
@@ -122,10 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update storage preference
                 const result = await AccountAPI.updateStoragePreference(newStoragePreference);
 
-                if (result.cleanupResult) {
+                if (result.message) {
                     await showModal.alert(
                         'Storage Updated',
-                        `Storage preference updated to ${newStoragePreference}. ${result.cleanupResult.message}`
+                        `Storage preference updated to ${newStoragePreference}. ${result.message}`
                     );
                 } else {
                     await showModal.success(
@@ -161,9 +207,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add storage preference change listener
     storagePreferenceSelect.addEventListener('change', handleStoragePreferenceChange);
 
+    // Add folder selection listener
+    if (selectStorageFolderBtn) {
+        selectStorageFolderBtn.addEventListener('click', handleFolderSelection);
+    }
+
     // Add immediate preview for settings changes
     themeToggle.addEventListener('change', applySettings);
-    colorBlindnessSelect.addEventListener('change', applySettings);
+
 
 
     // --- Initial Execution ---

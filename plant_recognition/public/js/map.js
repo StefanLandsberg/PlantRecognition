@@ -351,7 +351,11 @@ class MapLoaderProxy {
 
   // Calculate responsive positioning for popups within screen boundaries
   calculatePopupPosition(popupElement, markerElement, preferredPosition = 'bottom') {
-    const mapContainer = document.getElementById('map');
+    // Try to find the correct map element - could be 'map' or 'cluster-map'
+    let mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+      mapContainer = document.getElementById('cluster-map');
+    }
     const mapRect = mapContainer.getBoundingClientRect();
     const markerRect = markerElement.getBoundingClientRect();
 
@@ -1926,7 +1930,11 @@ ${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sigh
       // Position popup near the marker
       if (markerContainer && markerContainer.getBoundingClientRect) {
         const markerRect = markerContainer.getBoundingClientRect();
-        const mapElement = document.getElementById('map');
+        // Try to find the correct map element - could be 'map' or 'cluster-map'
+        let mapElement = document.getElementById('map');
+        if (!mapElement) {
+          mapElement = document.getElementById('cluster-map');
+        }
         if (mapElement) {
           const mapRect = mapElement.getBoundingClientRect();
 

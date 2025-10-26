@@ -19,6 +19,25 @@ export async function postJSON(url, body) {
     throw error;
   }
 }
+
+export async function putJSON(url, body) {
+  console.log('putJSON called:', url, body);
+  try {
+    const res = await fetch(url, { ...common, method: 'PUT', body: JSON.stringify(body) });
+    console.log('fetch response:', res.status, res.statusText);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log('API error response:', errorText);
+      throw new Error(errorText);
+    }
+    const result = await res.json();
+    console.log('API success response:', result);
+    return result;
+  } catch (error) {
+    console.error('putJSON error:', error);
+    throw error;
+  }
+}
 export async function getJSON(url) {
   const res = await fetch(url, { ...common, method: 'GET' });
   if (!res.ok) throw new Error(await res.text());
@@ -54,18 +73,16 @@ export const SightingsAPI = {
     if (includeRemoved) params.push('includeRemoved=true');
     if (params.length > 0) url += '?' + params.join('&');
     return getJSON(url);
+  },
+  remove: (sightingId) => {
+    return postJSON(`/api/sightings/${sightingId}/remove`, {});
   }
 };
 
 // Analyze
 export const AnalyzeAPI = {
-  analyze: (blob, { lat, lng, fromVideo }, options = {}) => {
-    const fd = new FormData();
-    fd.append('image', blob, 'frame.jpg');
-    if (lat != null) fd.append('lat', String(lat));
-    if (lng != null) fd.append('lng', String(lng));
-    if (fromVideo != null) fd.append('fromVideo', String(fromVideo));
-    return postForm('/api/analyze', fd, options);
+  analyzeOnce: (formData, options = {}) => {
+    return postForm('/api/analyze', formData, options);
   }
 };
 
@@ -75,7 +92,21 @@ export const StorageAPI = {
   cleanup: (days = 30) => postJSON('/api/storage/cleanup', { days })
 };
 
+
+
 // Account Storage Preferences
 export const AccountAPI = {
   updateStoragePreference: (storagePreference) => postJSON('/api/account/storage-preference', { storagePreference })
+};
+
+// Video Sessions
+export const VideoSessionAPI = {
+  start: (sessionType, lat, lng) => postJSON('/api/video-sessions/start', { sessionType, lat, lng }),
+  end: (sessionId) => putJSON(`/api/video-sessions/${sessionId}/end`, {}),
+  addDetection: (sessionId, timestamp, frameUrl, sightingId) => 
+    postJSON(`/api/video-sessions/${sessionId}/detections`, { timestamp, frameUrl, sightingId }),
+  updateDetectionStatus: (sessionId, detectionIndex, status) => 
+    putJSON(`/api/video-sessions/${sessionId}/detections/${detectionIndex}/status`, { status }),
+  list: (limit = 20, skip = 0) => getJSON(`/api/video-sessions?limit=${limit}&skip=${skip}`),
+  get: (sessionId) => getJSON(`/api/video-sessions/${sessionId}`)
 };

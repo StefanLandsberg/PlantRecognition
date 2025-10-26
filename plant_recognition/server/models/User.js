@@ -8,7 +8,7 @@ const schema = new mongoose.Schema({
     type: String,
     enum: ['server', 'local'],
     default: 'server',
-    description: 'User preference for image storage: server (50MB limit) or local (unlimited)'
+    description: 'User preference for file storage: server (2GB limit, 90 days retention) or local (unlimited)'
   }
 }, { timestamps: true });
 export default mongoose.model('User', schema);

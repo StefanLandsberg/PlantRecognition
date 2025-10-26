@@ -78,21 +78,19 @@ router.put("/storage-preference", requireAuth, async (req, res, next) => {
     // Update storage preference
     await User.findByIdAndUpdate(userId, { storagePreference }, { runValidators: true });
 
-    // If switching from server to local, clean up server images
-    let cleanupResult = null;
+    // Note: When switching from server to local, we don't delete files immediately
+    // They will be cleaned up by the 90-day retention policy
+    let message = null;
     if (oldPreference === 'server' && storagePreference === 'local') {
-      cleanupResult = await cleanupUserServerImages(userId);
-      console.log(`User ${userId} switched to local storage. Cleaned up ${cleanupResult.removedCount} server images (${cleanupResult.freedFormatted})`);
+      message = 'Switched to local storage. Server files will be kept for 90 days.';
+      console.log(`User ${userId} switched to local storage. Server files will be retained for 90 days.`);
     }
 
     return res.json({
       ok: true,
       storagePreference,
       previousPreference: oldPreference,
-      cleanupResult: cleanupResult ? {
-        message: `Cleaned up ${cleanupResult.removedCount} server images and freed ${cleanupResult.freedFormatted}`,
-        ...cleanupResult
-      } : null
+      message: message
     });
   } catch (err) {
     next(err);

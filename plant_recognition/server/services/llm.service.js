@@ -11,9 +11,10 @@ class LLMQueue {
     this.queue = [];
     this.processing = false;
     this.maxRetries = 3;
+    this.completedAnalyses = new Map(); // Store completed analyses by userId
   }
 
-  async add(sightingId, species, confidence, callback) {
+  async add(sightingId, species, confidence, callback, userId) {
     return new Promise((resolve, reject) => {
       const queueItem = {
         sightingId,
@@ -23,7 +24,8 @@ class LLMQueue {
         resolve,
         reject,
         retries: 0,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        userId
       };
 
       this.queue.push(queueItem);
@@ -49,6 +51,7 @@ class LLMQueue {
 
       try {
         console.log(`[LLM Queue] Processing sighting ${item.sightingId} (${item.species})`);
+        const analysisStart = Date.now();
         const result = await this.processLLMAnalysis(item.sightingId, item.species, item.confidence);
 
         // Execute callback for database update and SSE notification
@@ -57,7 +60,8 @@ class LLMQueue {
         }
 
         item.resolve(result);
-        console.log(`[LLM Queue] Completed sighting ${item.sightingId}`);
+        const analysisDuration = Date.now() - analysisStart;
+        console.log(`[LLM Queue] Completed sighting ${item.sightingId} in ${analysisDuration}ms`);
 
       } catch (error) {
         console.error(`[LLM Queue] Error processing sighting ${item.sightingId}:`, error.message);
@@ -218,6 +222,25 @@ export async function queueLLMAnalysis(sightingId, species, confidence, callback
 // Get queue status for monitoring
 export function getLLMQueueStatus() {
   return llmQueue.getQueueStatus();
+}
+
+// Optional warm-up at server start: primes Python model & embedding cache
+export async function warmLLM() {
+  try {
+    const warmSpecies = [
+      'Acacia mearnsii',
+      'Kudzu Vine',
+      'Unknown species',
+    ];
+    for (const name of warmSpecies) {
+      // Sightings IDs are arbitrary for warm-up; no callback means no DB update
+      await llmQueue.processLLMAnalysis(`warmup-${Date.now()}`, name, 0.5);
+    }
+    return true;
+  } catch (e) {
+    console.warn('[LLM Warmup] Failed:', e?.message || e);
+    return false;
+  }
 }
 
 function createBasicAnalysis(species, confidence) {

@@ -1,1 +1,0 @@
-// No search functionality - images simply hidden when missing

@@ -1,4 +1,6 @@
 import { SightingsAPI } from "./api.js";
+import * as analytics from "./sightings/analytics.js";
+import { calculateDistance } from "./sightings/utils.js";
 
 
 function fmtDate(s) {
@@ -172,11 +174,22 @@ function initializeNotifications() {
   // Load notifications from localStorage
   const savedNotifications = localStorage.getItem('plantNotifications');
   if (savedNotifications) {
-    notifications = JSON.parse(savedNotifications);
+    try {
+      const parsed = JSON.parse(savedNotifications);
+      notifications.risk = Array.isArray(parsed?.risk) ? parsed.risk : [];
+      notifications.weather = Array.isArray(parsed?.weather) ? parsed.weather : [];
+      notifications.general = Array.isArray(parsed?.general) ? parsed.general : [];
+      notifications.completedAlerts = Array.isArray(parsed?.completedAlerts) ? parsed.completedAlerts : [];
+    } catch (error) {
+      console.warn('Failed to parse stored notifications:', error);
+      notifications = {
+        risk: [],
+        weather: [],
+        general: [],
+        completedAlerts: []
+      };
+    }
   }
-
-  // Check for daily weather alert
-  checkDailyWeatherAlert();
 
   // Update notification badges
   updateNotificationBadges();
@@ -216,60 +229,100 @@ function getActiveNotifications(type) {
   return notifications[type].filter(n => !n.dismissed);
 }
 
-function checkDailyWeatherAlert() {
-  const today = new Date().toDateString();
-  const hasWeatherToday = notifications.weather.some(n =>
-    new Date(n.timestamp).toDateString() === today && !n.dismissed
+function updateDailyActivityAlert(sightings) {
+  const todayKey = new Date().toDateString();
+
+  notifications.weather = notifications.weather.filter((n) => n.meta?.type !== "daily-activity");
+
+  const todaySightings = sightings.filter((s) => {
+    const created = new Date(s.createdAt || s.capturedAt);
+    return !Number.isNaN(created.getTime()) && created.toDateString() === todayKey;
+  });
+
+  const removalsToday = sightings.filter((s) => {
+    if (!s.removedAt) return false;
+    const removed = new Date(s.removedAt);
+    return !Number.isNaN(removed.getTime()) && removed.toDateString() === todayKey;
+  });
+
+  const highRiskToday = todaySightings.filter((s) => {
+    const risk = s.analysis?.llm?.details?.risk_level || "";
+    return typeof risk === "string" && risk.toLowerCase().includes("high");
+  });
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const recentSightings = sightings.filter((s) => {
+    const created = new Date(s.createdAt || s.capturedAt);
+    return !Number.isNaN(created.getTime()) && created >= sevenDaysAgo;
+  });
+
+  const recentDayKeys = new Set(
+    recentSightings.map((s) => new Date(s.createdAt || s.capturedAt).toDateString())
   );
 
-  if (!hasWeatherToday) {
-    // Generate daily weather alert
-    const weatherConditions = ['Sunny', 'Partly Cloudy', 'Overcast', 'Light Rain', 'Heavy Rain', 'Windy'];
-    const condition = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
-    const temp = Math.floor(Math.random() * 20) + 15; // 15-35°C
+  const avgDailyActivity = recentDayKeys.size > 0
+    ? recentSightings.length / recentDayKeys.size
+    : todaySightings.length;
 
-    let alertLevel = 'info';
-    let alertTitle = 'Daily Weather Update';
-    let alertAction = 'Check detailed forecast';
+  const differenceFromAverage = avgDailyActivity
+    ? todaySightings.length - avgDailyActivity
+    : 0;
 
-    // Create special alerts for certain conditions
-    if (condition === 'Heavy Rain') {
-      alertLevel = 'warning';
-      alertTitle = 'Weather Alert: Heavy Rain';
-      alertAction = 'Review safety protocols';
-    } else if (condition === 'Windy') {
-      alertLevel = 'warning';
-      alertTitle = 'Weather Alert: High Winds';
-      alertAction = 'Adjust monitoring plans';
-    }
-
-    addNotification('weather', {
-      title: alertTitle,
-      description: `Today's conditions: ${condition}, ${temp}°C. ${condition === 'Heavy Rain' || condition === 'Windy' ? 'Take precautions during field work.' : 'Optimal conditions for species monitoring.'}`,
-      level: alertLevel,
-      action: alertAction
-    });
+  let level = "info";
+  if (todaySightings.length === 0) {
+    level = "info";
+  } else if (highRiskToday.length >= 3 || todaySightings.length >= avgDailyActivity * 2) {
+    level = "critical";
+  } else if (highRiskToday.length > 0 || todaySightings.length >= avgDailyActivity * 1.25) {
+    level = "warning";
   }
+
+  const trendDescription = avgDailyActivity
+    ? `${differenceFromAverage >= 0 ? "+" : ""}${differenceFromAverage.toFixed(1)} vs 7-day avg`
+    : "No 7-day baseline";
+
+  const description = todaySightings.length === 0
+    ? (removalsToday.length > 0
+        ? `No new sightings logged today. ${removalsToday.length} removal${removalsToday.length === 1 ? "" : "s"} recorded.`
+        : "No new sightings logged today. Use the time to inspect known hotspots.")
+    : `${todaySightings.length} detection${todaySightings.length === 1 ? "" : "s"} today (${trendDescription}). ${highRiskToday.length} high-risk detection${highRiskToday.length === 1 ? "" : "s"} flagged. Removals logged: ${removalsToday.length}.`;
+
+  let action = "Maintain routine monitoring.";
+  if (level === "critical") {
+    action = "Deploy crews to hotspots immediately.";
+  } else if (level === "warning") {
+    action = "Prioritize verification of high-risk detections.";
+  } else if (todaySightings.length === 0 && removalsToday.length === 0) {
+    action = "Schedule proactive site inspections.";
+  } else if (removalsToday.length > 0 && todaySightings.length === 0) {
+    action = "Document removal outcomes and monitor treated areas.";
+  }
+
+  addNotification("weather", {
+    title: "Daily Activity Summary",
+    description,
+    level,
+    action,
+    meta: {
+      type: "daily-activity",
+      date: todayKey,
+      metrics: {
+        detections: todaySightings.length,
+        highRisk: highRiskToday.length,
+        removals: removalsToday.length,
+        averageDaily: Number(avgDailyActivity.toFixed(2)),
+        variance: Number(differenceFromAverage.toFixed(2))
+      }
+    }
+  });
 }
 
 // Global function to manually trigger weather alerts for testing
 window.triggerWeatherAlert = function() {
-  const conditions = [
-    { condition: 'Severe Storm Warning', temp: 18, level: 'critical', action: 'Suspend field operations' },
-    { condition: 'High UV Index', temp: 32, level: 'warning', action: 'Use sun protection' },
-    { condition: 'Perfect Field Conditions', temp: 22, level: 'info', action: 'Optimal for surveys' }
-  ];
-
-  const weather = conditions[Math.floor(Math.random() * conditions.length)];
-
-  addNotification('weather', {
-    title: `Weather Alert: ${weather.condition}`,
-    description: `Current conditions: ${weather.condition}, ${weather.temp}°C. ${weather.level === 'critical' ? 'Dangerous conditions detected.' : weather.level === 'warning' ? 'Caution advised.' : 'Great conditions for monitoring.'}`,
-    level: weather.level,
-    action: weather.action
-  });
-
-  showNotificationToast(`Weather alert added: ${weather.condition}`, weather.level === 'critical' ? 'error' : weather.level === 'warning' ? 'warning' : 'info');
+  updateDailyActivityAlert(window.sightingsData || []);
+  showNotificationToast('Daily activity summary refreshed', 'info');
 };
 
 function updateNotificationBadges() {
@@ -410,263 +463,7 @@ window.switchTab = function(tabName) {
   // Note: Tab switching is now handled by ui.js module
 };
 
-function aggregateSpeciesData(sightings) {
-  const speciesMap = new Map();
 
-  // Filter out removed sightings for analytics
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  activeSightings.forEach(sighting => {
-    const species = sighting.analysis?.predictedSpecies || 'Unknown Species';
-
-    if (!speciesMap.has(species)) {
-      speciesMap.set(species, {
-        species,
-        sightings: [],
-        totalCount: 0,
-        confidenceSum: 0,
-        locations: [],
-        images: [],
-        llmData: null
-      });
-    }
-
-    const data = speciesMap.get(species);
-    data.sightings.push(sighting);
-    data.totalCount++;
-    data.confidenceSum += sighting.analysis?.confidence || 0;
-
-    if (sighting.location?.coordinates) {
-      data.locations.push(sighting.location.coordinates);
-    }
-
-    if (sighting.imageUrl || sighting.imagePath) {
-      data.images.push(sighting.imageUrl || sighting.imagePath);
-    }
-
-    // Store LLM data from most recent analysis
-    if (sighting.analysis?.llm && !data.llmData) {
-      data.llmData = sighting.analysis.llm;
-    }
-  });
-
-  return Array.from(speciesMap.values());
-}
-
-function calculateStats(speciesData) {
-  return speciesData.map(data => {
-    const avgConfidence = data.totalCount > 0 ? (data.confidenceSum / data.totalCount) * 100 : 0;
-    const sortedSightings = data.sightings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const lastSeen = sortedSightings[0]?.createdAt;
-    const firstSeen = sortedSightings[sortedSightings.length - 1]?.createdAt;
-
-    // Calculate geographic spread
-    let geoSpread = 0;
-    if (data.locations.length > 1) {
-      const distances = [];
-      for (let i = 0; i < data.locations.length; i++) {
-        for (let j = i + 1; j < data.locations.length; j++) {
-          const dist = calculateDistance(data.locations[i], data.locations[j]);
-          distances.push(dist);
-        }
-      }
-      geoSpread = Math.max(...distances);
-    }
-
-    // Calculate average location
-    let avgLocation = null;
-    if (data.locations.length > 0) {
-      const avgLat = data.locations.reduce((sum, loc) => sum + loc[1], 0) / data.locations.length;
-      const avgLng = data.locations.reduce((sum, loc) => sum + loc[0], 0) / data.locations.length;
-      avgLocation = [avgLng, avgLat];
-    }
-
-    // Get risk level from most recent sighting - exactly like invasive dashboard
-    const mostRecentSighting = sortedSightings[0]; // Already sorted above
-
-    const riskLevel = mostRecentSighting?.analysis?.llm?.details?.risk_level || 'Medium';
-
-    // Get scientific name from LLM data
-    const scientificName = data.llmData?.details?.advisory_content?.species_identification?.scientific_name || '';
-
-    return {
-      ...data,
-      avgConfidence,
-      lastSeen,
-      firstSeen,
-      geoSpread,
-      avgLocation,
-      scientificName,
-      uniqueLocations: data.locations.length,
-      mainImage: data.images[0] || null,
-      riskLevel // Place this last to ensure it's not overridden
-    };
-  });
-}
-
-function calculateDistance(coord1, coord2) {
-  // Haversine formula for distance between two coordinates
-  const R = 6371; // Earth's radius in km
-  const dLat = (coord2[1] - coord1[1]) * Math.PI / 180;
-  const dLon = (coord2[0] - coord1[0]) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(coord1[1] * Math.PI / 180) * Math.cos(coord2[1] * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-function getRiskBadgeClass(riskLevel) {
-  const risk = riskLevel.toLowerCase();
-  if (risk.includes('high') || risk.includes('severe')) return 'risk-high';
-  if (risk.includes('medium') || risk.includes('moderate')) return 'risk-medium';
-  if (risk.includes('low') || risk.includes('minimal')) return 'risk-low';
-  return 'risk-unknown';
-}
-
-// === SPECIES ANALYTICS ===
-// Note: Species Analytics is now implemented in ui.js module
-
-// === INVASIVE SPECIES DASHBOARD ===
-function loadInvasiveDashboard(sightings) {
-  const container = document.getElementById('invasive-dashboard-container');
-
-  // Filter out removed sightings first
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  // Separate invasive species (named species) from unknown species
-  const namedSpecies = activeSightings.filter(s => {
-    const species = s.analysis?.predictedSpecies || 'Unknown';
-    return species !== 'Unknown' && species !== 'Unknown species' && !species.includes('Unknown');
-  });
-
-  const unknownSpecies = activeSightings.filter(s => {
-    const species = s.analysis?.predictedSpecies || 'Unknown';
-    return species === 'Unknown' || species === 'Unknown species' || species.includes('Unknown');
-  });
-
-  // All named species are considered invasive
-  const invasiveSpecies = namedSpecies;
-
-  const riskAnalysis = analyzeInvasiveRisk(invasiveSpecies, sightings);
-  const hotspots = identifyHotspots(invasiveSpecies);
-  const spreadAnalysis = analyzeSpreadPatterns(invasiveSpecies);
-
-  container.innerHTML = `
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">Invasive Species Dashboard</h2>
-      <p class="dashboard-subtitle">Critical invasive species monitoring and threat assessment</p>
-    </div>
-
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-value">${invasiveSpecies.length}</div>
-        <div class="metric-label">Invasive Sightings</div>
-        <div class="metric-change ${invasiveSpecies.length > 0 ? 'negative' : 'neutral'}">
-          ${(invasiveSpecies.length / activeSightings.length * 100).toFixed(1)}% of total
-        </div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">${riskAnalysis.highRiskSpecies}</div>
-        <div class="metric-label">High Risk Species</div>
-        <div class="metric-change ${riskAnalysis.highRiskSpecies > 0 ? 'negative' : 'positive'}">
-          Requires immediate action
-        </div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">${hotspots.length}</div>
-        <div class="metric-label">Active Hotspots</div>
-        <div class="metric-change ${hotspots.length > 0 ? 'negative' : 'positive'}">
-          Geographic concentration areas
-        </div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">${spreadAnalysis.spreadingSpecies}</div>
-        <div class="metric-label">Spreading Species</div>
-        <div class="metric-change ${spreadAnalysis.spreadingSpecies > 0 ? 'negative' : 'positive'}">
-          Active geographic expansion
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-container">
-      <div class="chart-header">
-        <h3 class="chart-title">Invasive Species Risk Distribution</h3>
-      </div>
-      <div class="chart-content">
-        <div class="simple-chart" id="risk-distribution-chart"></div>
-      </div>
-    </div>
-
-    <div class="geo-grid">
-      <div class="chart-container">
-        <div class="chart-header">
-          <h3 class="chart-title">Invasion Hotspots</h3>
-        </div>
-        <div class="location-list">
-          ${hotspots.map(hotspot => `
-            <div class="location-item">
-              <div class="location-info">
-                <div class="location-coords">${fmtLatLng([hotspot.lng, hotspot.lat])}</div>
-                <div class="location-meta">${hotspot.species.join(', ')}</div>
-              </div>
-              <div class="location-count">${hotspot.count}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="chart-container">
-        <div class="chart-header">
-          <h3 class="chart-title">Risk Level Breakdown</h3>
-        </div>
-        <div class="chart-content">
-          <div class="simple-chart" id="risk-breakdown-chart"></div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Generate risk distribution chart
-  generateRiskChart(riskAnalysis, 'risk-distribution-chart');
-  generateRiskBreakdownChart(sightings, 'risk-breakdown-chart');
-
-  // Add unknown species section at the end
-  const unknownContainer = document.createElement('div');
-  unknownContainer.className = 'chart-container';
-  unknownContainer.style.marginTop = '2rem';
-  unknownContainer.innerHTML = `
-    <div class="chart-header">
-      <h3 class="chart-title">Non-Invasive (Unknown) Species</h3>
-      <p class="unknown-species-subtitle">Species requiring further identification - classified as non-invasive</p>
-    </div>
-    <div class="metrics-grid unknown-metrics-grid">
-      <div class="metric-card">
-        <div class="metric-value">${unknownSpecies.length}</div>
-        <div class="metric-label">Unknown Species Sightings</div>
-        <div class="metric-change neutral">${(unknownSpecies.length / sightings.length * 100).toFixed(1)}% of total</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">${new Set(unknownSpecies.map(s => s.analysis?.predictedSpecies || 'Unknown')).size}</div>
-        <div class="metric-label">Unique Unknown Classifications</div>
-        <div class="metric-change neutral">Awaiting identification</div>
-      </div>
-    </div>
-    <div class="location-list unknown-location-list">
-      ${unknownSpecies.slice(0, 10).map(sighting => `
-        <div class="location-item">
-          <div class="location-info">
-            <div class="location-coords">${fmtLatLng(sighting.location?.coordinates || [0, 0])}</div>
-            <div class="location-meta">${fmtDate(sighting.createdAt)} • ${((sighting.analysis?.confidence || 0) * 100).toFixed(1)}% confidence</div>
-          </div>
-          <div class="location-count">Unknown</div>
-        </div>
-      `).join('')}
-      ${unknownSpecies.length > 10 ? `<div class="location-item"><div class="location-info"><div class="location-coords">... and ${unknownSpecies.length - 10} more</div></div></div>` : ''}
-    </div>
-  `;
-  container.appendChild(unknownContainer);
-}
 
 // === GEOGRAPHIC INSIGHTS ===
 function loadGeographicInsights(sightings) {
@@ -675,9 +472,9 @@ function loadGeographicInsights(sightings) {
   // Filter out removed sightings for geographic analysis
   const activeSightings = sightings.filter(s => !s.isRemoved);
 
-  const locationClusters = analyzeLocationClusters(activeSightings);
-  const densityMap = createDensityAnalysis(activeSightings);
-  const coverageStats = calculateCoverageStats(activeSightings);
+  const locationClusters = analytics.analyzeLocationClusters(activeSightings);
+  const densityMap = analytics.createDensityAnalysis(activeSightings);
+  const coverageStats = analytics.calculateCoverageStats(activeSightings);
 
   container.innerHTML = `
     <div class="dashboard-header">
@@ -763,13 +560,13 @@ function loadGeographicInsights(sightings) {
 function loadTemporalAnalysis(sightings) {
   const container = document.getElementById('temporal-analysis-container');
 
-  const timePatterns = analyzeTimePatterns(sightings);
-  const trends = calculateTrends(sightings);
-  const seasonalData = analyzeSeasonalPatterns(sightings);
+  const timePatterns = analytics.analyzeTimePatterns(sightings);
+  const trends = analytics.calculateTrends(sightings);
+  const seasonalData = analytics.analyzeSeasonalPatterns(sightings);
 
   // CSS styles now in sightings.css
 
-  const invasiveAnalytics = generateInvasiveAnalytics(sightings);
+  const invasiveAnalytics = analytics.generateInvasiveAnalytics(sightings);
 
   container.innerHTML = `
     <div class="dashboard-header">
@@ -873,7 +670,7 @@ window.updateTimelineView = function(period, buttonElement) {
   }
 
   // Update the chart
-  const timePatterns = analyzeTimePatterns(sightings);
+  const timePatterns = analytics.analyzeTimePatterns(sightings);
   generateTimelineChart(timePatterns, 'timeline-chart', period);
 };
 
@@ -881,9 +678,9 @@ window.updateTimelineView = function(period, buttonElement) {
 function loadRiskAssessment(sightings) {
   const container = document.getElementById('risk-assessment-container');
 
-  const alerts = generateRiskAlerts(sightings);
-  const priorities = calculatePriorities(sightings);
-  const recommendations = generateRecommendations(sightings);
+  const alerts = analytics.generateRiskAlerts(sightings);
+  const priorities = analytics.calculatePriorities(sightings);
+  const recommendations = analytics.generateRecommendations(sightings);
 
   // Get stored notifications
   const riskNotifications = getActiveNotifications('risk');
@@ -1101,6 +898,7 @@ async function load() {
 
     empty.style.display = "none";
     window.sightingsData = data; // Store for global access
+    updateDailyActivityAlert(data);
 
     // Separate invasive and non-invasive species
     const invasiveSightings = data.filter(s => {
@@ -1141,8 +939,8 @@ async function load() {
       card.innerHTML = `
         <button class="remove-btn" onclick="removeSighting('${sighting._id}', '${sighting.analysis?.predictedSpecies || 'Unknown Species'}')">×</button>
         <div class="sighting-header">
-${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sighting.imagePath) === 'string' && ((sighting.imageUrl || sighting.imagePath).startsWith('/') || (sighting.imageUrl || sighting.imagePath).startsWith('http')) ?
-            `<img src="${sighting.imageUrl || sighting.imagePath}" alt="Plant" class="sighting-thumbnail" onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')" onerror="this.style.display='none'" />` :
+${(sighting.imagePath || sighting.imageUrl) && typeof (sighting.imagePath || sighting.imageUrl) === 'string' && ((sighting.imagePath || sighting.imageUrl).startsWith('/') || (sighting.imagePath || sighting.imageUrl).startsWith('http')) ?
+            `<img src="${sighting.imagePath || sighting.imageUrl}" alt="Plant" class="sighting-thumbnail" onclick="showImageModal('${sighting.imagePath || sighting.imageUrl}')" onerror="this.style.display='none'" />` :
             `<div class="no-image-placeholder sighting-thumbnail"></div>`}
 
           <div class="sighting-info">
@@ -1196,8 +994,8 @@ ${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sigh
         card.innerHTML = `
           <button class="remove-btn" onclick="removeSighting('${sighting._id}', '${sighting.analysis?.predictedSpecies || 'Unknown Species'}')">×</button>
           <div class="sighting-header">
-${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sighting.imagePath) === 'string' && ((sighting.imageUrl || sighting.imagePath).startsWith('/') || (sighting.imageUrl || sighting.imagePath).startsWith('http')) ?
-            `<img src="${sighting.imageUrl || sighting.imagePath}" alt="Plant" class="sighting-thumbnail" onclick="showImageModal('${sighting.imageUrl || sighting.imagePath}')" onerror="this.style.display='none'" />` :
+${(sighting.imagePath || sighting.imageUrl) && typeof (sighting.imagePath || sighting.imageUrl) === 'string' && ((sighting.imagePath || sighting.imageUrl).startsWith('/') || (sighting.imagePath || sighting.imageUrl).startsWith('http')) ?
+            `<img src="${sighting.imagePath || sighting.imageUrl}" alt="Plant" class="sighting-thumbnail" onclick="showImageModal('${sighting.imagePath || sighting.imageUrl}')" onerror="this.style.display='none'" />` :
             `<div class="no-image-placeholder sighting-thumbnail"></div>`}
 
             <div class="sighting-info">
@@ -1213,7 +1011,7 @@ ${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sigh
 
               <div class="sighting-badges">
                 <span class="sighting-badge confidence">${pct(sighting.analysis?.confidence)} confidence</span>
-                <span class="sighting-badge source">${sighting.fromVideo ? 'Live Video' : 'Upload'}</span>
+                <span class="sighting-badge source">Upload</span>
               </div>
             </div>
           </div>
@@ -1234,357 +1032,6 @@ ${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sigh
 // === ANALYSIS HELPER FUNCTIONS ===
 
 // Invasive Species Analytics Generator
-function generateInvasiveAnalytics(sightings) {
-  const today = new Date();
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  // Today's invasive species detections (excluding removed ones)
-  const todayInvasives = sightings.filter(s => {
-    const sDate = new Date(s.createdAt);
-    const isToday = sDate.toDateString() === today.toDateString();
-    const isInvasive = s.analysis?.predictedSpecies &&
-                     s.analysis.predictedSpecies !== 'Unknown' &&
-                     s.analysis.predictedSpecies !== 'Unknown species';
-    const notRemoved = !s.isRemoved;
-    return isToday && isInvasive && notRemoved;
-  });
-
-  const yesterdayInvasives = sightings.filter(s => {
-    const sDate = new Date(s.createdAt);
-    const isYesterday = sDate.toDateString() === yesterday.toDateString();
-    const isInvasive = s.analysis?.predictedSpecies &&
-                     s.analysis.predictedSpecies !== 'Unknown' &&
-                     s.analysis.predictedSpecies !== 'Unknown species';
-    const notRemoved = !s.isRemoved;
-    return isYesterday && isInvasive && notRemoved;
-  });
-
-  // Today's removals
-  const todayRemovals = sightings.filter(s => {
-    if (!s.removedAt) return false;
-    const rDate = new Date(s.removedAt);
-    return rDate.toDateString() === today.toDateString();
-  });
-
-  const yesterdayRemovals = sightings.filter(s => {
-    if (!s.removedAt) return false;
-    const rDate = new Date(s.removedAt);
-    return rDate.toDateString() === yesterday.toDateString();
-  });
-
-  // Calculate threat level
-  const threatLevel = todayInvasives.length >= 5 ? 'high' :
-                     todayInvasives.length >= 2 ? 'medium' : 'low';
-
-  // Generate immediate actions
-  const immediateActions = [];
-  if (todayInvasives.length > 0) {
-    immediateActions.push(`Inspect ${todayInvasives.length} new invasive detection${todayInvasives.length > 1 ? 's' : ''}`);
-  }
-  if (threatLevel === 'high') {
-    immediateActions.push('Consider emergency herbicide application');
-    immediateActions.push('Alert neighboring farmers');
-  }
-  if (todayInvasives.length > yesterdayInvasives.length) {
-    immediateActions.push('Increase monitoring frequency');
-  }
-  if (immediateActions.length === 0) {
-    immediateActions.push('Continue regular monitoring schedule');
-  }
-
-  // Calculate hotspots (clusters of invasive species)
-  const invasiveLocations = sightings
-    .filter(s => s.analysis?.predictedSpecies &&
-                s.analysis.predictedSpecies !== 'Unknown' &&
-                s.location?.coordinates)
-    .map(s => s.location.coordinates);
-
-  const hotspotCount = Math.max(1, Math.floor(invasiveLocations.length / 5));
-
-  // Estimate spread rate (simplified calculation)
-  const recentInvasives = sightings.filter(s => {
-    const sDate = new Date(s.createdAt);
-    return sDate >= weekAgo && s.analysis?.predictedSpecies &&
-           s.analysis.predictedSpecies !== 'Unknown';
-  });
-
-  const spreadRate = recentInvasives.length > 1 ?
-    Math.random() * 50 + 10 : // Simulated spread rate 10-60m/day
-    0;
-
-  // Environmental impact assessment - based on scientific research
-  const activeInvasives = sightings.filter(s => {
-    const isInvasive = s.analysis?.predictedSpecies &&
-                      s.analysis.predictedSpecies !== 'Unknown' &&
-                      s.analysis.predictedSpecies !== 'Unknown species';
-    return isInvasive && !s.isRemoved;
-  }).length;
-
-  const environmentalImpact = calculateEnvironmentalImpact(activeInvasives, todayInvasives.length);
-
-  // Calculate removal efficiency
-  const totalRemovals = sightings.filter(s => s.isRemoved).length;
-  const totalInvasiveDetections = sightings.filter(s => {
-    const isInvasive = s.analysis?.predictedSpecies &&
-                      s.analysis.predictedSpecies !== 'Unknown' &&
-                      s.analysis.predictedSpecies !== 'Unknown species';
-    return isInvasive;
-  }).length;
-
-  const removalEfficiency = totalInvasiveDetections > 0 ?
-    Math.floor((totalRemovals / totalInvasiveDetections) * 100) : 0;
-
-  return {
-    todayThreatLevel: threatLevel,
-    todayRecommendation: getThreatRecommendation(threatLevel, todayInvasives.length, todayRemovals.length),
-    immediateActions,
-    newInvasivesToday: todayInvasives.length,
-    invasiveTrend: getInvasiveTrend(todayInvasives.length, yesterdayInvasives.length),
-    hotspotCount,
-    spreadRate,
-    spreadTrend: getSpreadTrend(spreadRate),
-    environmentalImpact,
-    removalsToday: todayRemovals.length,
-    removalTrend: getRemovalTrend(todayRemovals.length, yesterdayRemovals.length),
-    weatherImpact: getWeatherImpact(),
-    controlEffectiveness: removalEfficiency
-  };
-}
-
-function getThreatRecommendation(level, count, removals = 0) {
-  const removalText = removals > 0 ? ` Great job removing ${removals} plant${removals > 1 ? 's' : ''} today!` : '';
-
-  switch (level) {
-    case 'high':
-      return `Critical invasion detected! ${count} new invasive species found. Immediate intervention required.${removalText}`;
-    case 'medium':
-      return `Moderate threat level. ${count} invasive species detected. Increase monitoring and prepare control measures.${removalText}`;
-    case 'low':
-      return count > 0 ?
-        `Low threat level. ${count} invasive species detected. Continue regular monitoring.${removalText}` :
-        `No new invasive species detected today. Maintain vigilance.${removalText}`;
-  }
-}
-
-function getInvasiveTrend(today, yesterday) {
-  if (today > yesterday) return `↗ +${today - yesterday} from yesterday`;
-  if (today < yesterday) return `↘ -${yesterday - today} from yesterday`;
-  return '→ Same as yesterday';
-}
-
-function getSpreadTrend(rate) {
-  if (rate > 30) return '↗ Rapid expansion';
-  if (rate > 15) return '→ Moderate spread';
-  return '↘ Slow spread';
-}
-
-function getRemovalTrend(today, yesterday) {
-  if (today > yesterday) return `↗ +${today - yesterday} from yesterday`;
-  if (today < yesterday) return `↘ -${yesterday - today} from yesterday`;
-  return yesterday === 0 && today === 0 ? '→ No activity' : '→ Same as yesterday';
-}
-
-function getWeatherImpact() {
-  const impacts = [
-    'Warm, humid conditions favor invasive growth',
-    'Dry conditions may slow invasive spread',
-    'Recent rain increases invasive germination risk',
-    'Wind patterns may disperse invasive seeds',
-    'Cool temperatures reducing invasive activity'
-  ];
-  return impacts[Math.floor(Math.random() * impacts.length)];
-}
-
-function calculateEnvironmentalImpact(activeInvasives, todayInvasives) {
-  // Scientific-based environmental impact assessment for South African invasive species
-  const baseImpactPerSpecies = {
-    // Ecosystem degradation (hectares affected per invasive plant)
-    ecosystemDegradation: 0.25,
-    // Water consumption (liters per day per plant) - invasives like Water Hyacinth consume 3.5L/day
-    waterConsumption: 3.5,
-    // Soil contamination radius (meters) - allelopathic effects
-    soilContamination: 2.0,
-    // Biodiversity loss factor (native species displaced per invasive)
-    biodiversityLoss: 1.8,
-    // Carbon sequestration reduction (kg CO2/year per plant)
-    carbonReduction: 12.0
-  };
-
-  // Calculate total environmental impact
-  const impacts = {
-    ecosystemArea: (activeInvasives * baseImpactPerSpecies.ecosystemDegradation).toFixed(2),
-    waterDaily: Math.round(activeInvasives * baseImpactPerSpecies.waterConsumption),
-    soilArea: Math.round(activeInvasives * Math.PI * Math.pow(baseImpactPerSpecies.soilContamination, 2)),
-    nativeSpeciesDisplaced: Math.round(activeInvasives * baseImpactPerSpecies.biodiversityLoss),
-    carbonLoss: Math.round(activeInvasives * baseImpactPerSpecies.carbonReduction)
-  };
-
-  // Determine severity level based on total active invasives
-  let severity, description, urgency;
-
-  if (activeInvasives >= 20) {
-    severity = 'Critical';
-    description = 'Severe ecosystem disruption imminent';
-    urgency = 'Immediate intervention required';
-  } else if (activeInvasives >= 10) {
-    severity = 'High';
-    description = 'Significant environmental degradation occurring';
-    urgency = 'Urgent action needed within 48 hours';
-  } else if (activeInvasives >= 5) {
-    severity = 'Moderate';
-    description = 'Noticeable ecological impact developing';
-    urgency = 'Action recommended within 1 week';
-  } else if (activeInvasives >= 1) {
-    severity = 'Low';
-    description = 'Early-stage environmental pressure';
-    urgency = 'Monitor and plan removal strategy';
-  } else {
-    severity = 'Minimal';
-    description = 'No active invasive threats detected';
-    urgency = 'Continue monitoring';
-  }
-
-  // Daily trend assessment
-  const dailyTrend = todayInvasives > 3 ? 'Accelerating degradation' :
-                    todayInvasives > 1 ? 'Steady environmental pressure' :
-                    todayInvasives === 1 ? 'New environmental threat detected' :
-                    'No new environmental threats today';
-
-  return {
-    severity,
-    description,
-    urgency,
-    dailyTrend,
-    impacts: {
-      ecosystemDegradation: `${impacts.ecosystemArea} hectares affected`,
-      waterConsumption: `${impacts.waterDaily} liters consumed daily`,
-      soilContamination: `${impacts.soilArea} m² soil contaminated`,
-      biodiversityLoss: `${impacts.nativeSpeciesDisplaced} native species at risk`,
-      carbonImpact: `${impacts.carbonLoss} kg CO₂ sequestration lost annually`
-    },
-    totalActiveInvasives: activeInvasives,
-    riskScore: Math.min(100, activeInvasives * 4.2) // Risk score out of 100
-  };
-}
-
-// Farmer Timeline Helper Functions
-function getThreatUrgency(sighting) {
-  const riskLevel = sighting.analysis?.llm?.details?.risk_level || 'Medium';
-  const confidence = sighting.analysis?.confidence || 0.5;
-
-  if (riskLevel.toLowerCase().includes('high')) {
-    return 'Immediate inspection required - High threat species';
-  } else if (riskLevel.toLowerCase().includes('medium')) {
-    return confidence > 0.8 ? 'Monitor closely - Confirmed invasive' : 'Verify identification - Possible invasive';
-  } else {
-    return 'Routine monitoring - Low immediate threat';
-  }
-}
-
-function getThreatColor(riskLevel) {
-  const level = riskLevel.toLowerCase();
-  if (level.includes('high')) return '#dc2626';
-  if (level.includes('medium')) return '#d97706';
-  return '#059669';
-}
-
-function getThreatColorAlpha(riskLevel, alpha) {
-  const level = riskLevel.toLowerCase();
-  if (level.includes('high')) return `rgba(220, 38, 38, ${alpha})`;
-  if (level.includes('medium')) return `rgba(217, 119, 6, ${alpha})`;
-  return `rgba(5, 150, 105, ${alpha})`;
-}
-
-function calculateAvgRisk(sightings) {
-  const riskLevels = sightings.map(s => s.analysis?.llm?.details?.risk_level || 'Medium');
-  const highCount = riskLevels.filter(r => r.toLowerCase().includes('high')).length;
-  const mediumCount = riskLevels.filter(r => r.toLowerCase().includes('medium')).length;
-
-  if (highCount > sightings.length / 2) return 'High';
-  if (mediumCount > sightings.length / 3) return 'Medium';
-  return 'Low';
-}
-
-function calculateWeeklySpread(sightings) {
-  return Math.floor(sightings.length * 2.5 + Math.random() * 10); // Simplified spread calculation
-}
-
-function generateWeeklyActions(sightings) {
-  const actions = [];
-  if (sightings.length > 5) actions.push('Increase herbicide application');
-  if (sightings.length > 2) actions.push('Deploy monitoring equipment');
-  actions.push('Update control strategy');
-  return actions;
-}
-
-function calculateEnvironmentalSeverity(sightings) {
-  const invasiveCount = sightings.filter(s =>
-    s.analysis?.predictedSpecies &&
-    s.analysis.predictedSpecies !== 'Unknown' &&
-    s.analysis.predictedSpecies !== 'Unknown species' &&
-    !s.isRemoved
-  ).length;
-
-  if (invasiveCount >= 15) return 'Critical';
-  if (invasiveCount >= 8) return 'High';
-  if (invasiveCount >= 4) return 'Moderate';
-  if (invasiveCount >= 1) return 'Low';
-  return 'Minimal';
-}
-
-function calculateControlEffectiveness(sightings) {
-  return Math.floor(Math.random() * 25 + 65); // Simulated effectiveness 65-90%
-}
-
-function getSeasonalFactors(month) {
-  const seasonalFactors = {
-    '01': 'Winter dormancy - Limited invasive activity',
-    '02': 'Early germination risk in warmer areas',
-    '03': 'Spring emergence - High vigilance needed',
-    '04': 'Peak germination season',
-    '05': 'Rapid growth phase - Critical control period',
-    '06': 'Summer expansion - Maximum spread risk',
-    '07': 'Peak biomass - Seed production begins',
-    '08': 'Seed dispersal season',
-    '09': 'Fall establishment window',
-    '10': 'Final growth push before winter',
-    '11': 'Preparation for dormancy',
-    '12': 'Winter planning and preparation'
-  };
-  return seasonalFactors[month.split('-')[1]] || 'Seasonal assessment needed';
-}
-
-function getClimateCorrelation(year, sightings) {
-  const correlations = [
-    'Warmer than average - Increased invasive activity',
-    'Higher rainfall - Enhanced seed germination',
-    'Drought conditions - Stress on native species, invasive advantage',
-    'Extreme weather events - Increased invasive establishment',
-    'Mild winter - Higher survival rates for invasive species'
-  ];
-  return correlations[Math.floor(Math.random() * correlations.length)];
-}
-
-function generatePredictiveInsights(sightings) {
-  return 'Based on current trends, expect 15-25% increase in invasive species next year';
-}
-
-function calculateEcosystemRecovery(sightings) {
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-  const removedSightings = sightings.filter(s => s.isRemoved);
-
-  if (removedSightings.length === 0) {
-    return 'No ecosystem recovery data available - no removal activities recorded';
-  }
-
-  const recoveryRate = (removedSightings.length / sightings.length * 100).toFixed(1);
-  const ecosystemBenefit = Math.round(removedSightings.length * 2.3); // hectares restored per removal
-  const biodiversityGain = Math.round(removedSightings.length * 1.8); // native species able to return
-
-  return `Ecosystem recovery: ${recoveryRate}% invasive removal restored ${ecosystemBenefit} hectares, enabling ${biodiversityGain} native species return`;
-}
-
 function renderPeriodSpecificData(item, period) {
   // Calculate actual data-driven insights based on the sightings in this time period
   const sightings = item.sightings || [];
@@ -1643,481 +1090,33 @@ function isInvasiveSpeciesFromAnalysis(sighting) {
 }
 
 // Invasive Species Analysis
-function analyzeInvasiveRisk(invasiveSpecies, allSightings) {
-  const speciesGroups = {};
-  invasiveSpecies.forEach(s => {
-    const species = s.analysis?.predictedSpecies || 'Unknown';
-    if (!speciesGroups[species]) speciesGroups[species] = [];
-    speciesGroups[species].push(s);
-  });
-
-  let highRiskSpecies = 0;
-  let mediumRiskSpecies = 0;
-  let lowRiskSpecies = 0;
-
-  Object.keys(speciesGroups).forEach(species => {
-    const sightings = speciesGroups[species];
-    const isHighRisk = sightings.length >= 3 || sightings.some(s =>
-      s.llm?.details?.risk_level?.toLowerCase().includes('severe') ||
-      s.llm?.details?.risk_level?.toLowerCase().includes('high')
-    );
-
-    const isMediumRisk = !isHighRisk && (sightings.length >= 2 || sightings.some(s =>
-      s.llm?.details?.risk_level?.toLowerCase().includes('medium') ||
-      s.llm?.details?.risk_level?.toLowerCase().includes('moderate')
-    ));
-
-    if (isHighRisk) {
-      highRiskSpecies++;
-    } else if (isMediumRisk) {
-      mediumRiskSpecies++;
-    } else {
-      lowRiskSpecies++;
-    }
-  });
-
-  return {
-    highRiskSpecies,
-    mediumRiskSpecies,
-    lowRiskSpecies,
-    totalSpecies: Object.keys(speciesGroups).length,
-    avgSightingsPerSpecies: invasiveSpecies.length / Math.max(Object.keys(speciesGroups).length, 1)
-  };
-}
-
-function identifyHotspots(sightings) {
-  const locationGroups = {};
-  const tolerance = 0.01; // ~1km
-
-  // Filter out removed sightings for hotspot analysis
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  activeSightings.forEach(s => {
-    if (!s.location?.coordinates) return;
-    const [lng, lat] = s.location.coordinates;
-    const key = `${Math.round(lat / tolerance) * tolerance},${Math.round(lng / tolerance) * tolerance}`;
-
-    if (!locationGroups[key]) {
-      locationGroups[key] = {
-        lat: Math.round(lat / tolerance) * tolerance,
-        lng: Math.round(lng / tolerance) * tolerance,
-        sightings: [],
-        species: new Set()
-      };
-    }
-
-    locationGroups[key].sightings.push(s);
-    locationGroups[key].species.add(s.analysis?.predictedSpecies || 'Unknown');
-  });
-
-  return Object.values(locationGroups)
-    .filter(group => group.sightings.length >= 3)
-    .map(group => ({
-      lat: group.lat,
-      lng: group.lng,
-      count: group.sightings.length,
-      species: Array.from(group.species)
-    }))
-    .sort((a, b) => b.count - a.count);
-}
-
-function analyzeSpreadPatterns(sightings) {
-  const speciesData = {};
-
-  // Filter out removed sightings for spread analysis
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  activeSightings.forEach(s => {
-    const species = s.analysis?.predictedSpecies || 'Unknown';
-    if (!speciesData[species]) speciesData[species] = [];
-    if (s.location?.coordinates) {
-      speciesData[species].push({
-        coords: s.location.coordinates,
-        date: new Date(s.createdAt)
-      });
-    }
-  });
-
-  let spreadingSpecies = 0;
-  Object.keys(speciesData).forEach(species => {
-    const locations = speciesData[species];
-    if (locations.length >= 2) {
-      locations.sort((a, b) => a.date - b.date);
-      const distances = [];
-      for (let i = 1; i < locations.length; i++) {
-        const dist = calculateDistance(locations[0].coords, locations[i].coords);
-        distances.push(dist);
-      }
-      if (Math.max(...distances) > 5) { // More than 5km spread
-        spreadingSpecies++;
-      }
-    }
-  });
-
-  return { spreadingSpecies };
-}
-
-// Geographic Analysis
-function analyzeLocationClusters(sightings) {
-  const validSightings = sightings.filter(s => s.location?.coordinates && !s.isRemoved);
-  if (validSightings.length === 0) return [];
-
-  const clusters = [];
-  const processed = new Set();
-
-  validSightings.forEach((sighting, index) => {
-    if (processed.has(index)) return;
-
-    const cluster = {
-      centerLat: sighting.location.coordinates[1],
-      centerLng: sighting.location.coordinates[0],
-      sightings: [sighting],
-      species: new Set([sighting.analysis?.predictedSpecies || 'Unknown'])
-    };
-
-    // Find nearby sightings
-    validSightings.forEach((other, otherIndex) => {
-      if (otherIndex !== index && !processed.has(otherIndex)) {
-        const distance = calculateDistance(
-          sighting.location.coordinates,
-          other.location.coordinates
-        );
-        if (distance <= 2) { // Within 2km
-          cluster.sightings.push(other);
-          cluster.species.add(other.analysis?.predictedSpecies || 'Unknown');
-          processed.add(otherIndex);
-        }
-      }
-    });
-
-    if (cluster.sightings.length >= 2) {
-      // Recalculate center
-      const avgLat = cluster.sightings.reduce((sum, s) => sum + s.location.coordinates[1], 0) / cluster.sightings.length;
-      const avgLng = cluster.sightings.reduce((sum, s) => sum + s.location.coordinates[0], 0) / cluster.sightings.length;
-
-      cluster.centerLat = avgLat;
-      cluster.centerLng = avgLng;
-      cluster.count = cluster.sightings.length;
-      cluster.species = Array.from(cluster.species);
-      cluster.radius = Math.max(...cluster.sightings.map(s =>
-        calculateDistance([avgLng, avgLat], s.location.coordinates)
-      ));
-
-      clusters.push(cluster);
-    }
-
-    processed.add(index);
-  });
-
-  return clusters.sort((a, b) => b.count - a.count);
-}
-
-function createDensityAnalysis(sightings) {
-  const validSightings = sightings.filter(s => s.location?.coordinates);
-  const gridSize = 0.01; // ~1km grid
-  const densityGrid = {};
-
-  validSightings.forEach(s => {
-    const lat = Math.round(s.location.coordinates[1] / gridSize) * gridSize;
-    const lng = Math.round(s.location.coordinates[0] / gridSize) * gridSize;
-    const key = `${lat},${lng}`;
-    densityGrid[key] = (densityGrid[key] || 0) + 1;
-  });
-
-  const densityValues = Object.values(densityGrid);
-  const maxDensity = Math.max(...densityValues);
-  const hotspots = densityValues.filter(d => d >= maxDensity * 0.7).length;
-
-  return {
-    grid: densityGrid,
-    maxDensity,
-    hotspots,
-    averageDensity: densityValues.reduce((sum, d) => sum + d, 0) / densityValues.length
-  };
-}
-
-function calculateCoverageStats(sightings) {
-  const validSightings = sightings.filter(s => s.location?.coordinates && !s.isRemoved);
-  if (validSightings.length === 0) return { totalArea: 0, avgDistance: 0 };
-
-  const lats = validSightings.map(s => s.location.coordinates[1]);
-  const lngs = validSightings.map(s => s.location.coordinates[0]);
-
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-
-  // Approximate area calculation
-  const latDistance = calculateDistance([minLng, minLat], [minLng, maxLat]);
-  const lngDistance = calculateDistance([minLng, minLat], [maxLng, minLat]);
-  const totalArea = latDistance * lngDistance;
-
-  // Average distance between sightings
-  let totalDistance = 0;
-  let comparisons = 0;
-  for (let i = 0; i < validSightings.length; i++) {
-    for (let j = i + 1; j < validSightings.length; j++) {
-      totalDistance += calculateDistance(
-        validSightings[i].location.coordinates,
-        validSightings[j].location.coordinates
-      );
-      comparisons++;
-    }
-  }
-
-  return {
-    totalArea,
-    avgDistance: comparisons > 0 ? totalDistance / comparisons : 0
-  };
-}
-
-// Temporal Analysis
-function analyzeTimePatterns(sightings) {
-  const hourCounts = new Array(24).fill(0);
-  const dayCounts = {};
-  const weekCounts = {};
-  const monthCounts = {};
-  const yearCounts = {};
-
-  // Filter out removed sightings for timeline analysis
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  activeSightings.forEach(s => {
-    const date = new Date(s.createdAt);
-    const hour = date.getHours();
-    const day = date.toDateString();
-
-    // Week counting (start of week)
-    const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay());
-    const weekKey = weekStart.toISOString().split('T')[0];
-
-    // Month counting
-    const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
-
-    // Year counting
-    const yearKey = date.getFullYear().toString();
-
-    hourCounts[hour]++;
-    dayCounts[day] = (dayCounts[day] || 0) + 1;
-    weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
-    monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
-    yearCounts[yearKey] = (yearCounts[yearKey] || 0) + 1;
-  });
-
-  const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
-
-  return {
-    hourCounts,
-    dayCounts,
-    weekCounts,
-    monthCounts,
-    yearCounts,
-    peakHour,
-    totalDays: Object.keys(dayCounts).length
-  };
-}
-
-function calculateTrends(sightings) {
-  const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-  const thisWeek = sightings.filter(s => new Date(s.createdAt) >= oneWeekAgo).length;
-  const lastWeek = sightings.filter(s => {
-    const date = new Date(s.createdAt);
-    return date >= twoWeeksAgo && date < oneWeekAgo;
-  }).length;
-
-  const weeklyChange = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0;
-  const detectionRate = sightings.length / Math.max((now - new Date(sightings[sightings.length - 1]?.createdAt)) / (1000 * 60 * 60 * 24), 1);
-
-  return {
-    weeklyAverage: (thisWeek + lastWeek) / 2,
-    weeklyChange,
-    detectionRate,
-    rateChange: weeklyChange // Simplified
-  };
-}
-
-function analyzeSeasonalPatterns(sightings) {
-  const seasonCounts = { Spring: 0, Summer: 0, Fall: 0, Winter: 0 };
-
-  // Filter out removed sightings for seasonal analysis
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  activeSightings.forEach(s => {
-    const month = new Date(s.createdAt).getMonth();
-    if (month >= 2 && month <= 4) seasonCounts.Spring++;
-    else if (month >= 5 && month <= 7) seasonCounts.Summer++;
-    else if (month >= 8 && month <= 10) seasonCounts.Fall++;
-    else seasonCounts.Winter++;
-  });
-
-  const dominantSeason = Object.keys(seasonCounts).reduce((a, b) =>
-    seasonCounts[a] > seasonCounts[b] ? a : b
-  );
-
-  return { seasonCounts, dominantSeason };
-}
-
-// Risk Assessment
-function generateRiskAlerts(sightings) {
-  const alerts = { critical: [], warning: [], info: [] };
-
-  // Filter out removed sightings for risk assessment
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-
-  // Critical: High-risk invasive species with recent spread
-  const invasiveSpecies = activeSightings.filter(s => {
-    const risk = s.llm?.details?.risk_level?.toLowerCase() || '';
-    return risk.includes('high') || risk.includes('severe');
-  });
-
-  if (invasiveSpecies.length > 0) {
-    const recentInvasive = invasiveSpecies.filter(s =>
-      new Date() - new Date(s.createdAt) < 7 * 24 * 60 * 60 * 1000
-    );
-
-    if (recentInvasive.length > 0) {
-      const alert = {
-        level: 'critical',
-        title: 'New Invasive Species Detected',
-        description: `${recentInvasive.length} high-risk invasive species sightings in the past week. Immediate containment required.`,
-        timestamp: new Date().toISOString(),
-        action: 'Deploy containment teams',
-        data: { species: recentInvasive.map(s => s.analysis?.predictedSpecies).filter(Boolean) }
-      };
-      alerts.critical.push(alert);
-
-      // Add to notification system if new
-      const existingAlert = getActiveNotifications('risk').find(n =>
-        n.title === alert.title && n.description === alert.description
-      );
-      if (!existingAlert) {
-        addNotification('risk', alert);
-      }
-    }
-  }
-
-  // Warning: Species clustering
-  const hotspots = identifyHotspots(activeSightings);
-  if (hotspots.length > 0) {
-    const alert = {
-      level: 'warning',
-      title: 'Species Concentration Detected',
-      description: `${hotspots.length} hotspots identified with high species concentration. Monitor for potential spreading.`,
-      timestamp: new Date().toISOString(),
-      action: 'Increase surveillance',
-      data: { hotspots: hotspots.slice(0, 3) }
-    };
-    alerts.warning.push(alert);
-
-    // Add to notification system if new
-    const existingAlert = getActiveNotifications('risk').find(n =>
-      n.title === alert.title && n.description === alert.description
-    );
-    if (!existingAlert) {
-      addNotification('risk', alert);
-    }
-  }
-
-  // Info: Low detection activity
-  const recentSightings = activeSightings.filter(s =>
-    new Date() - new Date(s.createdAt) < 7 * 24 * 60 * 60 * 1000
-  );
-
-  if (recentSightings.length < 5) {
-    const alert = {
-      level: 'info',
-      title: 'Low Detection Activity',
-      description: 'Detection activity below normal levels. Consider increasing monitoring efforts.',
-      timestamp: new Date().toISOString(),
-      action: 'Schedule additional surveys'
-    };
-    alerts.info.push(alert);
-
-    // Add to notification system if new
-    const existingAlert = getActiveNotifications('risk').find(n =>
-      n.title === alert.title && n.description === alert.description
-    );
-    if (!existingAlert) {
-      addNotification('risk', alert);
-    }
-  }
-
-  return alerts;
-}
-
-function calculatePriorities(sightings) {
-  const activeSightings = sightings.filter(s => !s.isRemoved);
-  const invasiveAreas = identifyHotspots(activeSightings.filter(s => {
-    const risk = s.llm?.details?.risk_level?.toLowerCase() || '';
-    return risk.includes('high') || risk.includes('severe');
-  }));
-
-  return {
-    highPriority: invasiveAreas.length,
-    mediumPriority: Math.max(0, identifyHotspots(sightings).length - invasiveAreas.length),
-    lowPriority: 0
-  };
-}
-
-function generateRecommendations(sightings) {
-  const recommendations = [];
-
-  const invasiveCount = sightings.filter(s => {
-    const risk = s.llm?.details?.risk_level?.toLowerCase() || '';
-    return risk.includes('high') || risk.includes('severe');
-  }).length;
-
-  if (invasiveCount > 0) {
-    recommendations.push({
-      title: 'Immediate Invasive Species Control',
-      description: `Deploy control measures for ${invasiveCount} detected invasive species. Focus on early detection and rapid response protocols.`,
-      priority: 'High',
-      impact: 'Critical'
-    });
-  }
-
-  const hotspots = identifyHotspots(sightings);
-  if (hotspots.length > 0) {
-    recommendations.push({
-      title: 'Enhanced Monitoring in Hotspots',
-      description: `Increase surveillance frequency in ${hotspots.length} identified hotspot areas to track species spread patterns.`,
-      priority: 'Medium',
-      impact: 'High'
-    });
-  }
-
-  recommendations.push({
-    title: 'Community Engagement Program',
-    description: 'Expand citizen science participation to increase detection coverage and early warning capabilities.',
-    priority: 'Medium',
-    impact: 'Medium'
-  });
-
-  return recommendations;
-}
-
-// === CHART GENERATION FUNCTIONS ===
-
-function generateRiskChart(riskAnalysis, containerId) {
+function generateDetectionTrendsChart(sightings, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-
-  // Calculate proper risk distribution from actual data
-  const highRisk = riskAnalysis.highRiskSpecies;
-  const mediumRisk = riskAnalysis.mediumRiskSpecies || 0;
-  const lowRisk = Math.max(0, riskAnalysis.totalSpecies - highRisk - mediumRisk);
-
-  const data = [
-    { label: 'High Risk', value: highRisk, color: '#ef4444' },
-    { label: 'Medium Risk', value: mediumRisk, color: '#f59e0b' },
-    { label: 'Low Risk', value: lowRisk, color: '#10b981' }
-  ].filter(item => item.value > 0); // Only show categories with data
-
+  
+  // Group sightings by week for the last 8 weeks
+  const now = new Date();
+  const weeklyData = {};
+  
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+    const weekEnd = new Date(weekStart.getTime() + (7 * 24 * 60 * 60 * 1000));
+    const weekKey = `Week ${8-i}`;
+    
+    const weekSightings = sightings.filter(s => {
+      const sightingDate = new Date(s.createdAt);
+      return sightingDate >= weekStart && sightingDate < weekEnd;
+    });
+    
+    weeklyData[weekKey] = weekSightings.length;
+  }
+  
+  const data = Object.entries(weeklyData).map(([week, count]) => ({
+    label: week,
+    value: count,
+    color: count > 5 ? '#ef4444' : count > 2 ? '#f59e0b' : '#10b981'
+  }));
+  
   generateSimpleBarChart(data, container);
 }
 
@@ -2373,15 +1372,15 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
       groupedData = sortedSightings.slice(0, 12);
       return groupedData.map((sighting, index) => {
         const riskLevel = sighting.analysis?.llm?.details?.risk_level || 'Medium';
-        const threatUrgency = getThreatUrgency(sighting);
+        const threatUrgency = analytics.getThreatUrgency(sighting);
 
         return `
           <div class="timeline-item farmer-threat timeline-threat-item">
-            <div class="timeline-marker timeline-threat-marker" style="background: ${getThreatColor(riskLevel)}; box-shadow-color: ${getThreatColor(riskLevel)};"></div>
-            <div class="timeline-content timeline-threat-content" style="background: linear-gradient(135deg, ${getThreatColorAlpha(riskLevel, 0.1)} 0%, ${getThreatColorAlpha(riskLevel, 0.02)} 100%); border-left-color: ${getThreatColor(riskLevel)};">
+            <div class="timeline-marker timeline-threat-marker" style="background: ${analytics.getThreatColor(riskLevel)}; box-shadow-color: ${analytics.getThreatColor(riskLevel)};"></div>
+            <div class="timeline-content timeline-threat-content" style="background: linear-gradient(135deg, ${analytics.getThreatColorAlpha(riskLevel, 0.1)} 0%, ${analytics.getThreatColorAlpha(riskLevel, 0.02)} 100%); border-left-color: ${analytics.getThreatColor(riskLevel)};">
               <div class="timeline-header timeline-threat-header">
                 <div class="timeline-date timeline-threat-date">${fmtDate(sighting.createdAt)}</div>
-                <div class="threat-badge" style="background: ${getThreatColor(riskLevel)};">${riskLevel.toUpperCase()} RISK</div>
+                <div class="threat-badge" style="background: ${analytics.getThreatColor(riskLevel)};">${riskLevel.toUpperCase()} RISK</div>
               </div>
               <div class="timeline-title timeline-threat-title">${sighting.analysis?.predictedSpecies || 'Unknown Species'}</div>
               <div class="farmer-action">
@@ -2411,9 +1410,9 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
         period: `Week of ${new Date(week).toLocaleDateString()}`,
         count: sightings.length,
         species: [...new Set(sightings.map(s => s.analysis?.predictedSpecies || 'Unknown'))],
-        avgRisk: calculateAvgRisk(sightings),
-        spreadRate: calculateWeeklySpread(sightings),
-        actionItems: generateWeeklyActions(sightings),
+        avgRisk: analytics.calculateAvgRisk(sightings),
+        spreadRate: analytics.calculateWeeklySpread(sightings),
+        actionItems: analytics.generateWeeklyActions(sightings),
         sightings: sightings, // Add actual sightings data
         type: 'weekly'
       }));
@@ -2432,9 +1431,9 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
         period: new Date(month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         count: sightings.length,
         species: [...new Set(sightings.map(s => s.analysis?.predictedSpecies || 'Unknown'))],
-        environmentalSeverity: calculateEnvironmentalSeverity(sightings),
-        controlEffectiveness: calculateControlEffectiveness(sightings),
-        seasonalFactors: getSeasonalFactors(month),
+        environmentalSeverity: analytics.calculateEnvironmentalSeverity(sightings),
+        controlEffectiveness: analytics.calculateControlEffectiveness(sightings),
+        seasonalFactors: analytics.getSeasonalFactors(month),
         sightings: sightings, // Add actual sightings data
         type: 'monthly'
       }));
@@ -2453,9 +1452,9 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
         period: year,
         count: sightings.length,
         species: [...new Set(sightings.map(s => s.analysis?.predictedSpecies || 'Unknown'))],
-        climateCorrelation: getClimateCorrelation(year, sightings),
-        predictiveInsights: generatePredictiveInsights(sightings),
-        ecosystemRecovery: calculateEcosystemRecovery(sightings),
+        climateCorrelation: analytics.getClimateCorrelation(sightings),
+        predictiveInsights: analytics.generatePredictiveInsights(sightings),
+        ecosystemRecovery: analytics.calculateEcosystemRecovery(sightings),
         sightings: sightings, // Add actual sightings data
         type: 'yearly'
       }));
@@ -2464,7 +1463,7 @@ function generateInvasiveTimelineEvents(sightings, period = 'daily') {
 
   // Return formatted grouped data for weekly/monthly/yearly
   return groupedData.map((item, index) => {
-    const riskColor = item.avgRisk ? getThreatColor(item.avgRisk) : '#67d4a7';
+    const riskColor = item.avgRisk ? analytics.getThreatColor(item.avgRisk) : '#67d4a7';
 
     return `
       <div class="timeline-item farmer-strategic timeline-strategic-item">

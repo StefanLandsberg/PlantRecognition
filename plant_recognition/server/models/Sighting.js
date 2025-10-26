@@ -15,7 +15,11 @@ const analysisSchema = new mongoose.Schema({
 const schema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   imagePath: String,
-  fromVideo: { type: Boolean, default: false },
+  localFileId: String,  // For local storage files
+  storageType: { type: String, enum: ['server', 'local'], default: 'server' },
+  videoSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'VideoSession', default: null },
+  videoTimestamp: { type: Number, default: null },
+
   location: { type: { type: String, enum: ['Point'], default: 'Point' }, coordinates: { type: [Number], default: [0,0] } }, // [lng, lat]
   analysis: analysisSchema,
   capturedAt: { type: Date, default: Date.now },

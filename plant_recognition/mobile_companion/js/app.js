@@ -28,10 +28,19 @@ export class MobileCompanionApp {
         // Check if accessed via QR code (companion code in URL)
         const urlParams = new URLSearchParams(window.location.search);
         const qrCompanionCode = urlParams.get('code');
+        const qrStoragePreference = urlParams.get('storage');
 
         console.log('Mobile companion initializing...');
         console.log('URL parameters:', window.location.search);
         console.log('QR companion code:', qrCompanionCode);
+        console.log('QR storage preference:', qrStoragePreference);
+
+        // If storage preference is provided via QR code, use it and save it
+        if (qrStoragePreference && (qrStoragePreference === 'local' || qrStoragePreference === 'server')) {
+            this.storagePreference = qrStoragePreference;
+            this.config.saveStorageSetting(this.storagePreference);
+            console.log('Using storage preference from QR code:', this.storagePreference);
+        }
 
         if (qrCompanionCode && qrCompanionCode.length === 6) {
             console.log('QR code detected, auto-connecting...');
@@ -45,8 +54,9 @@ export class MobileCompanionApp {
 
     setupMessageHandlers() {
         this.connection.registerMessageHandler('classification_result', (data) => {
-            this.ui.showClassificationPopup(data.result.predictedSpecies || 'Unknown Species', data.result.confidence || 0);
-            this.ui.updateCameraStatus('Classification complete');
+            const result = data?.result || {};
+            this.ui.showClassificationPopup(result);
+            this.ui.updateCameraStatus(result.duplicate ? 'Previously detected nearby' : 'Classification complete');
         });
 
         this.connection.registerMessageHandler('analysis_complete', (data) => {
@@ -59,6 +69,41 @@ export class MobileCompanionApp {
 
         this.connection.registerMessageHandler('connection_lost', (message) => {
             this.ui.showError('Connection Lost', message);
+            this.ui.setConnectedUser('Disconnected');
+        });
+
+        this.connection.registerMessageHandler('session_replaced', (message) => {
+            this.ui.showError('Session Replaced', message || 'Another companion session has been started. This session will be disconnected.');
+            this.ui.setConnectedUser('Disconnected');
+            // Optionally redirect to connection screen after a delay
+            setTimeout(() => {
+                this.ui.showScreen('connection');
+            }, 3000);
+        });
+
+        this.connection.registerMessageHandler('reconnected', (message) => {
+            this.ui.showStatus(message || 'Reconnected successfully', 'success');
+            console.log('Companion reconnected successfully');
+        });
+
+        this.connection.registerMessageHandler('connection_confirmed', (data) => {
+            if (data.user?.username) {
+                this.ui.setConnectedUser(data.user.username);
+            }
+            if (data.storagePreference && data.storagePreference !== this.storagePreference) {
+                this.storagePreference = data.storagePreference;
+                this.config.saveStorageSetting(this.storagePreference);
+                console.log('Storage preference updated from main app:', this.storagePreference);
+                
+                // Update the storage display if settings screen is visible
+                const storageDisplay = document.getElementById('storage-display');
+                if (storageDisplay) {
+                    const storageText = this.storagePreference === 'local' 
+                        ? 'Local Storage (Unlimited, device only)' 
+                        : 'Server Storage (2GB total, 90 days, backed up)';
+                    storageDisplay.textContent = storageText;
+                }
+            }
         });
     }
 
@@ -94,7 +139,9 @@ export class MobileCompanionApp {
         }
 
         // Navigation events
-        document.getElementById('disconnect-btn').addEventListener('click', () => this.disconnect());
+        document.getElementById('disconnect-btn').addEventListener('click', () => {
+            this.disconnect().catch((error) => console.warn('Disconnect warning:', error));
+        });
         document.getElementById('close-results').addEventListener('click', () => this.hideResults());
         document.getElementById('capture-another').addEventListener('click', () => this.hideResults());
         document.getElementById('retry-btn').addEventListener('click', () => this.ui.showScreen('connection-screen'));
@@ -156,6 +203,12 @@ export class MobileCompanionApp {
                             this.ui.showPermissionStatus('Location access granted', 'success');
                             this.ui.showQRStatus('Location access granted', 'success');
                             locationGranted = true;
+                            if (this.connection) {
+                                this.connection.lastKnownLocation = {
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                };
+                            }
                             resolve(position);
                         },
                         (error) => {
@@ -268,12 +321,12 @@ export class MobileCompanionApp {
         }
     }
 
-    toggleLiveStream() {
+    async toggleLiveStream() {
         try {
             this.streaming.setStoragePreference(this.storagePreference);
-            this.streaming.toggleLiveStream();
+            await this.streaming.toggleLiveStream();
         } catch (error) {
-            this.ui.showStatus(error.message, 'error');
+            this.ui.showStatus(error.message || 'Live stream error', 'error');
         }
     }
 
@@ -307,10 +360,8 @@ export class MobileCompanionApp {
             this.config.saveResolutionSetting(this.resolution);
         }
 
-        if (settings.storage) {
-            this.storagePreference = settings.storage;
-            this.config.saveStorageSetting(this.storagePreference);
-        }
+        // Storage preference is no longer user-configurable in companion app
+        // It's automatically inherited from the main app
 
         this.ui.updateCameraStatus('Settings saved successfully');
         this.ui.showScreen('camera-screen');
@@ -330,9 +381,9 @@ export class MobileCompanionApp {
         this.ui.updateCameraStatus('Ready to capture');
     }
 
-    disconnect() {
+    async disconnect() {
         // Stop live streaming if active
-        this.streaming.cleanup();
+        await this.streaming.cleanup();
 
         // Disconnect from main app
         this.connection.disconnect();
@@ -343,6 +394,7 @@ export class MobileCompanionApp {
         // Reset UI
         this.ui.showScreen('connection-screen');
         this.ui.clearConnectionForm();
+        this.ui.setConnectedUser('Disconnected');
     }
 }
 

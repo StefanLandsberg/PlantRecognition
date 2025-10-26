@@ -3,6 +3,7 @@ export class UIManager {
     constructor() {
         this.currentScreen = 'connection-screen';
         this.permissionCallbacks = new Map();
+        this.notificationTimeout = null;
     }
 
     showScreen(screenId) {
@@ -72,8 +73,31 @@ export class UIManager {
         this.showScreen('error-screen');
     }
 
-    showClassificationPopup(species, confidence) {
-        // Create small notification
+    setConnectedUser(username) {
+        const connectionLabel = document.getElementById('connection-user');
+        if (!connectionLabel) return;
+
+        if (!username || username === 'Disconnected') {
+            connectionLabel.textContent = 'Disconnected';
+        } else {
+            connectionLabel.textContent = `Connected as ${username}`;
+        }
+    }
+
+    showClassificationPopup(result = {}) {
+        const species = result.predictedSpecies || 'Unknown Species';
+        const confidence =
+            typeof result.confidence === 'number'
+                ? `${(result.confidence * 100).toFixed(1)}%`
+                : 'Confidence unavailable';
+        const duplicate = !!result.duplicate;
+        const originalInfo = result.originalDetection;
+        const duplicateMeta = duplicate
+            ? originalInfo?.daysAgo != null
+                ? `Already logged ${originalInfo.daysAgo} day${originalInfo.daysAgo === 1 ? '' : 's'} ago`
+                : 'Already logged nearby'
+            : 'New sighting saved to your dashboard';
+
         let notification = document.getElementById('classification-notification');
         if (!notification) {
             notification = document.createElement('div');
@@ -83,19 +107,36 @@ export class UIManager {
         }
 
         notification.innerHTML = `
-            <div class="notification-content">
-                <div class="species-name">${species}</div>
-                <div class="confidence-text">${(confidence * 100).toFixed(0)}%</div>
+            <div class="notification-content ${duplicate ? 'duplicate' : ''}">
+                <div class="notification-header">
+                    <div class="species-name">${species}</div>
+                    <div class="confidence-text">${confidence}</div>
+                </div>
+                <div class="notification-meta">
+                    <span class="status-pill ${duplicate ? 'warning' : 'success'}">
+                        ${duplicate ? 'Previously Detected' : 'New Detection'}
+                    </span>
+                    <span>${duplicateMeta}</span>
+                </div>
             </div>
         `;
 
         // Show notification with slide-in animation
+        notification.classList.remove('show');
+        // Force reflow for restart animation
+        void notification.offsetWidth;
         notification.classList.add('show');
-
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
+        notification.onclick = () => {
             notification.classList.remove('show');
-        }, 3000);
+        };
+
+        if (this.notificationTimeout) {
+            clearTimeout(this.notificationTimeout);
+        }
+
+        this.notificationTimeout = setTimeout(() => {
+            notification.classList.remove('show');
+        }, 4000);
     }
 
     // Settings UI Management
@@ -107,10 +148,13 @@ export class UIManager {
             resolutionSelect.value = currentRes;
         }
 
-        // Load current storage setting
-        const storageSelect = document.getElementById('storage-select');
-        if (storageSelect) {
-            storageSelect.value = storage;
+        // Display current storage setting (read-only)
+        const storageDisplay = document.getElementById('storage-display');
+        if (storageDisplay) {
+            const storageText = storage === 'local' 
+                ? 'Local Storage (Unlimited, device only)' 
+                : 'Server Storage (2GB total, 90 days, backed up)';
+            storageDisplay.textContent = storageText;
         }
     }
 
@@ -124,11 +168,8 @@ export class UIManager {
             settings.resolution = { width, height };
         }
 
-        // Get storage setting
-        const storageSelect = document.getElementById('storage-select');
-        if (storageSelect) {
-            settings.storage = storageSelect.value;
-        }
+        // Storage setting is no longer user-configurable in companion app
+        // It's inherited from the main app via QR code and WebSocket connection
 
         return settings;
     }

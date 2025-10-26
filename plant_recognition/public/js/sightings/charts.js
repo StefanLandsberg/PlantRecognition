@@ -32,14 +32,33 @@ export const generateSimpleBarChart = (data, container) => {
   });
 };
 
-export const generateRiskChart = (riskAnalysis, containerId) => {
+export const generateDetectionTrendsChart = (sightings, containerId) => {
   const container = document.getElementById(containerId);
   if (!container) return;
-  const data = [
-    { label: 'High Risk', value: riskAnalysis.highRiskSpecies, color: '#ef4444' },
-    { label: 'Medium Risk', value: Math.max(0, riskAnalysis.totalSpecies - riskAnalysis.highRiskSpecies), color: '#f59e0b' },
-    { label: 'Low Risk', value: 0, color: '#10b981' }
-  ];
+  
+  // Group sightings by week for the last 8 weeks
+  const now = new Date();
+  const weeklyData = {};
+  
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+    const weekEnd = new Date(weekStart.getTime() + (7 * 24 * 60 * 60 * 1000));
+    const weekKey = `Week ${8-i}`;
+    
+    const weekSightings = sightings.filter(s => {
+      const sightingDate = new Date(s.createdAt);
+      return sightingDate >= weekStart && sightingDate < weekEnd;
+    });
+    
+    weeklyData[weekKey] = weekSightings.length;
+  }
+  
+  const data = Object.entries(weeklyData).map(([week, count]) => ({
+    label: week,
+    value: count,
+    color: count > 5 ? '#ef4444' : count > 2 ? '#f59e0b' : '#10b981'
+  }));
+  
   generateSimpleBarChart(data, container);
 };
 

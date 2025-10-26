@@ -189,7 +189,7 @@ export function autoCleanup() {
   return { removedCount: 0, freedBytes: 0 };
 }
 
-// Clean up all server images for a specific user
+// Clean up all server files for a specific user
 export async function cleanupUserServerImages(userId) {
   if (!userId) return { removedCount: 0, freedBytes: 0 };
 
@@ -199,16 +199,17 @@ export async function cleanupUserServerImages(userId) {
   try {
     // Import here to avoid circular dependency
     const Sighting = (await import('../models/Sighting.js')).default;
+    const VideoSession = (await import('../models/VideoSession.js')).default;
 
-    // Find all sightings for this user that have server-stored images
+    // Clean up sighting images
     const userSightings = await Sighting.find({
-      userId: userId,
-      imageUrl: { $exists: true, $ne: null }
+      owner: userId,
+      imagePath: { $exists: true, $ne: null }
     });
 
     for (const sighting of userSightings) {
-      if (sighting.imageUrl && sighting.imageUrl.startsWith('/uploads/')) {
-        const filename = path.basename(sighting.imageUrl);
+      if (sighting.imagePath && sighting.imagePath.startsWith('/uploads/')) {
+        const filename = path.basename(sighting.imagePath);
         const filepath = path.join(UPLOADS_DIR, filename);
 
         try {
@@ -221,15 +222,70 @@ export async function cleanupUserServerImages(userId) {
             console.log(`Cleaned user ${userId} server image: ${filename} (${formatBytes(fileSize)})`);
           }
 
-          // Remove imageUrl from sighting since it's no longer valid
+          // Remove imagePath from sighting since it's no longer valid
           await Sighting.updateOne(
             { _id: sighting._id },
-            { $unset: { imageUrl: "" } }
+            { $set: { imagePath: null } }
           );
         } catch (error) {
           console.error(`Failed to remove user image ${filepath}:`, error);
         }
       }
+    }
+
+    // Clean up video session files
+    const userVideoSessions = await VideoSession.find({
+      userId: userId,
+      $or: [
+        { videoPath: { $exists: true, $ne: null } },
+        { thumbnailPath: { $exists: true, $ne: null } }
+      ]
+    });
+
+    for (const session of userVideoSessions) {
+      // Clean up video file
+      if (session.videoPath && session.videoPath.startsWith('/uploads/')) {
+        const filename = path.basename(session.videoPath);
+        const filepath = path.join(UPLOADS_DIR, filename);
+
+        try {
+          if (fs.existsSync(filepath)) {
+            const stats = fs.statSync(filepath);
+            const fileSize = stats.size;
+            fs.unlinkSync(filepath);
+            removedCount++;
+            freedBytes += fileSize;
+            console.log(`Cleaned user ${userId} server video: ${filename} (${formatBytes(fileSize)})`);
+          }
+        } catch (error) {
+          console.error(`Failed to remove user video ${filepath}:`, error);
+        }
+      }
+
+      // Clean up thumbnail file
+      if (session.thumbnailPath && session.thumbnailPath.startsWith('/uploads/')) {
+        const filename = path.basename(session.thumbnailPath);
+        const filepath = path.join(UPLOADS_DIR, filename);
+
+        try {
+          if (fs.existsSync(filepath)) {
+            const stats = fs.statSync(filepath);
+            const fileSize = stats.size;
+            fs.unlinkSync(filepath);
+            removedCount++;
+            freedBytes += fileSize;
+            console.log(`Cleaned user ${userId} server thumbnail: ${filename} (${formatBytes(fileSize)})`);
+          }
+        } catch (error) {
+          console.error(`Failed to remove user thumbnail ${filepath}:`, error);
+        }
+      }
+
+      // Remove file paths from session since they're no longer valid
+      await VideoSession.updateOne(
+        { _id: session._id },
+        { $set: { videoPath: null, thumbnailPath: null } }
+      );
     }
 
     return {
@@ -238,7 +294,7 @@ export async function cleanupUserServerImages(userId) {
       freedFormatted: formatBytes(freedBytes)
     };
   } catch (error) {
-    console.error('Error cleaning up user server images:', error);
+    console.error('Error cleaning up user server files:', error);
     return { removedCount: 0, freedBytes: 0 };
   }
 }

@@ -15,6 +15,8 @@ import {
   triggerWeatherAlert,
 } from "./ui.js";
 
+import { loadVideoSessions } from "./videoReview.js";
+
 // Attach functions to the global window object for inline HTML event handlers
 window.toggleLLMDropdown = toggleLLMDropdown;
 window.showLLMSection = showLLMSection;
@@ -26,6 +28,7 @@ window.handleAlertDismiss = handleAlertDismiss;
 window.removeSighting = removeSighting;
 window.confirmRemoval = confirmRemoval;
 window.closeRemovalModal = closeRemovalModal;
+window.loadVideoSessions = loadVideoSessions;
 
 // Attach global test functions
 window.triggerWeatherAlert = triggerWeatherAlert;

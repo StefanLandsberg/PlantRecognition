@@ -1,21 +1,25 @@
 // server/services/ml.service.js
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function urlPathToFs(fileUrlPath) {
   const rel = String(fileUrlPath || '').replace(/^\/+/, '');
-  const uploadsPath = path.join(process.cwd(), '..', 'uploads', path.basename(rel));
+  const uploadsPath = path.join(__dirname, '..', '..', 'uploads', path.basename(rel));
 
   if (fs.existsSync(uploadsPath)) {
     return uploadsPath;
   }
 
-  const serverUploads = path.join(process.cwd(), rel);
+  const serverUploads = path.join(__dirname, '..', rel);
   return serverUploads;
 }
 
 // Load class names from file
-const classNamesPath = path.join(process.cwd(), '..', 'models', 'class_names.txt');
+const classNamesPath = path.join(__dirname, '..', '..', 'models', 'class_names.txt');
 let classNames = ['Acacia_mearnsii', 'Acacia_melanoxylon', 'Acacia_podalyriifolia', 'Unknown_Plant'];
 
 if (fs.existsSync(classNamesPath)) {

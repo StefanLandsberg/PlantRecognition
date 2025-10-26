@@ -12,7 +12,7 @@ export function addDetectionCard(container, det) {
       <div>Conf: ${(det.confidence*100).toFixed(1)}%</div>
     </div>
     ${det.imageUrl ?
-      `<img src="${det.imageUrl}" alt="detection" onerror="this.outerHTML='<div class=\\"no-image-placeholder\\"></div>'" />` :
+      `<img src="${det.imageUrl}" alt="detection" onerror="this.outerHTML='&lt;div class=&quot;no-image-placeholder&quot;&gt;&lt;/div&gt;'" />` :
       `<div class="no-image-placeholder"></div>`
     }
 
@@ -108,7 +108,7 @@ export function setLLMCompleted(sightingId, llm) {
       setTimeout(() => {
         const delayedCard = document.getElementById(`det-${sightingId}`);
         if (delayedCard) {
-          createLLMDropdown(delayedCard, sightingId, llm);
+          createDetectionLLMDropdown(delayedCard, sightingId, llm);
         }
       }, 150);
       return;
@@ -136,9 +136,12 @@ function createDetectionLLMDropdown(card, sightingId, llm) {
   // Format the LLM content
   const formattedContent = formatLLMAnalysis(llm);
 
+  const hasLLMData = llm && llm.details;
+  const headerText = hasLLMData ? "AI Analysis Available" : "AI Analysis Pending";
+  
   llmSection.innerHTML = `
     <div class="species-dropdown-header" onclick="toggleMainDetectionLLM('${sightingId}')" style="cursor: pointer;">
-      <span class="species-text">AI Analysis Available</span>
+      <span class="species-text">${headerText}</span>
       <span class="species-dropdown-arrow">▼</span>
     </div>
     <div class="llm-content" style="display: none;">
@@ -149,18 +152,24 @@ function createDetectionLLMDropdown(card, sightingId, llm) {
   // Append to card
   card.appendChild(llmSection);
 
-  // Update species name to show analysis is available
+  // Update species name to show analysis status
   const speciesDiv = card.querySelector('.detection-species');
   if (speciesDiv) {
-    speciesDiv.style.color = 'var(--accent)';
-    speciesDiv.style.fontWeight = '600';
-    speciesDiv.title = 'AI analysis completed - see dropdown below';
+    if (hasLLMData) {
+      speciesDiv.style.color = 'var(--accent)';
+      speciesDiv.style.fontWeight = '600';
+      speciesDiv.title = 'AI analysis completed - see dropdown below';
+    } else {
+      speciesDiv.style.color = 'var(--text-secondary)';
+      speciesDiv.style.fontWeight = '500';
+      speciesDiv.title = 'AI analysis pending - see dropdown below';
+    }
   }
 }
 
 function formatLLMAnalysis(llm) {
   if (!llm || !llm.details) {
-    return '<div class="analysis-section"><p style="color: var(--text);">Analysis completed but no details available.</p></div>';
+    return '<div class="analysis-section"><p style="color: var(--text-secondary);">AI analysis is being processed. This may take a few moments...</p></div>';
   }
 
   const analysisData = llm.details;
