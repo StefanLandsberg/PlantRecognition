@@ -201,58 +201,51 @@ export const analyzeLocationClusters = (sightings) => {
   );
   if (validSightings.length === 0) return [];
 
-  const clusters = [];
-  const processed = new Set();
+  // Use the same clustering logic as the map
+  const clusterTolerance = 0.0001; // Same as map.js - ~10 meters
+  const clusterMap = new Map();
 
-  validSightings.forEach((sighting, index) => {
-    if (processed.has(index)) return;
+  // Group sightings by rounded coordinates (same as map clustering)
+  validSightings.forEach(sighting => {
+    const [lng, lat] = sighting.location.coordinates;
+    const roundedLat = Math.round(lat / clusterTolerance) * clusterTolerance;
+    const roundedLng = Math.round(lng / clusterTolerance) * clusterTolerance;
+    const key = `${roundedLat},${roundedLng}`;
 
-    const cluster = {
-      centerLat: sighting.location.coordinates[1],
-      centerLng: sighting.location.coordinates[0],
-      sightings: [sighting],
-      species: new Set([sighting.analysis?.predictedSpecies || "Unknown"]),
-    };
+    if (!clusterMap.has(key)) {
+      clusterMap.set(key, {
+        centerLat: roundedLat,
+        centerLng: roundedLng,
+        sightings: [],
+        species: new Set(),
+      });
+    }
 
-    validSightings.forEach((other, otherIndex) => {
-      if (otherIndex !== index && !processed.has(otherIndex)) {
-        const distance = calculateDistance(
-          sighting.location.coordinates,
-          other.location.coordinates
-        );
-        if (distance <= 2) {
-          // Within 2km
-          cluster.sightings.push(other);
-          cluster.species.add(other.analysis?.predictedSpecies || "Unknown");
-          processed.add(otherIndex);
-        }
-      }
-    });
+    const cluster = clusterMap.get(key);
+    cluster.sightings.push(sighting);
+    cluster.species.add(sighting.analysis?.predictedSpecies || "Unknown");
+  });
 
-    if (cluster.sightings.length >= 2) {
-      const avgLat =
-        cluster.sightings.reduce(
-          (sum, s) => sum + s.location.coordinates[1],
-          0
-        ) / cluster.sightings.length;
-      const avgLng =
-        cluster.sightings.reduce(
-          (sum, s) => sum + s.location.coordinates[0],
-          0
-        ) / cluster.sightings.length;
-      cluster.centerLat = avgLat;
-      cluster.centerLng = avgLng;
-      cluster.count = cluster.sightings.length;
-      cluster.species = Array.from(cluster.species);
-      cluster.radius = Math.max(
+  // Convert to array and calculate final properties
+  const clusters = Array.from(clusterMap.values()).map(cluster => {
+    // Calculate actual center from all sightings in cluster
+    const avgLat = cluster.sightings.reduce((sum, s) => sum + s.location.coordinates[1], 0) / cluster.sightings.length;
+    const avgLng = cluster.sightings.reduce((sum, s) => sum + s.location.coordinates[0], 0) / cluster.sightings.length;
+    
+    return {
+      centerLat: avgLat,
+      centerLng: avgLng,
+      count: cluster.sightings.length,
+      sightings: cluster.sightings,
+      species: Array.from(cluster.species),
+      radius: cluster.sightings.length > 1 ? Math.max(
         ...cluster.sightings.map((s) =>
           calculateDistance([avgLng, avgLat], s.location.coordinates)
         )
-      );
-      clusters.push(cluster);
-    }
-    processed.add(index);
+      ) : 0,
+    };
   });
+
   return clusters.sort((a, b) => b.count - a.count);
 };
 
@@ -590,11 +583,20 @@ export const generateInvasiveAnalytics = (sightings) => {
     activeInvasives,
     todayInvasives.length
   );
-  const totalInvasiveDetections = sightings.filter(isSightingInvasive).length;
-  const totalRemovals = sightings.filter((s) => s.isRemoved).length;
+  // Calculate removal efficiency for this week
+  // Get invasive sightings detected this week
+  const weeklyInvasiveDetections = sightings.filter(
+    (s) => new Date(s.createdAt) >= weekAgo && isSightingInvasive(s)
+  );
+  
+  // Count how many of those weekly detections have been removed
+  const weeklyDetectionsRemoved = weeklyInvasiveDetections.filter(
+    (s) => s.isRemoved
+  ).length;
+  
   const removalEfficiency =
-    totalInvasiveDetections > 0
-      ? Math.floor((totalRemovals / totalInvasiveDetections) * 100)
+    weeklyInvasiveDetections.length > 0
+      ? Math.floor((weeklyDetectionsRemoved / weeklyInvasiveDetections.length) * 100)
       : 0;
 
   return {
@@ -685,8 +687,29 @@ export const calculateEnvironmentalSeverity = (sightings) => {
   if (invasiveCount >= 1) return "Low";
   return "Minimal";
 };
-export const calculateControlEffectiveness = () =>
-  Math.floor(Math.random() * 25 + 65);
+export const calculateControlEffectiveness = (sightings) => {
+  if (!sightings || sightings.length === 0) return 0;
+  
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const isSightingInvasive = (s) =>
+    s.analysis?.predictedSpecies &&
+    s.analysis.predictedSpecies !== "Unknown" &&
+    s.analysis.predictedSpecies !== "Unknown species";
+  
+  // Get invasive sightings detected this week
+  const weeklyInvasiveDetections = sightings.filter(
+    (s) => new Date(s.createdAt) >= weekAgo && isSightingInvasive(s)
+  );
+  
+  // Count how many of those weekly detections have been removed
+  const weeklyDetectionsRemoved = weeklyInvasiveDetections.filter(
+    (s) => s.isRemoved
+  ).length;
+  
+  return weeklyInvasiveDetections.length > 0
+    ? Math.floor((weeklyDetectionsRemoved / weeklyInvasiveDetections.length) * 100)
+    : 0;
+};
 export const getSeasonalFactors = (month) => {
   const factors = {
     "01": "Winter dormancy",

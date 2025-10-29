@@ -18,6 +18,7 @@ import {
 import { loadVideoSessions } from "./videoReview.js";
 
 // Attach functions to the global window object for inline HTML event handlers
+window.load = load; // Make load function globally available
 window.toggleLLMDropdown = toggleLLMDropdown;
 window.showLLMSection = showLLMSection;
 window.toggleDropdown = toggleDropdown;

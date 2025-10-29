@@ -1,3 +1,5 @@
+import { SightingsAPI } from './api.js';
+
 class MapLoaderProxy {
   constructor() {
     this.map = null;
@@ -1696,18 +1698,43 @@ ${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sigh
         // Show success notification
         this.showNotification('Plant removal recorded successfully!', 'success');
 
-        // Remove the sighting from the cluster display immediately
-        this.removeSightingFromCluster(sightingId);
+        // Remove from all UI elements using centralized handler
+        if (typeof window.handleSightingRemoval === 'function') {
+          window.handleSightingRemoval(sightingId);
+        } else {
+          // Fallback: manual removal
+          this.removeSightingFromCluster(sightingId);
+          
+          const detectionCard = document.getElementById(`det-${sightingId}`);
+          if (detectionCard) {
+            detectionCard.remove();
+          }
+          
+          try {
+            const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
+            const filtered = sessionDetections.filter(d => d.sightingId !== sightingId);
+            sessionStorage.setItem('sessionDetections', JSON.stringify(filtered));
+          } catch (error) {
+            console.warn('Failed to remove from session storage:', error);
+          }
+        }
 
         // Hide cluster selector
         this.hideClusterPopup();
 
         // Update sightings page and stats
-        if (window.sightingsPageExists) {
-          window.location.reload(); // Refresh sightings page to reflect removal
+        const isOnSightingsPage = window.location.pathname.includes('/sightings') || 
+                                  document.getElementById('sightings-container') !== null;
+        
+        if (isOnSightingsPage) {
+          // If on sightings page, reload the sightings data
+          if (typeof window.load === 'function') {
+            window.load(); // Reload sightings without full page refresh
+          } else {
+            window.location.reload(); // Fallback to full page reload
+          }
         } else {
           // If not on sightings page, trigger a data refresh for stats
-          // This ensures removal stats are updated across all pages
           if (typeof window.refreshSightingsData === 'function') {
             window.refreshSightingsData();
           }
@@ -1799,11 +1826,7 @@ ${(sighting.imageUrl || sighting.imagePath) && typeof (sighting.imageUrl || sigh
       }
       this.markerClusters.clear();
 
-      // Import SightingsAPI if not already available
-      if (typeof SightingsAPI === 'undefined') {
-        console.error('SightingsAPI not available for map refresh');
-        return;
-      }
+
 
       // Reload sightings data
       const box = "";

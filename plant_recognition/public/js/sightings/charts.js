@@ -115,35 +115,85 @@ export const generateCoverageAnalysisChart = (coverageStats, containerId) => {
 export const generateDistanceDistributionChart = (sightings, containerId, calculateDistance) => {
   const container = document.getElementById(containerId);
   if (!container) return;
-  const validSightings = sightings.filter(s => s.location?.coordinates);
-  const distances = [];
+  
+  const validSightings = sightings.filter(s => s.location?.coordinates && 
+    Array.isArray(s.location.coordinates) && 
+    s.location.coordinates.length >= 2 &&
+    !isNaN(s.location.coordinates[0]) && 
+    !isNaN(s.location.coordinates[1])
+  );
+  
+  if (validSightings.length < 2) {
+    container.innerHTML = '<div class="no-data-display">Need at least 2 sightings with valid coordinates</div>';
+    return;
+  }
+  
+  // Calculate distance from each sighting to its nearest neighbor
+  const nearestDistances = [];
   for (let i = 0; i < validSightings.length; i++) {
-    for (let j = i + 1; j < validSightings.length && j < i + 10; j++) { // Limit comparisons
-      distances.push(Math.round(calculateDistance(validSightings[i].location.coordinates, validSightings[j].location.coordinates)));
+    let minDistance = Infinity;
+    for (let j = 0; j < validSightings.length; j++) {
+      if (i !== j) {
+        const dist = calculateDistance(validSightings[i].location.coordinates, validSightings[j].location.coordinates);
+        if (!isNaN(dist) && dist >= 0 && dist < minDistance) {
+          minDistance = dist;
+        }
+      }
+    }
+    if (minDistance !== Infinity) {
+      nearestDistances.push(minDistance);
     }
   }
-  const ranges = { '0-1km': 0, '1-5km': 0, '5-10km': 0, '10-20km': 0, '20km+': 0 };
-  distances.forEach(dist => {
-    if (dist <= 1) ranges['0-1km']++;
+  
+  if (nearestDistances.length === 0) {
+    container.innerHTML = '<div class="no-data-display">No valid distance calculations available</div>';
+    return;
+  }
+  
+  const ranges = { '0-100m': 0, '100m-1km': 0, '1-5km': 0, '5-10km': 0, '10km+': 0 };
+  nearestDistances.forEach(dist => {
+    if (dist <= 0.1) ranges['0-100m']++;
+    else if (dist <= 1) ranges['100m-1km']++;
     else if (dist <= 5) ranges['1-5km']++;
     else if (dist <= 10) ranges['5-10km']++;
-    else if (dist <= 20) ranges['10-20km']++;
-    else ranges['20km+']++;
+    else ranges['10km+']++;
   });
-  const data = Object.entries(ranges).map(([range, count]) => ({ label: range, value: count, color: '#67d4a7' }));
+  
+  const data = Object.entries(ranges).map(([range, count]) => ({ 
+    label: range, 
+    value: count, 
+    color: '#67d4a7' 
+  }));
+  
   generateSimpleBarChart(data, container);
 };
 
 export const generateClusterSizeChart = (locationClusters, containerId) => {
   const container = document.getElementById(containerId);
   if (!container) return;
-  const data = locationClusters
-    .slice(0, 8)
+  
+  if (locationClusters.length === 0) {
+    container.innerHTML = '<div class="no-data-display">No location clusters found</div>';
+    return;
+  }
+  
+  // Filter out single sightings (only show actual clusters with 2+ sightings)
+  const actualClusters = locationClusters.filter(cluster => cluster.count >= 2);
+  
+  if (actualClusters.length === 0) {
+    container.innerHTML = '<div class="no-data-display">No multi-sighting clusters found</div>';
+    return;
+  }
+  
+  // Create data for individual clusters
+  const data = actualClusters
+    .slice(0, 8) // Limit to top 8 clusters
     .map((cluster, index) => ({
       label: `Cluster ${index + 1}`,
       value: cluster.count,
       color: cluster.count > 5 ? '#ef4444' : cluster.count > 3 ? '#f59e0b' : '#10b981'
     }));
+  
   generateSimpleBarChart(data, container);
 };
 

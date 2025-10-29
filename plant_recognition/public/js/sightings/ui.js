@@ -101,7 +101,9 @@ const loadTabContent = async (tabName) => {
     // For analytics tabs, get sightings data
     let sightings = window.sightingsData;
     if (!sightings) {
-      const response = await SightingsAPI.list();
+      // For temporal analysis, we need removed sightings to calculate removal efficiency
+      const includeRemoved = tabName === "temporal-analysis";
+      const response = await SightingsAPI.list("", includeRemoved);
       sightings = response.data || response;
     }
 
@@ -114,7 +116,7 @@ const loadTabContent = async (tabName) => {
       "invasive-dashboard": loadInvasiveDashboard,
       "geographic-insights": loadGeographicInsights,
       "cluster-map": loadClusterMap,
-      "temporal-analysis": loadTemporalAnalysis,
+      "temporal-analysis": async (data) => await loadTemporalAnalysis(data),
       "risk-assessment": async (data) => {
         await loadRiskAssessment(data);
         if (notifications.updateNotificationBadges) {
@@ -416,10 +418,21 @@ const loadGeographicInsights = (sightings) => {
   charts.generateClusterSizeChart(locationClusters, "cluster-size-chart");
 };
 
-const loadTemporalAnalysis = (sightings) => {
+const loadTemporalAnalysis = async (sightings) => {
   const container = document.getElementById("temporal-analysis-container");
-  const timePatterns = analytics.analyzeTimePatterns(sightings);
-  const invasiveAnalytics = analytics.generateInvasiveAnalytics(sightings);
+  
+  // For temporal analysis, we need ALL sightings including removed ones to calculate removal efficiency
+  let allSightings = sightings;
+  try {
+    const response = await SightingsAPI.list("", true); // Include removed sightings
+    allSightings = response.data || response;
+    console.log('Temporal analysis loaded', allSightings.length, 'total sightings (including removed)');
+  } catch (error) {
+    console.warn('Failed to load all sightings for temporal analysis, using provided data:', error);
+  }
+  
+  const timePatterns = analytics.analyzeTimePatterns(allSightings);
+  const invasiveAnalytics = analytics.generateInvasiveAnalytics(allSightings);
 
   container.innerHTML = `
     <div class="dashboard-header"><h2 class="dashboard-title">Invasive Species Intelligence Dashboard</h2><p class="dashboard-subtitle">Comprehensive threat assessment and management analytics</p></div>
@@ -906,7 +919,7 @@ export const generateInvasiveTimelineEvents = (sightings, period = "daily") => {
         count: s_list.length,
         species: [...new Set(s_list.map((s) => s.analysis.predictedSpecies))],
         environmentalSeverity: analytics.calculateEnvironmentalSeverity(s_list),
-        controlEffectiveness: analytics.calculateControlEffectiveness(),
+        controlEffectiveness: analytics.calculateControlEffectiveness(s_list),
         seasonalFactors: analytics.getSeasonalFactors(month),
       }));
   } else if (period === "yearly") {
@@ -1064,8 +1077,25 @@ export const confirmRemoval = async (sightingId) => {
     });
     if (!response.ok) throw new Error("Server responded with an error.");
 
-    const card = document.querySelector(`[data-sighting-id="${sightingId}"]`);
-    if (card) card.remove();
+    // Remove from all UI elements using centralized handler
+    if (typeof window.handleSightingRemoval === 'function') {
+      window.handleSightingRemoval(sightingId);
+    } else {
+      // Fallback: manual removal
+      const card = document.querySelector(`[data-sighting-id="${sightingId}"]`);
+      if (card) card.remove();
+      
+      const detectionCard = document.getElementById(`det-${sightingId}`);
+      if (detectionCard) detectionCard.remove();
+      
+      try {
+        const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
+        const filtered = sessionDetections.filter(d => d.sightingId !== sightingId);
+        sessionStorage.setItem('sessionDetections', JSON.stringify(filtered));
+      } catch (error) {
+        console.warn('Failed to remove from session storage:', error);
+      }
+    }
 
     showNotification("Plant removal recorded successfully!", "success");
 
@@ -1111,7 +1141,7 @@ export const load = async () => {
 
   try {
     // Force fresh data load to ensure companion detections appear
-    const { data } = await SightingsAPI.list("", { cache: false });
+    const { data } = await SightingsAPI.list("", false); // Don't include removed sightings
     if (!data || data.length === 0) {
       empty.style.display = "block";
       return;
@@ -1119,6 +1149,21 @@ export const load = async () => {
 
     empty.style.display = "none";
     window.sightingsData = data; // Store for global access
+
+    // Clean up any locally removed sightings that might still be in the data
+    try {
+      const removedSightings = JSON.parse(localStorage.getItem('removedSightings') || '[]');
+      removedSightings.forEach(sightingId => {
+        const card = document.querySelector(`[data-sighting-id="${sightingId}"]`);
+        if (card) {
+          card.remove();
+        }
+      });
+      // Clear the localStorage after cleanup since server data should now be correct
+      localStorage.removeItem('removedSightings');
+    } catch (error) {
+      console.warn('Failed to clean up removed sightings:', error);
+    }
 
     // Set up SSE listener for new sightings (companion detections)
     if (!window.sightingsSSESetup) {

@@ -14,7 +14,7 @@ from unified_plant_augmentation import UnifiedPlantAugmentationEngine
 DATA_DIR = "data/plant_images"
 IMAGE_SIZE = 512  # Match ml_model.py
 BATCH_SIZE = 8  # Lower for 512px images
-EPOCHS = 50
+EPOCHS = 100
 LR = 1e-4  # Much higher learning rate
 VAL_SPLIT = 0.2
 AUGMENT_COUNT = 10

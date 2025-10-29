@@ -7,6 +7,9 @@ import { addDetectionCard, setLLMCompleted, showClassificationLoading, showLLMLo
 // Import the singleton instance directly
 import { mapProxy } from "./map.js";
 
+// Make mapProxy available globally for removal functions
+window.mapProxy = mapProxy;
+
 // Session detection persistence
 function saveSessionDetection(detection) {
   try {
@@ -41,7 +44,7 @@ function setSessionDetectionCache(detections) {
   }
 }
 
-function restoreSessionDetections() {
+async function restoreSessionDetections() {
   try {
     const container = document.getElementById('detections-list');
     if (!container) return;
@@ -60,28 +63,94 @@ function restoreSessionDetections() {
              !detection.sightingId.toString().startsWith('temp-');
     });
 
-    completedDetections.forEach(detection => {
+    // Validate detections against actual database data
+    let validDetections = [];
+    let actualSightings = [];
+    try {
+      const { data } = await SightingsAPI.list("", false); // Get current sightings from DB
+      actualSightings = data;
+      const actualSightingIds = new Set(actualSightings.map(s => s._id));
+      
+      // Log details about sightings for debugging
+      const sightingsWithLocation = actualSightings.filter(s => s.location?.coordinates);
+      const sightingsWithoutLocation = actualSightings.filter(s => !s.location?.coordinates);
+      
+      console.log(`Database has ${actualSightings.length} total sightings:`);
+      console.log(`- ${sightingsWithLocation.length} with location data`);
+      console.log(`- ${sightingsWithoutLocation.length} without location data`);
+      
+      if (sightingsWithoutLocation.length > 0) {
+        console.log('Sightings without location:', sightingsWithoutLocation.map(s => ({
+          id: s._id,
+          species: s.analysis?.predictedSpecies,
+          createdAt: s.createdAt
+        })));
+      }
+      
+      validDetections = completedDetections.filter(detection => {
+        const exists = actualSightingIds.has(detection.sightingId);
+        if (!exists) {
+          console.log(`Removing stale detection card for sighting ${detection.sightingId} (${detection.predictedSpecies})`);
+        }
+        return exists;
+      });
+      
+      console.log(`Filtered ${completedDetections.length} session detections to ${validDetections.length} valid ones`);
+    } catch (error) {
+      console.warn('Failed to validate session detections against database, using all:', error);
+      validDetections = completedDetections;
+    }
+
+    validDetections.forEach(detection => {
       addDetectionCard(container, detection);
       // Always add LLM dropdown for all restored detections
       setTimeout(() => {
+        // Check if we have LLM data in session storage
         if (detection.llm) {
-          // If we have LLM data, show it (regardless of llmCompleted flag)
           setLLMCompleted(detection.sightingId, detection.llm);
         } else {
-          // If no LLM data, still add the dropdown but show it's pending
-          setLLMCompleted(detection.sightingId, null);
+          // Check if the actual sighting has LLM data that's missing from session storage
+          const actualSighting = actualSightings.find(s => s._id === detection.sightingId);
+          if (actualSighting && actualSighting.analysis && actualSighting.analysis.llm) {
+            console.log(`Found missing LLM data for ${detection.sightingId}, updating session storage`);
+            // Update session storage with the missing LLM data
+            detection.llm = actualSighting.analysis.llm;
+            detection.llmCompleted = true;
+            setLLMCompleted(detection.sightingId, actualSighting.analysis.llm);
+            
+            // Update session storage
+            const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
+            const sessionIndex = sessionDetections.findIndex(d => d.sightingId === detection.sightingId);
+            if (sessionIndex !== -1) {
+              sessionDetections[sessionIndex].llm = actualSighting.analysis.llm;
+              sessionDetections[sessionIndex].llmCompleted = true;
+              sessionStorage.setItem('sessionDetections', JSON.stringify(sessionDetections));
+            }
+          } else {
+            // No LLM data available, show as pending
+            setLLMCompleted(detection.sightingId, null);
+          }
         }
       }, 100);
     });
 
-    // Update session storage to only keep completed detections
-    sessionStorage.setItem('sessionDetections', JSON.stringify(completedDetections));
+    // Update session storage to only keep valid detections
+    sessionStorage.setItem('sessionDetections', JSON.stringify(validDetections));
 
-    console.log('Restored', completedDetections.length, 'completed session detections');
+    console.log('Restored', validDetections.length, 'valid session detections');
   } catch (error) {
     console.warn('Failed to restore session detections:', error);
   }
 }
+
+// Set up periodic cleanup of stale detection cards
+setInterval(async () => {
+  try {
+    await window.cleanupStaleDetections();
+  } catch (error) {
+    console.warn('Periodic cleanup failed:', error);
+  }
+}, 5 * 60 * 1000); // Every 5 minutes
 
 function updateSessionDetection(oldId, newDetection) {
   try {
@@ -117,6 +186,111 @@ function removeSessionDetection(sightingId) {
     console.warn('Failed to remove session detection:', error);
   }
 }
+
+// Make removal functions globally available
+window.removeSessionDetection = removeSessionDetection;
+window.removeDetectionCard = removeDetectionCard;
+
+// Function to clean up stale detection cards
+window.cleanupStaleDetections = async function() {
+  try {
+    const { data: actualSightings } = await SightingsAPI.list("", false);
+    const actualSightingIds = new Set(actualSightings.map(s => s._id));
+    
+    // Remove detection cards that no longer exist in database
+    const detectionCards = document.querySelectorAll('[id^="det-"]:not([id^="det-temp-"])');
+    let removedCount = 0;
+    
+    detectionCards.forEach(card => {
+      const sightingId = card.id.replace('det-', '');
+      if (!actualSightingIds.has(sightingId)) {
+        console.log(`Removing stale detection card: ${sightingId}`);
+        card.remove();
+        removeSessionDetection(sightingId);
+        removedCount++;
+      }
+    });
+    
+    if (removedCount > 0) {
+      console.log(`Cleaned up ${removedCount} stale detection cards`);
+    } else {
+      console.log('No stale detection cards found');
+    }
+  } catch (error) {
+    console.warn('Failed to clean up stale detections:', error);
+  }
+};
+
+// Debug function to analyze detection/sighting mismatches
+window.debugDetectionMismatch = async function() {
+  try {
+    const { data: actualSightings } = await SightingsAPI.list("", false);
+    const detectionCards = document.querySelectorAll('[id^="det-"]:not([id^="det-temp-"])');
+    const sessionDetections = JSON.parse(sessionStorage.getItem('sessionDetections') || '[]');
+    
+    console.log('=== DETECTION MISMATCH DEBUG ===');
+    console.log(`Database sightings: ${actualSightings.length}`);
+    console.log(`Detection cards: ${detectionCards.length}`);
+    console.log(`Session storage detections: ${sessionDetections.length}`);
+    
+    const sightingsWithLocation = actualSightings.filter(s => s.location?.coordinates);
+    const sightingsWithoutLocation = actualSightings.filter(s => !s.location?.coordinates);
+    
+    console.log(`Sightings with location: ${sightingsWithLocation.length}`);
+    console.log(`Sightings without location: ${sightingsWithoutLocation.length}`);
+    
+    if (sightingsWithoutLocation.length > 0) {
+      console.log('Sightings without location data:');
+      sightingsWithoutLocation.forEach(s => {
+        console.log(`- ${s._id}: ${s.analysis?.predictedSpecies} (${s.createdAt})`);
+      });
+    }
+    
+    const detectionSightingIds = Array.from(detectionCards).map(card => card.id.replace('det-', ''));
+    const actualSightingIds = actualSightings.map(s => s._id);
+    
+    const orphanDetections = detectionSightingIds.filter(id => !actualSightingIds.includes(id));
+    if (orphanDetections.length > 0) {
+      console.log('Orphan detection cards (not in database):');
+      orphanDetections.forEach(id => console.log(`- ${id}`));
+    }
+    
+    console.log('=== END DEBUG ===');
+  } catch (error) {
+    console.error('Debug function failed:', error);
+  }
+};
+
+// Global function to handle complete sighting removal from all UI elements
+window.handleSightingRemoval = function(sightingId) {
+  // Remove from detection panel
+  removeDetectionCard(sightingId);
+  
+  // Remove from session storage
+  removeSessionDetection(sightingId);
+  
+  // Remove from sightings tab if present
+  const sightingCard = document.querySelector(`[data-sighting-id="${sightingId}"]`);
+  if (sightingCard) {
+    sightingCard.remove();
+  }
+  
+  // Remove from map if available
+  if (window.mapProxy && typeof window.mapProxy.removeSightingFromCluster === 'function') {
+    window.mapProxy.removeSightingFromCluster(sightingId);
+  }
+  
+  // Store removal in localStorage for cross-page persistence
+  try {
+    const removedSightings = JSON.parse(localStorage.getItem('removedSightings') || '[]');
+    if (!removedSightings.includes(sightingId)) {
+      removedSightings.push(sightingId);
+      localStorage.setItem('removedSightings', JSON.stringify(removedSightings));
+    }
+  } catch (error) {
+    console.warn('Failed to store removal in localStorage:', error);
+  }
+};
 
 function removeDetectionCard(cardId) {
   if (!cardId) return;
@@ -774,7 +948,14 @@ function handleAnalysisError(tempId, error) {
   }
 }
 
-boot().then(() => {
+boot().then(async () => {
   // Restore any session detections after the page loads
-  restoreSessionDetections();
+  await restoreSessionDetections();
+  
+  // Set up periodic cleanup of stale detections (every 5 minutes)
+  setInterval(async () => {
+    if (typeof window.cleanupStaleDetections === 'function') {
+      await window.cleanupStaleDetections();
+    }
+  }, 5 * 60 * 1000); // 5 minutes
 });
